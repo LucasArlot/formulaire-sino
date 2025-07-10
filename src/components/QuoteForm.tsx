@@ -1284,6 +1284,13 @@ const I18N_TEXT = {
     submitDescription: '点击下面的"获取我的报价"提交您的请求。我们将在24小时内回复。',
     getMyQuote: '获取我的报价',
     securityBadge: '安全且符合GDPR',
+    // Customer type selection
+    customerTypeQuestion: '您是以个人身份还是为公司运输？',
+    customerTypeDescription: '这有助于我们提供最相关的信息字段',
+    individualCustomer: '个人',
+    individualDescription: '个人运输或私人客户',
+    companyCustomer: '公司',
+    companyDescription: '商业运输或商业实体',
     // New statistics section
     impactInNumbers: '我们的数字影响力',
     impactDescription: '在中国提供卓越服务，拥有经过验证的结果和可信赖的服务',
@@ -1660,10 +1667,17 @@ const I18N_TEXT = {
     remarksHelp: 'Helfen Sie uns, Sie besser zu bedienen mit zusätzlichem Kontext',
     readyToSubmit: 'Bereit für Ihr Angebot!',
     submitDescription: 'Klicken Sie unten auf "Mein Angebot erhalten", um Ihre Anfrage zu senden. Wir antworten innerhalb von 24 Stunden.',
-    getMyQuote: 'Mein Angebot Erhalten',
-    securityBadge: 'Sicher und DSGVO-konform',
-    // New statistics section
-    impactInNumbers: 'Unser Einfluss in Zahlen',
+          getMyQuote: 'Mein Angebot Erhalten',
+      securityBadge: 'Sicher und DSGVO-konform',
+      // Customer type selection
+      customerTypeQuestion: 'Versenden Sie als Privatperson oder für ein Unternehmen?',
+      customerTypeDescription: 'Dies hilft uns, die relevantesten Informationsfelder bereitzustellen',
+      individualCustomer: 'Privatperson',
+      individualDescription: 'Privatversand oder Privatkunde',
+      companyCustomer: 'Unternehmen',
+      companyDescription: 'Geschäftsversand oder gewerbliche Einrichtung',
+      // New statistics section
+      impactInNumbers: 'Unser Einfluss in Zahlen',
     impactDescription: 'Exzellenz in China liefern mit bewiesenen Ergebnissen und vertrauensvollem Service',
     satisfiedCustomers: 'Zufriedene Kunden',
     customerSatisfaction: 'Kundenzufriedenheit',
@@ -8127,7 +8141,7 @@ const QuoteForm: React.FC = () => {
                     fontSize: '0.8rem',
                     fontWeight: '600',
                     transition: 'background-color 0.3s ease'
-                  }}>0</span>
+                  }}>1</span>
                   {getText('customerTypeQuestion', userLang)}
                 </h3>
                 <p style={{ 
@@ -8228,7 +8242,7 @@ const QuoteForm: React.FC = () => {
                       fontSize: '0.8rem',
                       fontWeight: '600',
                       transition: 'background-color 0.3s ease'
-                    }}>1</span>
+                    }}>2</span>
                     {(I18N_TEXT[userLang] as any).personalInformation || 'Personal Information'}
                   </h3>
                   <p style={{ 
@@ -8248,6 +8262,7 @@ const QuoteForm: React.FC = () => {
               }}>
           <div className="form-control">
                                       <label htmlFor="firstName" className="label-text">{getText('firstName', userLang)}</label>
+                                      <div className="input-wrapper">
             <input 
               type="text"
               name="firstName"
@@ -8263,9 +8278,11 @@ const QuoteForm: React.FC = () => {
             />
             {fieldValid.firstName === true && <CheckCircle className="check-icon" />}
           </div>
+          </div>
 
           <div className="form-control">
                                       <label htmlFor="lastName" className="label-text">{getText('lastName', userLang)}</label>
+                                      <div className="input-wrapper">
             <input 
               type="text"
               name="lastName"
@@ -8280,6 +8297,7 @@ const QuoteForm: React.FC = () => {
                     }}
             />
             {fieldValid.lastName === true && <CheckCircle className="check-icon" />}
+          </div>
           </div>
               </div>
             </div>
@@ -8310,7 +8328,7 @@ const QuoteForm: React.FC = () => {
                       fontSize: '0.8rem',
                       fontWeight: '600',
                       transition: 'background-color 0.3s ease'
-                    }}>2</span>
+                    }}>3</span>
                     {getText('shippingExperience', userLang)}
                   </h3>
                   <p style={{ 
@@ -8330,7 +8348,7 @@ const QuoteForm: React.FC = () => {
                 }}>
           <div className="form-control">
                     <label htmlFor="shipperType" className="label-text">{getText('shippingExperience', userLang)}</label>
-                    <div className="timing-select" style={{ position: 'relative' }}>
+                    <div className="timing-select input-wrapper" style={{ position: 'relative' }}>
                       <input
                         type="text"
                         value={experienceSearch || getText('selectExperience', userLang)}
@@ -8369,8 +8387,8 @@ const QuoteForm: React.FC = () => {
                           </div>
                         ))}
                       </div>
+                      {fieldValid.shipperType === true && <CheckCircle className="check-icon" />}
                     </div>
-                    {fieldValid.shipperType === true && <CheckCircle className="check-icon" />}
                   </div>
                 </div>
               </div>
@@ -8401,7 +8419,7 @@ const QuoteForm: React.FC = () => {
                       fontSize: '0.8rem',
                       fontWeight: '600',
                       transition: 'background-color 0.3s ease'
-                    }}>3</span>
+                    }}>4</span>
                     {getText('businessInformation', userLang)}
                   </h3>
                   <p style={{ 
@@ -8421,6 +8439,7 @@ const QuoteForm: React.FC = () => {
                 }}>
                   <div className="form-control">
                     <label htmlFor="companyName" className="label-text">{getText('companyName', userLang)}</label>
+                    <div className="input-wrapper">
             <input 
               type="text"
               name="companyName"
@@ -8435,6 +8454,7 @@ const QuoteForm: React.FC = () => {
                       }}
             />
             {fieldValid.companyName === true && <CheckCircle className="check-icon" />}
+          </div>
           </div>
 
 
@@ -8468,7 +8488,7 @@ const QuoteForm: React.FC = () => {
                       fontSize: '0.8rem',
                       fontWeight: '600',
                       transition: 'background-color 0.3s ease'
-                    }}>4</span>
+                    }}>5</span>
                     {getText('contactInformation', userLang)}
                   </h3>
                   <p style={{ 
@@ -8488,6 +8508,7 @@ const QuoteForm: React.FC = () => {
                 }}>
           <div className="form-control">
                     <label htmlFor="email" className="label-text">{getText('emailAddress', userLang)}</label>
+                    <div className="input-wrapper">
             <input 
               type="email" 
               name="email" 
@@ -8502,6 +8523,7 @@ const QuoteForm: React.FC = () => {
                       }}
             />
             {fieldValid.email === true && <CheckCircle className="check-icon" />}
+                    </div>
                     <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
                       📧 {getText('emailHelp', userLang)}
                     </div>
