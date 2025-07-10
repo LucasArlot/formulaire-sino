@@ -4120,6 +4120,21 @@ input[type="tel"]#phone {
   display: flex;
   justify-content: center;
   margin: var(--space-4) 0 var(--space-6) 0;
+  position: relative;
+}
+
+/* Règle d'urgence pour mobile - sélecteur de langue */
+@media (max-width: 480px) {
+  .language-selector-header {
+    position: relative !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+  
+  .language-selector-header .custom-dropdown {
+    position: relative !important;
+    overflow: visible !important;
+  }
 }
 
 .language-selector-header .custom-dropdown {
@@ -4156,6 +4171,10 @@ input[type="tel"]#phone {
   pointer-events: none;
   /* Transition améliorée pour ouverture/fermeture */
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Position absolue pour éviter les débordements */
+  position: absolute;
+  top: 100%;
+  z-index: 1000;
 }
 
 .language-selector-header .custom-dropdown-list.show {
@@ -4167,6 +4186,18 @@ input[type="tel"]#phone {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+/* Force sur mobile quand ouvert */
+@media (max-width: 480px) {
+  .language-selector-header .custom-dropdown-list.show {
+    position: absolute !important;
+    top: 100% !important;
+    left: 20px !important;
+    right: 20px !important;
+    transform: translateY(0) scale(1) !important;
+    z-index: 1000 !important;
+  }
 }
 
 .language-selector-header .custom-dropdown-list.show-above {
@@ -4330,16 +4361,19 @@ setTimeout(() => {
   }
   
   .language-selector-header .custom-dropdown-list {
-    min-width: 300px;
-    width: min(380px, calc(100vw - 20px));
-    max-width: calc(100vw - 20px);
+    min-width: 300px !important;
+    width: min(380px, calc(100vw - 40px)) !important;
+    max-width: calc(100vw - 40px) !important;
     padding: var(--space-3);
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, 1fr) !important;
     gap: var(--space-2);
-    /* Amélioration du positionnement sur tablette */
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%) translateY(-20px) scale(0.95);
+    /* Positionnement forcé pour tablette */
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) translateY(-20px) scale(0.95) !important;
+    /* Force la position */
+    position: absolute !important;
+    top: 100% !important;
   }
   
   .language-selector-header .custom-dropdown-option {
@@ -4361,20 +4395,24 @@ setTimeout(() => {
   }
   
   .language-selector-header .custom-dropdown-list {
-    /* Suppression des largeurs fixes problématiques */
-    min-width: 0;
-    width: calc(100vw - 40px);
-    max-width: calc(100vw - 40px);
-    padding: var(--space-2);
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-1);
-    /* Positionnement mobile optimisé */
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%) translateY(-20px) scale(0.95);
-    /* Marges de sécurité */
-    margin-left: 20px;
-    margin-right: 20px;
+    /* Suppression forcée des largeurs fixes problématiques */
+    min-width: 0 !important;
+    width: calc(100vw - 40px) !important;
+    max-width: calc(100vw - 40px) !important;
+    padding: var(--space-2) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: var(--space-1) !important;
+    /* Positionnement mobile optimisé forcé */
+    left: 20px !important;
+    right: 20px !important;
+    transform: translateY(-20px) scale(0.95) !important;
+    /* Force la position */
+    position: absolute !important;
+    top: 100% !important;
+    z-index: 1000 !important;
+    /* Suppression du centrage problématique */
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
   
   .language-selector-header .custom-dropdown-option {
@@ -4391,14 +4429,23 @@ setTimeout(() => {
 /* Règles spéciales pour très petits écrans */
 @media (max-width: 360px) {
   .language-selector-header .custom-dropdown-list {
-    width: calc(100vw - 20px);
-    max-width: calc(100vw - 20px);
-    margin-left: 10px;
-    margin-right: 10px;
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+    min-width: 0 !important;
+    /* Positionnement ultra-mobile */
+    left: 10px !important;
+    right: 10px !important;
     /* Forcer la grille à 2 colonnes avec espacement minimal */
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-1);
-    padding: var(--space-2);
+    grid-template-columns: 1fr 1fr !important;
+    gap: var(--space-1) !important;
+    padding: var(--space-2) !important;
+    /* Force la position */
+    position: absolute !important;
+    top: 100% !important;
+    transform: translateY(-10px) scale(0.95) !important;
+    z-index: 1000 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
   
   .language-selector-header .custom-dropdown-option {
@@ -4856,9 +4903,13 @@ setTimeout(() => {
     min-width: 0 !important;
     max-width: none !important;
     transform: translateY(-20px) scale(0.95) !important;
+    /* Force la position */
+    position: absolute !important;
+    top: 100% !important;
+    z-index: 1000 !important;
     /* Centrage manuel sans translateX */
-    margin-left: auto;
-    margin-right: auto;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
 }
 
