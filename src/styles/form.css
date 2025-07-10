@@ -4330,12 +4330,16 @@ setTimeout(() => {
   }
   
   .language-selector-header .custom-dropdown-list {
-    min-width: 420px;
-    width: 420px;
-    max-width: 95vw;
+    min-width: 300px;
+    width: min(380px, calc(100vw - 20px));
+    max-width: calc(100vw - 20px);
     padding: var(--space-3);
     grid-template-columns: repeat(3, 1fr);
     gap: var(--space-2);
+    /* Amélioration du positionnement sur tablette */
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(-20px) scale(0.95);
   }
   
   .language-selector-header .custom-dropdown-option {
@@ -4357,18 +4361,50 @@ setTimeout(() => {
   }
   
   .language-selector-header .custom-dropdown-list {
-    min-width: 320px;
-    width: 320px;
-    max-width: 90vw;
+    /* Suppression des largeurs fixes problématiques */
+    min-width: 0;
+    width: calc(100vw - 40px);
+    max-width: calc(100vw - 40px);
     padding: var(--space-2);
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-1);
+    /* Positionnement mobile optimisé */
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(-20px) scale(0.95);
+    /* Marges de sécurité */
+    margin-left: 20px;
+    margin-right: 20px;
   }
   
   .language-selector-header .custom-dropdown-option {
     min-height: 40px;
     padding: var(--space-2);
     font-size: 0.8rem;
+    /* Assurer que le texte ne déborde pas */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Règles spéciales pour très petits écrans */
+@media (max-width: 360px) {
+  .language-selector-header .custom-dropdown-list {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    margin-left: 10px;
+    margin-right: 10px;
+    /* Forcer la grille à 2 colonnes avec espacement minimal */
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-1);
+    padding: var(--space-2);
+  }
+  
+  .language-selector-header .custom-dropdown-option {
+    min-height: 38px;
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.75rem;
   }
 }
 
@@ -4809,6 +4845,20 @@ setTimeout(() => {
   
   .custom-dropdown.compact .custom-dropdown-option {
     font-size: 0.8rem;
+  }
+  
+  /* Styles spécifiques pour le sélecteur de langue sur mobile */
+  .language-selector-header .custom-dropdown-list {
+    /* Forcer l'utilisation de toute la largeur disponible moins les marges */
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    transform: translateY(-20px) scale(0.95) !important;
+    /* Centrage manuel sans translateX */
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
