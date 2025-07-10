@@ -1,0 +1,284 @@
+/**
+ * 🔘 BUTTON COMPONENT - Formulaire SINO
+ * ====================================
+ * Composant bouton unifié avec variants et tailles
+ * Remplace tous les boutons inconsistants
+ */
+
+/* ===== BASE BUTTON - Harmonisé avec le style formulaire ===== */
+.btn.btn,
+button.btn {
+  /* Layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  position: relative;
+  
+  /* Typography - Cohérent avec le formulaire */
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--text-base);
+  text-decoration: none;
+  white-space: nowrap;
+  
+  /* Tailles et espacement - Harmonisés */
+  padding: var(--space-4) var(--space-5);
+  min-height: var(--input-height-md);
+  border-radius: var(--radius-xl);
+  
+  /* Bordures et transitions - Style formulaire */
+  border: 1px solid var(--border-light);
+  outline: none;
+  transition: all var(--duration-normal) var(--ease-out-cubic);
+  
+  /* Cursor */
+  cursor: pointer;
+  user-select: none;
+  
+  /* Suppression des apparences par défaut */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* ===== VARIANTS - Style glassmorphism cohérent ===== */
+
+/* Primary Button */
+.btn.btn-primary,
+button.btn-primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.btn.btn-primary:hover:not(.disabled),
+button.btn-primary:hover:not(.disabled) {
+  background: var(--primary-light);
+  border-color: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
+}
+
+.btn.btn-primary:active:not(.disabled),
+button.btn-primary:active:not(.disabled) {
+  transform: translateY(0);
+  transition-duration: var(--duration-fast);
+}
+
+/* Secondary Button */
+.btn.btn-secondary,
+button.btn-secondary {
+  background: var(--surface);
+  color: var(--gray-700);
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-soft);
+}
+
+.btn.btn-secondary:hover:not(.disabled),
+button.btn-secondary:hover:not(.disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-medium);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
+}
+
+.btn.btn-secondary:active:not(.disabled),
+button.btn-secondary:active:not(.disabled) {
+  background: var(--surface-active);
+  transform: translateY(0);
+  transition-duration: var(--duration-fast);
+}
+
+/* Ghost Button */
+.btn.btn-ghost,
+button.btn-ghost {
+  background: transparent;
+  color: var(--gray-600);
+  border-color: transparent;
+}
+
+.btn.btn-ghost:hover:not(.disabled),
+button.btn-ghost:hover:not(.disabled) {
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border-color: var(--border-light);
+}
+
+.btn.btn-ghost:active:not(.disabled),
+button.btn-ghost:active:not(.disabled) {
+  background: var(--gray-200);
+}
+
+/* Success Button */
+.btn.btn-success,
+button.btn-success {
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+  box-shadow: var(--shadow-soft);
+}
+
+.btn.btn-success:hover:not(.disabled),
+button.btn-success:hover:not(.disabled) {
+  background: var(--success-dark);
+  border-color: var(--success-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
+}
+
+.btn.btn-success:active:not(.disabled),
+button.btn-success:active:not(.disabled) {
+  transform: translateY(0);
+  transition-duration: var(--duration-fast);
+}
+
+/* Warning Button */
+.btn.btn-warning,
+button.btn-warning {
+  background: var(--warning);
+  color: white;
+  border-color: var(--warning);
+  box-shadow: var(--shadow-soft);
+}
+
+.btn.btn-warning:hover:not(.disabled),
+button.btn-warning:hover:not(.disabled) {
+  background: var(--warning-dark);
+  border-color: var(--warning-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
+}
+
+/* Error Button */
+.btn.btn-error,
+button.btn-error {
+  background: var(--error);
+  color: white;
+  border-color: var(--error);
+  box-shadow: var(--shadow-soft);
+}
+
+.btn.btn-error:hover:not(.disabled),
+button.btn-error:hover:not(.disabled) {
+  background: var(--error-dark);
+  border-color: var(--error-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
+}
+
+/* ===== BUTTON SIZES ===== */
+.btn.btn-sm,
+button.btn-sm {
+  min-height: var(--input-height-sm);
+  padding: var(--space-2-5) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.btn.btn-md,
+button.btn-md {
+  min-height: var(--input-height-md);
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--text-base);
+}
+
+.btn.btn-lg,
+button.btn-lg {
+  min-height: var(--input-height-lg);
+  padding: var(--space-5) var(--space-6);
+  font-size: var(--text-lg);
+}
+
+/* ===== ÉTATS ===== */
+.btn.disabled,
+button.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.btn:focus-visible,
+button.btn:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 
+    var(--shadow-soft),
+    0 0 0 var(--focus-ring-width) var(--focus-ring-color);
+  transform: translateY(-1px);
+}
+
+/* ===== GLASSMORPHISM EFFECT - Cohérent avec le formulaire ===== */
+.btn.glassmorphism,
+button.glassmorphism {
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+}
+
+.btn.glassmorphism.btn-primary,
+button.glassmorphism.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn.glassmorphism.btn-secondary,
+button.glassmorphism.btn-secondary {
+  background: var(--surface);
+  border-color: var(--border-light);
+  color: var(--gray-700);
+}
+
+.btn.glassmorphism.btn-ghost,
+button.glassmorphism.btn-ghost {
+  background: var(--surface);
+  border-color: var(--border-light);
+  color: var(--gray-700);
+}
+
+.btn.glassmorphism.btn-success,
+button.glassmorphism.btn-success {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+/* Effets hover pour glassmorphism */
+.btn.glassmorphism:hover:not(.disabled),
+button.glassmorphism:hover:not(.disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
+}
+
+.btn.glassmorphism.btn-secondary:hover:not(.disabled),
+button.glassmorphism.btn-secondary:hover:not(.disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-medium);
+}
+
+.btn.glassmorphism.btn-ghost:hover:not(.disabled),
+button.glassmorphism.btn-ghost:hover:not(.disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-medium);
+}
+
+/* ===== NAVIGATION BUTTONS - Style harmonisé ===== */
+.form-navigation .btn {
+  font-weight: var(--font-weight-medium);
+}
+
+/* ===== AUTRES STYLES SPÉCIAUX ===== */
+.btn.language-btn {
+  font-size: var(--text-sm);
+  min-width: 70px;
+  padding: var(--space-2) var(--space-3);
+}
+
+.btn.test-btn {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: var(--z-fixed);
+  font-size: var(--text-sm);
+}
+
+.btn-full-width {
+  width: 100%;
+} 

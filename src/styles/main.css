@@ -1,0 +1,452 @@
+@import './tokens.css';
+@import './form.css';
+@import './utilities.css';
+@import './button.css';
+@import './customSelect.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand colors */
+  --primary: #001C38;
+  --primary-light: #002A4E;
+  --primary-dark: #001428;
+  --primary-rgb: 0, 28, 56;
+  --accent: #D6DF20;
+  --accent-light: #E4EA58;
+  --accent-dark: #B6BE1B;
+  
+  /* UI colors */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --error-dark: #D93D3D;
+  --error-rgb: 239, 68, 68;
+  --info: #3B82F6;
+  
+  /* Neutral colors - Enhanced with more nuanced tones */
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-500: #6B7280;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --gray-900: #111827;
+  
+  /* Enhanced color variations for better UI */
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-hover: rgba(255, 255, 255, 0.95);
+  --surface-active: rgba(255, 255, 255, 1);
+  --border-light: rgba(255, 255, 255, 0.2);
+  --border-medium: rgba(255, 255, 255, 0.3);
+  --border-strong: rgba(255, 255, 255, 0.4);
+  
+  /* Enhanced semantic colors */
+  --success-light: #ECFDF5;
+  --success-dark: #047857;
+  --warning-light: #FFFBEB;
+  --warning-dark: #B45309;
+  --error-light: #FEF2F2;
+  --info-light: #EFF6FF;
+  --info-dark: #1E40AF;
+  
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  
+  /* Font with improved line heights */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  
+  /* Enhanced border radius system */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+  --radius-full: 9999px;
+  
+  /* Modern easing functions for better animations */
+  --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-in-out-cubic: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-elastic: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-back: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-gentle: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  
+  /* Animation durations */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --duration-slower: 500ms;
+  
+  /* Shadow system */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-soft: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
+  --shadow-medium: 0 10px 15px rgba(0, 0, 0, 0.08), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-large: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 20px rgba(214, 223, 32, 0.3);
+}
+
+/* Reset with enhanced defaults */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-family);
+}
+
+/* Improved body with better typography */
+body {
+  background: linear-gradient(135deg, var(--gray-50) 0%, #fafbff 100%);
+  color: var(--primary);
+  line-height: var(--line-height-normal);
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Enhanced blob animation with more organic movement */
+@keyframes blob {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  25% { 
+    transform: translate(30px, -50px) scale(1.1) rotate(90deg);
+    border-radius: 50% 60% 70% 30% / 50% 70% 30% 60%;
+  }
+  50% { 
+    transform: translate(-20px, 20px) scale(0.9) rotate(180deg);
+    border-radius: 30% 70% 40% 60% / 40% 60% 50% 70%;
+  }
+  75% { 
+    transform: translate(40px, 10px) scale(1.05) rotate(270deg);
+    border-radius: 70% 30% 60% 40% / 30% 50% 40% 70%;
+  }
+}
+
+.animate-blob {
+  animation: blob 25s infinite var(--ease-in-out-cubic);
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Enhanced floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  33% {
+    transform: translateY(-8px) scale(1.02);
+  }
+  66% {
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+.animate-float {
+  animation: float 8s ease-in-out infinite;
+}
+
+/* Improved pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 3s var(--ease-gentle) infinite;
+}
+
+/* Modern fade and slide animations */
+.animate-fade-in {
+  animation: fadeIn var(--duration-normal) var(--ease-out-cubic);
+}
+
+.animate-slide-in {
+  animation: slideIn var(--duration-normal) var(--ease-out-cubic);
+}
+
+.animate-slide-up {
+  animation: slideUp var(--duration-normal) var(--ease-out-cubic);
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--duration-normal) var(--ease-back);
+}
+
+.animate-bounce-in {
+  animation: bounceIn var(--duration-slow) var(--ease-elastic);
+}
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+  }
+  to { 
+    opacity: 1; 
+  }
+}
+
+@keyframes slideIn {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounceIn {
+  0% { 
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% { 
+    transform: scale(0.9);
+  }
+  100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Smooth hover effects utility classes */
+.hover-lift {
+  transition: all var(--duration-normal) var(--ease-out-cubic);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-large);
+}
+
+.hover-scale {
+  transition: transform var(--duration-fast) var(--ease-out-cubic);
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+.hover-glow {
+  transition: all var(--duration-normal) var(--ease-out-cubic);
+}
+
+.hover-glow:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Enhanced focus utilities */
+.focus-ring {
+  outline: none;
+  transition: all var(--duration-fast) var(--ease-out-cubic);
+}
+
+.focus-ring:focus {
+  box-shadow: 0 0 0 3px rgba(214, 223, 32, 0.2);
+}
+
+/* Loading state animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
+}
+
+.loading-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Staggered animations for lists */
+.stagger-children > * {
+  animation: slideIn var(--duration-normal) var(--ease-out-cubic) both;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 350ms; }
+
+/* Enhanced glassmorphism effect */
+.glass-effect {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  transition: all var(--duration-normal) var(--ease-out-cubic);
+}
+
+.glass-effect:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-medium);
+  transform: translateY(-1px);
+}
+
+.glass-effect:active {
+  background: var(--surface-active);
+  border-color: var(--border-strong);
+  transform: translateY(0);
+}
+
+/* Micro-interaction for buttons */
+.btn-micro {
+  transition: all var(--duration-fast) var(--ease-out-cubic);
+  transform-origin: center;
+}
+
+.btn-micro:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.btn-micro:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: 50ms;
+}
+
+/* Enhanced progress indicators */
+@keyframes progress {
+  0% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+
+.progress-bar {
+  transform-origin: left;
+  animation: progress var(--duration-slower) var(--ease-out-cubic);
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color var(--duration-normal) var(--ease-gentle),
+              border-color var(--duration-normal) var(--ease-gentle),
+              color var(--duration-normal) var(--ease-gentle);
+}
+
+/* Additional animations for step indicators */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Form validation shake animation */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .animate-blob,
+  .animate-float,
+  .animate-pulse,
+  .animate-shake {
+    animation: none;
+  }
+}
