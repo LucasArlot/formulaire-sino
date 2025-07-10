@@ -282,3 +282,13 @@ button.glassmorphism.btn-ghost:hover:not(.disabled) {
 .btn-full-width {
   width: 100%;
 } 
+
+.btn-primary:focus-visible {
+  box-shadow: 0 0 0 4px var(--focus-ring-accent);
+}
+
+@media (max-width: 768px) {
+  .btn-text-mobile {
+    display: none;
+  }
+} 

@@ -9744,7 +9744,7 @@ const QuoteForm: React.FC = () => {
               style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
             >
               <PackageCheck size={18} />
-              {I18N_TEXT[userLang].addAnotherShipment}
+              <span className="btn-text-mobile">{I18N_TEXT[userLang].addAnotherShipment}</span>
             </button>
           )}
           
