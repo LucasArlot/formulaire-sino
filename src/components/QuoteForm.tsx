@@ -4,14 +4,224 @@ import Timeline from './Timeline';
 import FormStep from './FormStep';
 import Toast from './Toast';
 import { COUNTRIES } from '../data/countries';
+import { COUNTRY_TRANSLATIONS } from '../data/countryTranslations';
+import { PORT_TRANSLATIONS, getTranslatedPortName } from '../data/portTranslations';
 import { TEST_LEADS } from '../data/testLeads';
 
 const LOCATION_TYPES = [
   { id: 'factory', name: 'Factory/Warehouse', icon: Warehouse },
-  { id: 'port', name: 'Port/Airport', icon: Ship },
+  { id: 'port', name: 'Port/Airport', icon: Ship }, // Used only for pickup locations (Step 3), not destinations
   { id: 'business', name: 'Business address', icon: Building2 },
   { id: 'residential', name: 'Residential address', icon: Home }
 ];
+
+// Helper function to get translated country name
+const getTranslatedCountryName = (countryCode: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'): string => {
+  const translations = COUNTRY_TRANSLATIONS[countryCode];
+  if (translations && translations[userLang]) {
+    return translations[userLang];
+  }
+  // Fallback to English if translation not found
+  if (translations && translations.en) {
+    return translations.en;
+  }
+  // Final fallback to original country name from COUNTRIES array
+  const country = COUNTRIES.find(c => c.code === countryCode);
+  return country ? country.name : countryCode;
+};
+
+// Helper function to get the correct "search ports in/à/en" text with proper preposition
+const getSearchPortsText = (countryCode: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'): string => {
+  const baseText = I18N_TEXT[userLang].searchPortsIn;
+  
+  // French preposition rules
+  if (userLang === 'fr') {
+    // Countries with "à" (cities and small states)
+    const countriesWithA = ['MC', 'AD', 'LI', 'VA', 'SM']; // Monaco, Andorre, Liechtenstein, Vatican, Saint-Marin
+    if (countriesWithA.includes(countryCode)) {
+      return baseText.replace('en', 'à');
+    }
+    
+    // Countries with "aux" (plural countries)
+    const countriesWithAux = ['US', 'AE', 'NL', 'PH', 'MV']; // États-Unis, Émirats Arabes Unis, Pays-Bas, Philippines, Maldives
+    if (countriesWithAux.includes(countryCode)) {
+      return baseText.replace('en', 'aux');
+    }
+    
+    // Countries with "au" (masculine countries)
+    const countriesWithAu = [
+      'CA', 'BR', 'MX', 'JP', 'VN', 'CN', 'KR', 'IN', 'PK', 'BD', 'KH', 'LA', 'MM', 'NP', 'LK', 'TH', 'AF',
+      'IR', 'IQ', 'KW', 'OM', 'QA', 'SA', 'YE', 'BH', 'AZ', 'KZ', 'KG', 'TJ', 'TM', 'UZ', 'MN',
+      'CL', 'PE', 'EC', 'PY', 'UY', 'VE', 'CO', 'BO', 'SR', 'GY',
+      'MA', 'TN', 'DZ', 'EG', 'LY', 'SD', 'TD', 'NE', 'ML', 'BF', 'SN', 'GH', 'TG', 'BJ', 'NG', 'CM',
+      'CF', 'GA', 'CG', 'CD', 'AO', 'ZM', 'ZW', 'MW', 'MZ', 'LS', 'SZ', 'BW', 'NA', 'ZA',
+      'KE', 'UG', 'TZ', 'RW', 'BI', 'DJ', 'SO', 'ET', 'ER', 'SS',
+      'PT', 'LU', 'DK', 'NO', 'FI', 'IS'
+    ]; // Cambodge, Laos, Myanmar, Népal, Sri Lanka, Thaïlande, Afghanistan, Iran, Irak, etc.
+    if (countriesWithAu.includes(countryCode)) {
+      return baseText.replace('en', 'au');
+    }
+    
+    // All other countries use "en" (France, Allemagne, Italie, Espagne, Belgique, Suisse, Autriche, etc.)
+  }
+  
+  // German preposition rules (in + dative)
+  if (userLang === 'de') {
+    // Feminine plural countries (in die -> in den)
+    const femininePlural = ['US', 'NL', 'AE', 'PH']; // die USA, die Niederlande, die VAE, die Philippinen
+    if (femininePlural.includes(countryCode)) {
+      return baseText.replace('in', 'in den');
+    }
+    
+    // Masculine countries with article (in das -> im)
+    const masculineCountries = [
+      'IR', 'IQ', 'LB', 'SD', 'TD', 'KG', 'TJ', 'CF'
+    ]; // der Iran, der Irak, der Libanon, der Sudan, der Tschad, der Kosovo, etc.
+    if (masculineCountries.includes(countryCode)) {
+      return baseText.replace('in', 'im');
+    }
+    
+    // Feminine countries with article (in die -> in der)
+    const feminineCountries = [
+      'CH', 'TR', 'UA', 'MN', 'CF'
+    ]; // die Schweiz, die Türkei, die Ukraine, die Mongolei, etc.
+    if (feminineCountries.includes(countryCode)) {
+      return baseText.replace('in', 'in der');
+    }
+    
+    // All other countries use "in" (Deutschland, Frankreich, Italien, etc.)
+  }
+  
+  // Spanish preposition rules
+  if (userLang === 'es') {
+    // Plural countries use "en los"
+    const pluralCountries = ['US', 'AE', 'NL', 'PH']; // Estados Unidos, Emiratos Árabes Unidos, Países Bajos, Filipinas
+    if (pluralCountries.includes(countryCode)) {
+      return baseText.replace('en', 'en los');
+    }
+    
+    // Feminine countries with article use "en la"
+    const feminineCountries = ['IN', 'AR']; // la India, la Argentina
+    if (feminineCountries.includes(countryCode)) {
+      return baseText.replace('en', 'en la');
+    }
+    
+    // All other countries use "en" (España, Francia, México, Brasil, etc.)
+  }
+  
+  // Italian preposition rules
+  if (userLang === 'it') {
+    // Plural countries use "negli"
+    const pluralCountries = ['US', 'NL', 'AE', 'PH']; // Stati Uniti, Paesi Bassi, Emirati Arabi Uniti, Filippine
+    if (pluralCountries.includes(countryCode)) {
+      return baseText.replace('in', 'negli');
+    }
+    
+    // Masculine countries with vowel use "nell'"
+    const masculineVowel = ['AF', 'IR', 'IQ', 'UY', 'EC', 'EG']; // Afghanistan, Iran, Iraq, Uruguay, Ecuador, Egitto
+    if (masculineVowel.includes(countryCode)) {
+      return baseText.replace('in', "nell'");
+    }
+    
+    // Masculine countries use "nel"
+    const masculineCountries = [
+      'CA', 'BR', 'MX', 'JP', 'VN', 'CN', 'KR', 'IN', 'PK', 'BD', 'KH', 'LA', 'MM', 'NP', 'LK', 'TH',
+      'KW', 'OM', 'QA', 'SA', 'YE', 'BH', 'AZ', 'KZ', 'KG', 'TJ', 'TM', 'UZ', 'MN',
+      'CL', 'PE', 'PY', 'VE', 'CO', 'BO', 'SR', 'GY',
+      'MA', 'TN', 'DZ', 'LY', 'SD', 'TD', 'NE', 'ML', 'BF', 'SN', 'GH', 'TG', 'BJ', 'NG', 'CM',
+      'CF', 'GA', 'CG', 'CD', 'AO', 'ZM', 'ZW', 'MW', 'MZ', 'LS', 'SZ', 'BW', 'NA', 'ZA',
+      'KE', 'UG', 'TZ', 'RW', 'BI', 'DJ', 'SO', 'ET', 'ER', 'SS',
+      'PT', 'LU', 'DK', 'NO', 'FI', 'IS'
+    ]; // Canada, Brasile, Messico, Giappone, etc.
+    if (masculineCountries.includes(countryCode)) {
+      return baseText.replace('in', 'nel');
+    }
+    
+    // Feminine countries with vowel use "nell'"
+    const feminineVowel = ['IN']; // India
+    if (feminineVowel.includes(countryCode)) {
+      return baseText.replace('in', "nell'");
+    }
+    
+    // Feminine countries use "nella"
+    const feminineCountries = ['AR']; // Argentina
+    if (feminineCountries.includes(countryCode)) {
+      return baseText.replace('in', 'nella');
+    }
+    
+    // All other countries use "in" (Francia, Spagna, Grecia, Turchia, Russia, Svizzera, Germania, etc.)
+  }
+  
+  // Portuguese preposition rules
+  if (userLang === 'pt') {
+    // Plural countries use "nos"
+    const pluralCountries = ['US', 'NL', 'AE', 'PH']; // Estados Unidos, Países Baixos, Emirados Árabes Unidos, Filipinas
+    if (pluralCountries.includes(countryCode)) {
+      return baseText.replace('em', 'nos');
+    }
+    
+    // Feminine countries use "na"
+    const feminineCountries = [
+      'FR', 'ES', 'GR', 'TR', 'RU', 'CH', 'GB', 'DE', 'IT', 'BE', 'AT', 'PL', 'CZ', 'HU', 'RO', 'BG',
+      'HR', 'RS', 'SI', 'SK', 'EE', 'LV', 'LT', 'UA', 'BY', 'AR', 'AU', 'ZA'
+    ]; // França, Espanha, Grécia, Turquia, Rússia, Suíça, Grã-Bretanha, Alemanha, Itália, etc.
+    if (feminineCountries.includes(countryCode)) {
+      return baseText.replace('em', 'na');
+    }
+    
+    // Masculine countries use "no"
+    const masculineCountries = [
+      'CA', 'BR', 'MX', 'JP', 'VN', 'CN', 'KR', 'IN', 'PK', 'BD', 'KH', 'LA', 'MM', 'NP', 'LK', 'TH', 'AF',
+      'IR', 'IQ', 'KW', 'OM', 'QA', 'SA', 'YE', 'BH', 'AZ', 'KZ', 'KG', 'TJ', 'TM', 'UZ', 'MN',
+      'CL', 'PE', 'EC', 'PY', 'UY', 'VE', 'CO', 'BO', 'SR', 'GY',
+      'MA', 'TN', 'DZ', 'EG', 'LY', 'SD', 'TD', 'NE', 'ML', 'BF', 'SN', 'GH', 'TG', 'BJ', 'NG', 'CM',
+      'CF', 'GA', 'CG', 'CD', 'AO', 'ZM', 'ZW', 'MW', 'MZ', 'LS', 'SZ', 'BW', 'NA',
+      'KE', 'UG', 'TZ', 'RW', 'BI', 'DJ', 'SO', 'ET', 'ER', 'SS',
+      'PT', 'LU', 'DK', 'NO', 'FI', 'IS'
+    ]; // Canadá, Brasil, México, Japão, etc.
+    if (masculineCountries.includes(countryCode)) {
+      return baseText.replace('em', 'no');
+    }
+    
+    // All other countries use "em" (default)
+  }
+  
+  // Dutch preposition rules
+  if (userLang === 'nl') {
+    // Most countries use "in", but some use "naar" for direction
+    // For searching ports, "in" is correct for all countries
+    // No changes needed - "in" works for all: "in Nederland", "in Frankrijk", "in de Verenigde Staten"
+  }
+  
+  // Arabic preposition rules  
+  if (userLang === 'ar') {
+    // Arabic uses "في" (fi) for "in" for all countries
+    // No changes needed - "في" works universally
+  }
+  
+  // Turkish preposition rules
+  if (userLang === 'tr') {
+    // Turkish uses different suffixes/postpositions
+    // The base text already handles this correctly
+    // No changes needed
+  }
+  
+  // Russian preposition rules
+  if (userLang === 'ru') {
+    // Russian uses "в" (v) + prepositional case
+    // Most countries work with "в", some exceptions might exist
+    // The base text already handles this correctly
+    // No changes needed for now
+  }
+  
+  // Chinese preposition rules
+  if (userLang === 'zh') {
+    // Chinese uses "在" (zài) for location
+    // No changes needed - works for all countries
+  }
+
+  return baseText;
+};
 
 // Helper function to get translated location type name
 const getLocationTypeName = (typeId: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru', mode?: string) => {
@@ -47,16 +257,17 @@ const getLocationTypeDescription = (typeId: string, userLang: 'en' | 'fr' | 'zh'
 };
 
 // Helper function to get translated port/airport/terminal name
-const getTranslatedPortName = (port: any, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
-  const translations = I18N_TEXT[userLang] as any;
-  
-  // Check if we have a translation for this specific port
-  if (translations.ports && translations.ports[port.code]) {
-    return translations.ports[port.code];
-  }
-  
-  // Fallback to original name
-  return port.name;
+const getTranslatedPortNameLocal = (port: any, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
+  // Use the imported function from portTranslations.ts
+  return getTranslatedPortName(port.code, userLang, port.name);
+};
+
+// Helper function to get translated port type
+const getTranslatedPortType = (portType: 'sea' | 'air' | 'rail', userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
+  if (portType === 'sea') return I18N_TEXT[userLang].seaPort;
+  if (portType === 'air') return I18N_TEXT[userLang].airport;
+  if (portType === 'rail') return I18N_TEXT[userLang].railTerminal;
+  return portType;
 };
 
 // Helper function to get translated region name
@@ -140,6 +351,725 @@ const RAIL_TERMINALS = [
   { code: 'WUH', name: 'Wuhan Rail Terminal', region: 'Central China', type: 'rail', volume: '200 000 TEU', flag: '🚂' },
   { code: 'CDU', name: 'Chengdu Rail Terminal', region: 'Southwest China', type: 'rail', volume: '500 000+ TEU', flag: '🚂' },
 ].sort((a, b) => a.name.localeCompare(b.name));
+
+// Destination ports by country (for when user selects port/airport as destination type)
+const DESTINATION_PORTS_BY_COUNTRY: Record<string, Array<{code: string, name: string, type: 'sea' | 'air' | 'rail', flag: string, volume?: string}>> = {
+  // Europe
+  'FR': [
+    { code: 'FRMRS', name: 'Port de Marseille-Fos', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'FRLEH', name: 'Port du Havre', type: 'sea', flag: '🚢', volume: '2.9M TEU' },
+    { code: 'FRCDG', name: 'Aéroport Charles de Gaulle', type: 'air', flag: '✈️', volume: '2.1M tons' },
+    { code: 'FRORY', name: 'Aéroport Paris-Orly', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'FRLYO', name: 'Aéroport Lyon-Saint Exupéry', type: 'air', flag: '✈️', volume: '0.15M tons' },
+    { code: 'FRPAR_RAIL', name: 'Terminal ferroviaire de Paris', type: 'rail', flag: '🚂', volume: '0.3M TEU' },
+    { code: 'FRLYO_RAIL', name: 'Terminal ferroviaire de Lyon', type: 'rail', flag: '🚂', volume: '0.2M TEU' }
+  ],
+  'DE': [
+    { code: 'DEHAM', name: 'Port de Hambourg', type: 'sea', flag: '🚢', volume: '8.5M TEU' },
+    { code: 'DEBRE', name: 'Port de Brême', type: 'sea', flag: '🚢', volume: '4.6M TEU' },
+    { code: 'DEFRA', name: 'Aéroport de Francfort', type: 'air', flag: '✈️', volume: '2.0M tons' },
+    { code: 'DEMUC', name: 'Aéroport de Munich', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    { code: 'DEHAM_RAIL', name: 'Terminal ferroviaire de Hambourg', type: 'rail', flag: '🚂', volume: '2.3M TEU' },
+    { code: 'DEDUE_RAIL', name: 'Terminal ferroviaire de Duisbourg', type: 'rail', flag: '🚂', volume: '4.2M TEU' },
+    { code: 'DEFRM_RAIL', name: 'Terminal ferroviaire de Francfort', type: 'rail', flag: '🚂', volume: '0.8M TEU' },
+    { code: 'DEMUC_RAIL', name: 'Terminal ferroviaire de Munich', type: 'rail', flag: '🚂', volume: '0.5M TEU' },
+    { code: 'DEBER_RAIL', name: 'Terminal ferroviaire de Berlin', type: 'rail', flag: '🚂', volume: '0.6M TEU' }
+  ],
+  'GB': [
+    { code: 'GBFXT', name: 'Port de Felixstowe', type: 'sea', flag: '🚢', volume: '4.0M TEU' },
+    { code: 'GBSOU', name: 'Port de Southampton', type: 'sea', flag: '🚢', volume: '1.9M TEU' },
+    { code: 'GBLHR', name: 'Aéroport de Londres Heathrow', type: 'air', flag: '✈️', volume: '1.8M tons' },
+    { code: 'GBLGW', name: 'Aéroport de Londres Gatwick', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'GBMAN', name: 'Aéroport de Manchester', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'GBLON_RAIL', name: 'Terminal ferroviaire de Londres', type: 'rail', flag: '🚂', volume: '0.4M TEU' },
+    { code: 'GBMAN_RAIL', name: 'Terminal ferroviaire de Manchester', type: 'rail', flag: '🚂', volume: '0.2M TEU' },
+    { code: 'GBBIR_RAIL', name: 'Terminal ferroviaire de Birmingham', type: 'rail', flag: '🚂', volume: '0.3M TEU' }
+  ],
+  'NL': [
+    { code: 'NLRTM', name: 'Port de Rotterdam', type: 'sea', flag: '🚢', volume: '15.3M TEU' },
+    { code: 'NLAMS', name: 'Aéroport d\'Amsterdam Schiphol', type: 'air', flag: '✈️', volume: '1.7M tons' },
+    { code: 'NLRTM_RAIL', name: 'Terminal ferroviaire de Rotterdam', type: 'rail', flag: '🚂', volume: '0.9M TEU' },
+    { code: 'NLAMS_RAIL', name: 'Terminal ferroviaire d\'Amsterdam', type: 'rail', flag: '🚂', volume: '0.3M TEU' }
+  ],
+  'BE': [
+    { code: 'BEANR', name: 'Port d\'Anvers', type: 'sea', flag: '🚢', volume: '12.0M TEU' },
+    { code: 'BEBRU', name: 'Aéroport de Bruxelles', type: 'air', flag: '✈️', volume: '0.8M tons' },
+    { code: 'BELGG', name: 'Aéroport de Liège', type: 'air', flag: '✈️', volume: '0.9M tons' },
+    { code: 'BEANR_RAIL', name: 'Terminal ferroviaire d\'Anvers', type: 'rail', flag: '🚂', volume: '0.6M TEU' },
+    { code: 'BEBRU_RAIL', name: 'Terminal ferroviaire de Bruxelles', type: 'rail', flag: '🚂', volume: '0.2M TEU' }
+  ],
+  'IT': [
+    { code: 'ITGOA', name: 'Port de Gênes', type: 'sea', flag: '🚢', volume: '2.6M TEU' },
+    { code: 'ITLSP', name: 'Port de La Spezia', type: 'sea', flag: '🚢', volume: '1.4M TEU' },
+    { code: 'ITMXP', name: 'Aéroport de Milan Malpensa', type: 'air', flag: '✈️', volume: '0.7M tons' },
+    { code: 'ITFCO', name: 'Aéroport de Rome Fiumicino', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'ITMIL_RAIL', name: 'Terminal ferroviaire de Milan', type: 'rail', flag: '🚂', volume: '0.4M TEU' },
+    { code: 'ITROM_RAIL', name: 'Terminal ferroviaire de Rome', type: 'rail', flag: '🚂', volume: '0.3M TEU' },
+    { code: 'ITVCE_RAIL', name: 'Terminal ferroviaire de Venise', type: 'rail', flag: '🚂', volume: '0.2M TEU' }
+  ],
+  'ES': [
+    { code: 'ESALG', name: 'Port d\'Algésiras', type: 'sea', flag: '🚢', volume: '5.1M TEU' },
+    { code: 'ESVAL', name: 'Port de Valence', type: 'sea', flag: '🚢', volume: '5.4M TEU' },
+    { code: 'ESMAD', name: 'Aéroport de Madrid-Barajas', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    { code: 'ESBCN', name: 'Aéroport de Barcelone', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'ESMAD_RAIL', name: 'Terminal ferroviaire de Madrid', type: 'rail', flag: '🚂', volume: '0.3M TEU' },
+    { code: 'ESBCN_RAIL', name: 'Terminal ferroviaire de Barcelone', type: 'rail', flag: '🚂', volume: '0.2M TEU' }
+  ],
+  'PT': [
+    { code: 'PTLIS', name: 'Port de Lisbonne', type: 'sea', flag: '🚢', volume: '1.8M TEU' },
+    { code: 'PTLEX', name: 'Port de Leixões (Porto)', type: 'sea', flag: '🚢', volume: '1.4M TEU' },
+    { code: 'PTLIS_AIR', name: 'Aéroport de Lisbonne', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'PTLIS_RAIL', name: 'Terminal ferroviaire de Lisbonne', type: 'rail', flag: '🚂', volume: '0.1M TEU' },
+    { code: 'PTOPO_RAIL', name: 'Terminal ferroviaire de Porto', type: 'rail', flag: '🚂', volume: '0.08M TEU' }
+  ],
+  'PL': [
+    { code: 'PLGDN', name: 'Port de Gdansk', type: 'sea', flag: '🚢', volume: '2.1M TEU' },
+    { code: 'PLGDY', name: 'Port de Gdynia', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'PLWAW', name: 'Aéroport de Varsovie Chopin', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'PLWAW_RAIL', name: 'Terminal ferroviaire de Varsovie', type: 'rail', flag: '🚂', volume: '0.8M TEU' },
+    { code: 'PLKRA_RAIL', name: 'Terminal ferroviaire de Cracovie', type: 'rail', flag: '🚂', volume: '0.4M TEU' },
+    { code: 'PLMAL_RAIL', name: 'Terminal ferroviaire de Mała', type: 'rail', flag: '🚂', volume: '1.2M TEU' }
+  ],
+  'GR': [
+    { code: 'GRPIR', name: 'Port du Pirée', type: 'sea', flag: '🚢', volume: '5.4M TEU' },
+    { code: 'GRTHE', name: 'Port de Thessalonique', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'GRATH', name: 'Aéroport d\'Athènes', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'TR': [
+    { code: 'TRMER', name: 'Port de Mersin', type: 'sea', flag: '🚢', volume: '1.8M TEU' },
+    { code: 'TRIST', name: 'Port d\'Istanbul', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    { code: 'TRIST_AIR', name: 'Aéroport d\'Istanbul', type: 'air', flag: '✈️', volume: '1.3M tons' }
+  ],
+  'NO': [
+    { code: 'NOOSL', name: 'Port d\'Oslo', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    { code: 'NOOSLO', name: 'Aéroport d\'Oslo Gardermoen', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+  'SE': [
+    { code: 'SEGOT', name: 'Port de Göteborg', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'SESTO', name: 'Port de Stockholm', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'SEARN', name: 'Aéroport d\'Arlanda Stockholm', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'DK': [
+    { code: 'DKAAR', name: 'Port d\'Aarhus', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'DKCPH', name: 'Aéroport de Copenhague', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'FI': [
+    { code: 'FIHEN', name: 'Port d\'Helsinki', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    { code: 'FIHEL', name: 'Aéroport d\'Helsinki-Vantaa', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+  'EE': [
+    { code: 'EETLL', name: 'Port de Tallinn', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'EETLL_AIR', name: 'Aéroport de Tallinn', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'LV': [
+    { code: 'LVRIX', name: 'Port de Riga', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'LVRIX_AIR', name: 'Aéroport de Riga', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'LT': [
+    { code: 'LTKLA', name: 'Port de Klaipeda', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'LTVNO', name: 'Aéroport de Vilnius', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'CZ': [
+    { code: 'CZPRG', name: 'Aéroport de Prague', type: 'air', flag: '✈️', volume: '0.06M tons' },
+    { code: 'CZPRG_RAIL', name: 'Terminal ferroviaire de Prague', type: 'rail', flag: '🚂', volume: '0.1M TEU' }
+  ],
+  'SK': [
+    { code: 'SKBTS', name: 'Aéroport de Bratislava', type: 'air', flag: '✈️', volume: '0.01M tons' },
+    { code: 'SKBTS_RAIL', name: 'Terminal ferroviaire de Bratislava', type: 'rail', flag: '🚂', volume: '0.2M TEU' }
+  ],
+  'HU': [
+    { code: 'HUBUD', name: 'Aéroport de Budapest', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'HUBUD_RAIL', name: 'Terminal ferroviaire de Budapest', type: 'rail', flag: '🚂', volume: '0.3M TEU' }
+  ],
+  'RO': [
+    { code: 'ROCND', name: 'Port de Constanta', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    { code: 'ROBBU', name: 'Aéroport de Bucarest', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'BG': [
+    { code: 'BGVAR', name: 'Port de Varna', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    { code: 'BGSOF', name: 'Aéroport de Sofia', type: 'air', flag: '✈️', volume: '0.03M tons' }
+  ],
+  'HR': [
+    { code: 'HRRIU', name: 'Port de Rijeka', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'HRZAG', name: 'Aéroport de Zagreb', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'SI': [
+    { code: 'SIKOP', name: 'Port de Koper', type: 'sea', flag: '🚢', volume: '1.0M TEU' },
+    { code: 'SILJB', name: 'Aéroport de Ljubljana', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'AT': [
+    { code: 'ATVIE', name: 'Aéroport de Vienne', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    { code: 'ATVIE_RAIL', name: 'Terminal ferroviaire de Vienne', type: 'rail', flag: '🚂', volume: '0.5M TEU' }
+  ],
+  'CH': [
+    { code: 'CHZUR', name: 'Aéroport de Zurich', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    { code: 'CHBAS_RAIL', name: 'Terminal ferroviaire de Bâle', type: 'rail', flag: '🚂', volume: '0.8M TEU' }
+  ],
+  'IE': [
+    { code: 'IEDUB', name: 'Port de Dublin', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    { code: 'IEDUB_AIR', name: 'Aéroport de Dublin', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'IS': [
+    { code: 'ISKEF', name: 'Aéroport de Reykjavik', type: 'air', flag: '✈️', volume: '0.03M tons' }
+  ],
+  'RU': [
+    { code: 'RULED', name: 'Port de St-Pétersbourg', type: 'sea', flag: '🚢', volume: '2.1M TEU' },
+    { code: 'RUNVO', name: 'Port de Novorossiysk', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'RUSVO', name: 'Aéroport de Moscou Sheremetyevo', type: 'air', flag: '✈️', volume: '0.4M tons' },
+    { code: 'RUMOW_RAIL', name: 'Terminal ferroviaire de Moscou', type: 'rail', flag: '🚂', volume: '2.0M TEU' }
+  ],
+  'UA': [
+    { code: 'UAODE', name: 'Port d\'Odessa', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    { code: 'UAKBP', name: 'Aéroport de Kiev Boryspil', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'BY': [
+    { code: 'BYMSQ', name: 'Aéroport de Minsk', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    { code: 'BYMSQ_RAIL', name: 'Terminal ferroviaire de Minsk', type: 'rail', flag: '🚂', volume: '0.3M TEU' }
+  ],
+
+  // Americas
+  'US': [
+    { code: 'USLAX', name: 'Port de Los Angeles', type: 'sea', flag: '🚢', volume: '10.7M TEU' },
+    { code: 'USLGB', name: 'Port de Long Beach', type: 'sea', flag: '🚢', volume: '8.1M TEU' },
+    { code: 'USNYC', name: 'Port de New York/New Jersey', type: 'sea', flag: '🚢', volume: '7.8M TEU' },
+    { code: 'USSAV', name: 'Port de Savannah', type: 'sea', flag: '🚢', volume: '4.6M TEU' },
+    { code: 'USJFK', name: 'Aéroport JFK New York', type: 'air', flag: '✈️', volume: '1.3M tons' },
+    { code: 'USLAX_AIR', name: 'Aéroport LAX Los Angeles', type: 'air', flag: '✈️', volume: '2.2M tons' },
+    { code: 'USMIA', name: 'Aéroport de Miami', type: 'air', flag: '✈️', volume: '2.3M tons' },
+    { code: 'USORD', name: 'Aéroport de Chicago O\'Hare', type: 'air', flag: '✈️', volume: '1.8M tons' }
+  ],
+  'CA': [
+    { code: 'CAVAN', name: 'Port de Vancouver', type: 'sea', flag: '🚢', volume: '3.5M TEU' },
+    { code: 'CAHAL', name: 'Port d\'Halifax', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'CAYYZ', name: 'Aéroport de Toronto Pearson', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    { code: 'CAVAN_AIR', name: 'Aéroport de Vancouver', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'MX': [
+    { code: 'MXVER', name: 'Port de Veracruz', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    { code: 'MXMEX', name: 'Aéroport de Mexico', type: 'air', flag: '✈️', volume: '0.7M tons' }
+  ],
+  'BR': [
+    { code: 'BRSAN', name: 'Port de Santos', type: 'sea', flag: '🚢', volume: '4.3M TEU' },
+    { code: 'BRRIG', name: 'Port de Rio Grande', type: 'sea', flag: '🚢', volume: '1.4M TEU' },
+    { code: 'BRGRU', name: 'Aéroport de São Paulo Guarulhos', type: 'air', flag: '✈️', volume: '0.4M tons' },
+    { code: 'BRGIG', name: 'Aéroport de Rio de Janeiro Galeão', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'AR': [
+    { code: 'ARBUE', name: 'Port de Buenos Aires', type: 'sea', flag: '🚢', volume: '1.7M TEU' },
+    { code: 'AREZE', name: 'Aéroport de Buenos Aires Ezeiza', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+  'CL': [
+    { code: 'CLVAP', name: 'Port de Valparaiso', type: 'sea', flag: '🚢', volume: '1.0M TEU' },
+    { code: 'CLSAN', name: 'Port de San Antonio', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'CLSCL', name: 'Aéroport de Santiago', type: 'air', flag: '✈️', volume: '0.5M tons' }
+  ],
+  'PE': [
+    { code: 'PECAL', name: 'Port du Callao', type: 'sea', flag: '🚢', volume: '2.3M TEU' },
+    { code: 'PELIM', name: 'Aéroport de Lima Jorge Chávez', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'CO': [
+    { code: 'COCAR', name: 'Port de Carthagène', type: 'sea', flag: '🚢', volume: '3.0M TEU' },
+    { code: 'COBOG', name: 'Aéroport de Bogotá El Dorado', type: 'air', flag: '✈️', volume: '0.7M tons' }
+  ],
+  'EC': [
+    { code: 'ECGYE', name: 'Port de Guayaquil', type: 'sea', flag: '🚢', volume: '1.9M TEU' },
+    { code: 'ECUIO', name: 'Aéroport de Quito', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+
+  // Asia-Pacific
+  'CN': [
+    { code: 'CNSHA', name: 'Port de Shanghai', type: 'sea', flag: '🚢', volume: '47M TEU' },
+    { code: 'CNSZX', name: 'Port de Shenzhen', type: 'sea', flag: '🚢', volume: '28M TEU' },
+    { code: 'CNPVG', name: 'Aéroport de Shanghai Pudong', type: 'air', flag: '✈️', volume: '3.6M tons' },
+    { code: 'CNPEK', name: 'Aéroport de Beijing Capital', type: 'air', flag: '✈️', volume: '2M tons' }
+  ],
+  'JP': [
+    { code: 'JPTYO', name: 'Port de Tokyo', type: 'sea', flag: '🚢', volume: '4.2M TEU' },
+    { code: 'JPYOK', name: 'Port de Yokohama', type: 'sea', flag: '🚢', volume: '2.9M TEU' },
+    { code: 'JPNRT', name: 'Aéroport de Tokyo Narita', type: 'air', flag: '✈️', volume: '2.3M tons' },
+    { code: 'JPKIX', name: 'Aéroport de Kansai Osaka', type: 'air', flag: '✈️', volume: '0.9M tons' }
+  ],
+  'KR': [
+    { code: 'KRPUS', name: 'Port de Busan', type: 'sea', flag: '🚢', volume: '22.9M TEU' },
+    { code: 'KRICN', name: 'Aéroport de Seoul Incheon', type: 'air', flag: '✈️', volume: '2.8M tons' }
+  ],
+  'TW': [
+    { code: 'TWKAO', name: 'Port de Kaohsiung', type: 'sea', flag: '🚢', volume: '10.2M TEU' },
+    { code: 'TWTPE', name: 'Aéroport de Taipei Taoyuan', type: 'air', flag: '✈️', volume: '2.2M tons' }
+  ],
+  'HK': [
+    { code: 'HKHKG', name: 'Port de Hong Kong', type: 'sea', flag: '🚢', volume: '17.8M TEU' },
+    { code: 'HKHKG_AIR', name: 'Aéroport de Hong Kong', type: 'air', flag: '✈️', volume: '4.2M tons' }
+  ],
+  'SG': [
+    { code: 'SGSIN', name: 'Port de Singapour', type: 'sea', flag: '🚢', volume: '37.5M TEU' },
+    { code: 'SGSIN_AIR', name: 'Aéroport de Singapour Changi', type: 'air', flag: '✈️', volume: '2.0M tons' }
+  ],
+  'MY': [
+    { code: 'MYPKG', name: 'Port Klang', type: 'sea', flag: '🚢', volume: '13.6M TEU' },
+    { code: 'MYKUL', name: 'Aéroport de Kuala Lumpur', type: 'air', flag: '✈️', volume: '0.8M tons' }
+  ],
+  'TH': [
+    { code: 'THLCH', name: 'Port de Laem Chabang', type: 'sea', flag: '🚢', volume: '8.1M TEU' },
+    { code: 'THBKK', name: 'Aéroport de Bangkok Suvarnabhumi', type: 'air', flag: '✈️', volume: '1.3M tons' }
+  ],
+  'VN': [
+    { code: 'VNHPH', name: 'Port de Hai Phong', type: 'sea', flag: '🚢', volume: '2.7M TEU' },
+    { code: 'VNSGN', name: 'Port de Ho Chi Minh Ville', type: 'sea', flag: '🚢', volume: '7.2M TEU' },
+    { code: 'VNSGN_AIR', name: 'Aéroport de Ho Chi Minh Ville', type: 'air', flag: '✈️', volume: '0.6M tons' }
+  ],
+  'PH': [
+    { code: 'PHMNL', name: 'Port de Manille', type: 'sea', flag: '🚢', volume: '4.2M TEU' },
+    { code: 'PHMNL_AIR', name: 'Aéroport de Manille', type: 'air', flag: '✈️', volume: '0.7M tons' }
+  ],
+  'ID': [
+    { code: 'IDJKT', name: 'Port de Jakarta (Tanjung Priok)', type: 'sea', flag: '🚢', volume: '7.6M TEU' },
+    { code: 'IDCGK', name: 'Aéroport de Jakarta Soekarno-Hatta', type: 'air', flag: '✈️', volume: '0.7M tons' }
+  ],
+  'IN': [
+    { code: 'INJNP', name: 'Port de Jawaharlal Nehru', type: 'sea', flag: '🚢', volume: '5.0M TEU' },
+    { code: 'INMAA', name: 'Port de Chennai', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'INBOM', name: 'Aéroport de Mumbai', type: 'air', flag: '✈️', volume: '0.9M tons' },
+    { code: 'INDEL', name: 'Aéroport de Delhi', type: 'air', flag: '✈️', volume: '1.1M tons' }
+  ],
+  'LK': [
+    { code: 'LKCMB', name: 'Port de Colombo', type: 'sea', flag: '🚢', volume: '7.2M TEU' },
+    { code: 'LKCMB_AIR', name: 'Aéroport de Colombo', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'AU': [
+    { code: 'AUSYD', name: 'Port de Sydney', type: 'sea', flag: '🚢', volume: '2.6M TEU' },
+    { code: 'AUMEL', name: 'Port de Melbourne', type: 'sea', flag: '🚢', volume: '3.0M TEU' },
+    { code: 'AUSYD_AIR', name: 'Aéroport de Sydney', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    { code: 'AUMEL_AIR', name: 'Aéroport de Melbourne', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'NZ': [
+    { code: 'NZAKL', name: 'Port d\'Auckland', type: 'sea', flag: '🚢', volume: '1.0M TEU' },
+    { code: 'NZAKL_AIR', name: 'Aéroport d\'Auckland', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+
+  // Middle East & Africa
+  'AE': [
+    { code: 'AEJEA', name: 'Port Jebel Ali (Dubai)', type: 'sea', flag: '🚢', volume: '14.1M TEU' },
+    { code: 'AEDXB', name: 'Aéroport de Dubai', type: 'air', flag: '✈️', volume: '2.9M tons' },
+    { code: 'AEAUH', name: 'Aéroport d\'Abu Dhabi', type: 'air', flag: '✈️', volume: '0.7M tons' }
+  ],
+  'SA': [
+    { code: 'SAJED', name: 'Port du Roi Abdulaziz (Dammam)', type: 'sea', flag: '🚢', volume: '1.8M TEU' },
+    { code: 'SARRH', name: 'Aéroport de Riyadh', type: 'air', flag: '✈️', volume: '0.5M tons' }
+  ],
+  'QA': [
+    { code: 'QADOH', name: 'Port de Doha', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'QADOH_AIR', name: 'Aéroport de Doha Hamad', type: 'air', flag: '✈️', volume: '1.4M tons' }
+  ],
+  'KW': [
+    { code: 'KWKWI', name: 'Port du Koweït', type: 'sea', flag: '🚢', volume: '1.0M TEU' },
+    { code: 'KWKWI_AIR', name: 'Aéroport du Koweït', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'OM': [
+    { code: 'OMSLL', name: 'Port de Salalah', type: 'sea', flag: '🚢', volume: '3.5M TEU' },
+    { code: 'OMSLL_AIR', name: 'Aéroport de Salalah', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'BH': [
+    { code: 'BHBAH', name: 'Port de Bahreïn', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'BHBAH_AIR', name: 'Aéroport de Bahreïn', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'IL': [
+    { code: 'ILASH', name: 'Port d\'Ashdod', type: 'sea', flag: '🚢', volume: '1.6M TEU' },
+    { code: 'ILTLV', name: 'Aéroport de Tel Aviv Ben Gurion', type: 'air', flag: '✈️', volume: '0.4M tons' }
+  ],
+  'EG': [
+    { code: 'EGALY', name: 'Port d\'Alexandrie', type: 'sea', flag: '🚢', volume: '2.5M TEU' },
+    { code: 'EGCAI', name: 'Aéroport du Caire', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'ZA': [
+    { code: 'ZADUR', name: 'Port de Durban', type: 'sea', flag: '🚢', volume: '2.9M TEU' },
+    { code: 'ZACPT', name: 'Port du Cap', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    { code: 'ZAJNB', name: 'Aéroport de Johannesburg OR Tambo', type: 'air', flag: '✈️', volume: '0.5M tons' }
+  ],
+  'MA': [
+    { code: 'MACAS', name: 'Port de Casablanca', type: 'sea', flag: '🚢', volume: '1.4M TEU' },
+    { code: 'MATAN', name: 'Port de Tanger Med', type: 'sea', flag: '🚢', volume: '7.8M TEU' },
+    { code: 'MACMN', name: 'Aéroport de Casablanca Mohammed V', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'NG': [
+    { code: 'NGLOS', name: 'Port de Lagos', type: 'sea', flag: '🚢', volume: '1.7M TEU' },
+    { code: 'NGLOS_AIR', name: 'Aéroport de Lagos', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+  'GH': [
+    { code: 'GHTEM', name: 'Port de Tema', type: 'sea', flag: '🚢', volume: '1.3M TEU' },
+    { code: 'GHACC', name: 'Aéroport d\'Accra', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'CI': [
+    { code: 'CIABJ', name: 'Port d\'Abidjan', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'CIABJ_AIR', name: 'Aéroport d\'Abidjan', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'KE': [
+    { code: 'KEMBA', name: 'Port de Mombasa', type: 'sea', flag: '🚢', volume: '1.4M TEU' },
+    { code: 'KENBO', name: 'Aéroport de Nairobi Jomo Kenyatta', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'TZ': [
+    { code: 'TZDAR', name: 'Port de Dar es Salaam', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'TZDAR_AIR', name: 'Aéroport de Dar es Salaam', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'DZ': [
+    { code: 'DZALG', name: 'Port d\'Alger', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'DZALG_AIR', name: 'Aéroport d\'Alger', type: 'air', flag: '✈️', volume: '0.03M tons' }
+  ],
+  'TN': [
+    { code: 'TNRAD', name: 'Port de Radès', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'TNTUN', name: 'Aéroport de Tunis-Carthage', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+
+  // Additional Asian Countries
+  'KH': [
+    { code: 'KHPNH', name: 'Port de Phnom Penh', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'KHPNH_AIR', name: 'Aéroport de Phnom Penh', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'KHKOS', name: 'Port de Sihanoukville', type: 'sea', flag: '🚢', volume: '0.8M TEU' }
+  ],
+  'LA': [
+    { code: 'LAVTE', name: 'Aéroport de Vientiane', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'MM': [
+    { code: 'MMRGN', name: 'Port de Yangon', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'MMRGN_AIR', name: 'Aéroport de Yangon', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'BD': [
+    { code: 'BDCGP', name: 'Port de Chittagong', type: 'sea', flag: '🚢', volume: '3.1M TEU' },
+    { code: 'BDDAC', name: 'Aéroport de Dhaka', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'NP': [
+    { code: 'NPKTM', name: 'Aéroport de Katmandou', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'BT': [
+    { code: 'BTPAR', name: 'Aéroport de Paro', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'MV': [
+    { code: 'MVMLE', name: 'Aéroport de Malé', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'BN': [
+    { code: 'BNBWN', name: 'Aéroport de Bandar Seri Begawan', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'TL': [
+    { code: 'TLDIL', name: 'Aéroport de Dili', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+
+  // Additional Middle Eastern Countries
+  'IR': [
+    { code: 'IRIMA', name: 'Port de Bandar Abbas', type: 'sea', flag: '🚢', volume: '2.8M TEU' },
+    { code: 'IRIMA_AIR', name: 'Aéroport de Téhéran Imam Khomeini', type: 'air', flag: '✈️', volume: '0.4M tons' }
+  ],
+  'IQ': [
+    { code: 'IQBSR', name: 'Port de Bassorah', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'IQBGW', name: 'Aéroport de Bagdad', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'JO': [
+    { code: 'JOAQJ', name: 'Port d\'Aqaba', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'JOAMM', name: 'Aéroport d\'Amman', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'LB': [
+    { code: 'LBBEY', name: 'Port de Beyrouth', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    { code: 'LBBEY_AIR', name: 'Aéroport de Beyrouth', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'SY': [
+    { code: 'SYLAT', name: 'Port de Lattaquié', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    { code: 'SYDAM', name: 'Aéroport de Damas', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'YE': [
+    { code: 'YEADE', name: 'Port d\'Aden', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    { code: 'YEADE_AIR', name: 'Aéroport d\'Aden', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+
+  // Central Asian Countries
+  'KZ': [
+    { code: 'KZALA', name: 'Aéroport d\'Almaty', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'KZALA_RAIL', name: 'Terminal ferroviaire d\'Almaty', type: 'rail', flag: '🚂', volume: '0.5M TEU' }
+  ],
+  'UZ': [
+    { code: 'UZTAS', name: 'Aéroport de Tashkent', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'UZTAS_RAIL', name: 'Terminal ferroviaire de Tashkent', type: 'rail', flag: '🚂', volume: '0.3M TEU' }
+  ],
+  'KG': [
+    { code: 'KGFRU', name: 'Aéroport de Bichkek', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'TJ': [
+    { code: 'TJDYU', name: 'Aéroport de Douchanbe', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'TM': [
+    { code: 'TMASB', name: 'Aéroport d\'Achgabat', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'AF': [
+    { code: 'AFKBL', name: 'Aéroport de Kaboul', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'PK': [
+    { code: 'PKKHI', name: 'Port de Karachi', type: 'sea', flag: '🚢', volume: '2.4M TEU' },
+    { code: 'PKKHI_AIR', name: 'Aéroport de Karachi', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'PKLHE', name: 'Aéroport de Lahore', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'MN': [
+    { code: 'MNULN', name: 'Aéroport d\'Oulan-Bator', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    { code: 'MNULN_RAIL', name: 'Terminal ferroviaire d\'Oulan-Bator', type: 'rail', flag: '🚂', volume: '0.1M TEU' }
+  ],
+
+  // Additional African Countries
+  'ET': [
+    { code: 'ETADD', name: 'Aéroport d\'Addis-Abeba', type: 'air', flag: '✈️', volume: '0.4M tons' }
+  ],
+  'ER': [
+    { code: 'ERASM', name: 'Port d\'Asmara', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    { code: 'ERASM_AIR', name: 'Aéroport d\'Asmara', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'DJ': [
+    { code: 'DJJIB', name: 'Port de Djibouti', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    { code: 'DJJIB_AIR', name: 'Aéroport de Djibouti', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'SO': [
+    { code: 'SOMGQ', name: 'Port de Mogadiscio', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'SOMGQ_AIR', name: 'Aéroport de Mogadiscio', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'UG': [
+    { code: 'UGEBB', name: 'Aéroport d\'Entebbe', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'RW': [
+    { code: 'RWKGL', name: 'Aéroport de Kigali', type: 'air', flag: '✈️', volume: '0.04M tons' }
+  ],
+  'BI': [
+    { code: 'BIBJM', name: 'Aéroport de Bujumbura', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'SS': [
+    { code: 'SSJUB', name: 'Aéroport de Juba', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'SD': [
+    { code: 'SDPZB', name: 'Port de Port-Soudan', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'SDKRT', name: 'Aéroport de Khartoum', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'LY': [
+    { code: 'LYTIP', name: 'Port de Tripoli', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'LYTIP_AIR', name: 'Aéroport de Tripoli', type: 'air', flag: '✈️', volume: '0.03M tons' }
+  ],
+  'TD': [
+    { code: 'TDNDJ', name: 'Aéroport de N\'Djaména', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'CF': [
+    { code: 'CFBGF', name: 'Aéroport de Bangui', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'CD': [
+    { code: 'CDFIH', name: 'Aéroport de Kinshasa', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'CDMAT', name: 'Port de Matadi', type: 'sea', flag: '🚢', volume: '0.5M TEU' }
+  ],
+  'CG': [
+    { code: 'CGPNR', name: 'Port de Pointe-Noire', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'CGBZV', name: 'Aéroport de Brazzaville', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'CM': [
+    { code: 'CMDLA', name: 'Port de Douala', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'CMDLA_AIR', name: 'Aéroport de Douala', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'CMNSM', name: 'Aéroport de Yaoundé', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'GA': [
+    { code: 'GALIB', name: 'Port de Libreville', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'GALIB_AIR', name: 'Aéroport de Libreville', type: 'air', flag: '✈️', volume: '0.03M tons' }
+  ],
+  'GQ': [
+    { code: 'GQMSG', name: 'Aéroport de Malabo', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'ST': [
+    { code: 'STTMS', name: 'Aéroport de São Tomé', type: 'air', flag: '✈️', volume: '0.005M tons' }
+  ],
+  'AO': [
+    { code: 'AOLAD', name: 'Port de Luanda', type: 'sea', flag: '🚢', volume: '1.0M TEU' },
+    { code: 'AOLAD_AIR', name: 'Aéroport de Luanda', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+
+  // Additional African Countries (continued)
+  'ZM': [
+    { code: 'ZMLUN', name: 'Aéroport de Lusaka', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'ZW': [
+    { code: 'ZWHRE', name: 'Aéroport de Harare', type: 'air', flag: '✈️', volume: '0.03M tons' }
+  ],
+  'MW': [
+    { code: 'MWBLZ', name: 'Aéroport de Blantyre', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'MZ': [
+    { code: 'MZMPB', name: 'Port de Maputo', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'MZMPB_AIR', name: 'Aéroport de Maputo', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'MG': [
+    { code: 'MGTNR', name: 'Port de Toamasina', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    { code: 'MGTNR_AIR', name: 'Aéroport d\'Antananarivo', type: 'air', flag: '✈️', volume: '0.03M tons' }
+  ],
+  'MU': [
+    { code: 'MUPLU', name: 'Port Louis', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    { code: 'MUPLU_AIR', name: 'Aéroport de Maurice', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'SC': [
+    { code: 'SCSEZ', name: 'Aéroport de Victoria', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'KM': [
+    { code: 'KMHAH', name: 'Aéroport de Moroni', type: 'air', flag: '✈️', volume: '0.005M tons' }
+  ],
+  'LS': [
+    { code: 'LSMSK', name: 'Aéroport de Maseru', type: 'air', flag: '✈️', volume: '0.005M tons' }
+  ],
+  'SZ': [
+    { code: 'SZMTS', name: 'Aéroport de Matsapha', type: 'air', flag: '✈️', volume: '0.005M tons' }
+  ],
+  'BW': [
+    { code: 'BWGBE', name: 'Aéroport de Gaborone', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'NA': [
+    { code: 'NAWDH', name: 'Port de Walvis Bay', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    { code: 'NAWDH_AIR', name: 'Aéroport de Windhoek', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+
+  // Additional West African Countries
+  'SN': [
+    { code: 'SNDKR', name: 'Port de Dakar', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    { code: 'SNDKR_AIR', name: 'Aéroport de Dakar', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'GM': [
+    { code: 'GMBJL', name: 'Port de Banjul', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    { code: 'GMBJL_AIR', name: 'Aéroport de Banjul', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'GW': [
+    { code: 'GWOXB', name: 'Aéroport de Bissau', type: 'air', flag: '✈️', volume: '0.005M tons' }
+  ],
+  'GN': [
+    { code: 'GNCKY', name: 'Port de Conakry', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'GNCKY_AIR', name: 'Aéroport de Conakry', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'SL': [
+    { code: 'SLFNA', name: 'Port de Freetown', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'SLFNA_AIR', name: 'Aéroport de Freetown', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'LR': [
+    { code: 'LRMLW', name: 'Port de Monrovia', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    { code: 'LRMLW_AIR', name: 'Aéroport de Monrovia', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'ML': [
+    { code: 'MLBKO', name: 'Aéroport de Bamako', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'BF': [
+    { code: 'BFOUA', name: 'Aéroport de Ouagadougou', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'NE': [
+    { code: 'NENIM', name: 'Aéroport de Niamey', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'TG': [
+    { code: 'TGLFW', name: 'Port de Lomé', type: 'sea', flag: '🚢', volume: '1.8M TEU' },
+    { code: 'TGLFW_AIR', name: 'Aéroport de Lomé', type: 'air', flag: '✈️', volume: '0.03M tons' }
+  ],
+  'BJ': [
+    { code: 'BJCOO', name: 'Port de Cotonou', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'BJCOO_AIR', name: 'Aéroport de Cotonou', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+
+  // Additional American Countries
+  'GT': [
+    { code: 'GTGUA', name: 'Aéroport de Guatemala City', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'GTPQU', name: 'Port de Puerto Quetzal', type: 'sea', flag: '🚢', volume: '0.9M TEU' }
+  ],
+  'BZ': [
+    { code: 'BZBZE', name: 'Aéroport de Belize City', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'SV': [
+    { code: 'SVSAL', name: 'Aéroport de San Salvador', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    { code: 'SVSAL_SEA', name: 'Port d\'Acajutla', type: 'sea', flag: '🚢', volume: '0.5M TEU' }
+  ],
+  'HN': [
+    { code: 'HNTGU', name: 'Aéroport de Tegucigalpa', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    { code: 'HNPCO', name: 'Port de Puerto Cortés', type: 'sea', flag: '🚢', volume: '1.2M TEU' }
+  ],
+  'NI': [
+    { code: 'NIMGA', name: 'Aéroport de Managua', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    { code: 'NICOR', name: 'Port de Corinto', type: 'sea', flag: '🚢', volume: '0.3M TEU' }
+  ],
+  'CR': [
+    { code: 'CRSJO', name: 'Aéroport de San José', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'CRLIM', name: 'Port de Limón', type: 'sea', flag: '🚢', volume: '1.2M TEU' }
+  ],
+  'PA': [
+    { code: 'PAPTY', name: 'Aéroport de Panama City', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'PAPTY_SEA', name: 'Port de Balboa', type: 'sea', flag: '🚢', volume: '3.5M TEU' },
+    { code: 'PACLN', name: 'Port de Colón', type: 'sea', flag: '🚢', volume: '4.3M TEU' }
+  ],
+  'CU': [
+    { code: 'CUHAV', name: 'Port de La Havane', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    { code: 'CUHAV_AIR', name: 'Aéroport de La Havane', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'JM': [
+    { code: 'JMKIN', name: 'Port de Kingston', type: 'sea', flag: '🚢', volume: '1.7M TEU' },
+    { code: 'JMKIN_AIR', name: 'Aéroport de Kingston', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'HT': [
+    { code: 'HTPAP', name: 'Port de Port-au-Prince', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    { code: 'HTPAP_AIR', name: 'Aéroport de Port-au-Prince', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'DO': [
+    { code: 'DOSDQ', name: 'Port de Santo Domingo', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    { code: 'DOSDQ_AIR', name: 'Aéroport de Santo Domingo', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'TT': [
+    { code: 'TTPOS', name: 'Port d\'Espagne', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    { code: 'TTPOS_AIR', name: 'Aéroport de Port d\'Espagne', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'BB': [
+    { code: 'BBBGI', name: 'Port de Bridgetown', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    { code: 'BBBGI_AIR', name: 'Aéroport de Bridgetown', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'GY': [
+    { code: 'GYGEO', name: 'Port de Georgetown', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'GYGEO_AIR', name: 'Aéroport de Georgetown', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'SR': [
+    { code: 'SRPBM', name: 'Port de Paramaribo', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    { code: 'SRPBM_AIR', name: 'Aéroport de Paramaribo', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'UY': [
+    { code: 'UYMVD', name: 'Port de Montevideo', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    { code: 'UYMVD_AIR', name: 'Aéroport de Montevideo', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'PY': [
+    { code: 'PYASU', name: 'Aéroport d\'Asunción', type: 'air', flag: '✈️', volume: '0.03M tons' }
+  ],
+  'BO': [
+    { code: 'BOLPB', name: 'Aéroport de La Paz', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'BOVVI', name: 'Aéroport de Santa Cruz', type: 'air', flag: '✈️', volume: '0.08M tons' }
+  ],
+  'VE': [
+    { code: 'VELCG', name: 'Port de La Guaira', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    { code: 'VECCS', name: 'Aéroport de Caracas', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+
+  // Additional Oceania Countries
+  'FJ': [
+    { code: 'FJSUV', name: 'Port de Suva', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    { code: 'FJSUV_AIR', name: 'Aéroport de Suva', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'PG': [
+    { code: 'PGPOM', name: 'Port de Port Moresby', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'PGPOM_AIR', name: 'Aéroport de Port Moresby', type: 'air', flag: '✈️', volume: '0.03M tons' }
+  ],
+  'NC': [
+    { code: 'NCNOU', name: 'Port de Nouméa', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    { code: 'NCNOU_AIR', name: 'Aéroport de Nouméa', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'PF': [
+    { code: 'PFPPT', name: 'Aéroport de Tahiti', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'TO': [
+    { code: 'TOTBU', name: 'Aéroport de Nuku\'alofa', type: 'air', flag: '✈️', volume: '0.005M tons' }
+  ],
+  'WS': [
+    { code: 'WSAPIA', name: 'Aéroport d\'Apia', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'VU': [
+    { code: 'VUVLI', name: 'Aéroport de Port Vila', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'SB': [
+    { code: 'SBHIR', name: 'Aéroport de Honiara', type: 'air', flag: '✈️', volume: '0.005M tons' }
+  ]
+};
 
 
 
@@ -318,6 +1248,8 @@ const I18N_TEXT = {
     port: 'Port',
     airport: 'Airport', 
     railTerminal: 'Rail Terminal',
+    seaPort: 'Sea Port',
+    volume: 'Volume',
     businessAddress: 'Business address',
     residentialAddress: 'Residential address',
     chooseLocationDescription: 'Choose your pickup location',
@@ -363,6 +1295,10 @@ const I18N_TEXT = {
     searchCountryDescription: 'Search for the country where you want to ship your goods',
     addressTypeQuestion: 'What type of address is your destination?',
     selectDestinationLocationType: 'Please select a destination location type',
+    selectDestinationPort: 'Select destination port',
+    selectDestinationPortDescription: 'Choose the specific port or airport for delivery',
+    searchPortsIn: 'Search ports in',
+    searchDestinationPorts: 'Search destination ports',
     enterDestinationDetails: 'Enter destination details',
     // Validation messages
     validationShippingType: 'Please select a shipping type',
@@ -414,6 +1350,7 @@ const I18N_TEXT = {
     annualVolume: "Annual volume",
     // Port translations
     ports: {
+      // China pickup ports
       'SHA': 'Shanghai',
       'SZX': 'Shenzhen',
       'NGB': 'Ningbo-Zhoushan',
@@ -435,7 +1372,200 @@ const I18N_TEXT = {
       'ZIH': 'Zhengzhou Rail Terminal',
       'CQN': 'Chongqing Rail Terminal',
       'WUH': 'Wuhan Rail Terminal',
-      'CDU': 'Chengdu Rail Terminal'
+      'CDU': 'Chengdu Rail Terminal',
+      // Destination ports - Europe
+      'FRMRS': 'Port of Marseille-Fos',
+      'FRLEH': 'Port of Le Havre',
+      'FRCDG': 'Charles de Gaulle Airport',
+      'FRORY': 'Paris-Orly Airport',
+      'FRLYO': 'Lyon-Saint Exupéry Airport',
+      'DEHAM': 'Port of Hamburg',
+      'DEBRE': 'Port of Bremen',
+      'DEFRA': 'Frankfurt Airport',
+      'DEMUC': 'Munich Airport',
+      'DEHAM_RAIL': 'Hamburg Rail Terminal',
+      'GBFXT': 'Port of Felixstowe',
+      'GBSOU': 'Port of Southampton',
+      'GBLHR': 'London Heathrow Airport',
+      'GBLGW': 'London Gatwick Airport',
+      'GBMAN': 'Manchester Airport',
+      'NLRTM': 'Port of Rotterdam',
+      'NLAMS': 'Amsterdam Schiphol Airport',
+      'BEANR': 'Port of Antwerp',
+      'BEBRU': 'Brussels Airport',
+      'BELGG': 'Liège Airport',
+      'ITGOA': 'Port of Genoa',
+      'ITLSP': 'Port of La Spezia',
+      'ITMXP': 'Milan Malpensa Airport',
+      'ITFCO': 'Rome Fiumicino Airport',
+      'ESALG': 'Port of Algeciras',
+      'ESVAL': 'Port of Valencia',
+      'ESMAD': 'Madrid-Barajas Airport',
+      'ESBCN': 'Barcelona Airport',
+      'PTLIS': 'Port of Lisbon',
+      'PTLEX': 'Port of Leixões (Porto)',
+      'PTLIS_AIR': 'Lisbon Airport',
+      'PLGDN': 'Port of Gdansk',
+      'PLGDY': 'Port of Gdynia',
+      'PLWAW': 'Warsaw Chopin Airport',
+      'GRPIR': 'Port of Piraeus',
+      'GRTHE': 'Port of Thessaloniki',
+      'GRATH': 'Athens Airport',
+      'TRMER': 'Port of Mersin',
+      'TRIST': 'Port of Istanbul',
+      'TRIST_AIR': 'Istanbul Airport',
+      'NOOSL': 'Port of Oslo',
+      'NOOSLO': 'Oslo Gardermoen Airport',
+      'SEGOT': 'Port of Gothenburg',
+      'SESTO': 'Port of Stockholm',
+      'SEARN': 'Stockholm Arlanda Airport',
+      'DKAAR': 'Port of Aarhus',
+      'DKCPH': 'Copenhagen Airport',
+      'FIHEN': 'Port of Helsinki',
+      'FIHEL': 'Helsinki-Vantaa Airport',
+      'EETLL': 'Port of Tallinn',
+      'EETLL_AIR': 'Tallinn Airport',
+      'LVRIX': 'Port of Riga',
+      'LVRIX_AIR': 'Riga Airport',
+      'LTKLA': 'Port of Klaipeda',
+      'LTVNO': 'Vilnius Airport',
+      'CZPRG': 'Prague Airport',
+      'CZPRG_RAIL': 'Prague Rail Terminal',
+      'SKBTS': 'Bratislava Airport',
+      'SKBTS_RAIL': 'Bratislava Rail Terminal',
+      'HUBUD': 'Budapest Airport',
+      'HUBUD_RAIL': 'Budapest Rail Terminal',
+      'ROCND': 'Port of Constanta',
+      'ROBBU': 'Bucharest Airport',
+      'BGVAR': 'Port of Varna',
+      'BGSOF': 'Sofia Airport',
+      'HRRIU': 'Port of Rijeka',
+      'HRZAG': 'Zagreb Airport',
+      'SIKOP': 'Port of Koper',
+      'SILJB': 'Ljubljana Airport',
+      'ATVIE': 'Vienna Airport',
+      'ATVIE_RAIL': 'Vienna Rail Terminal',
+      'CHZUR': 'Zurich Airport',
+      'CHBAS_RAIL': 'Basel Rail Terminal',
+      'IEDUB': 'Port of Dublin',
+      'IEDUB_AIR': 'Dublin Airport',
+      'ISKEF': 'Reykjavik Airport',
+      'RULED': 'Port of St. Petersburg',
+      'RUNVO': 'Port of Novorossiysk',
+      'RUSVO': 'Moscow Sheremetyevo Airport',
+      'RUMOW_RAIL': 'Moscow Rail Terminal',
+      'UAODE': 'Port of Odessa',
+      'UAKBP': 'Kiev Boryspil Airport',
+      'BYMSQ': 'Minsk Airport',
+      'BYMSQ_RAIL': 'Minsk Rail Terminal',
+      // Americas
+      'USLAX': 'Port of Los Angeles',
+      'USLGB': 'Port of Long Beach',
+      'USNYC': 'Port of New York/New Jersey',
+      'USSAV': 'Port of Savannah',
+      'USJFK': 'JFK Airport New York',
+      'USLAX_AIR': 'LAX Airport Los Angeles',
+      'USMIA': 'Miami Airport',
+      'USORD': 'Chicago O\'Hare Airport',
+      'CAVAN': 'Port of Vancouver',
+      'CAHAL': 'Port of Halifax',
+      'CAYYZ': 'Toronto Pearson Airport',
+      'CAVAN_AIR': 'Vancouver Airport',
+      'MXVER': 'Port of Veracruz',
+      'MXMEX': 'Mexico City Airport',
+      'BRSAN': 'Port of Santos',
+      'BRRIG': 'Port of Rio Grande',
+      'BRGRU': 'São Paulo Guarulhos Airport',
+      'BRGIG': 'Rio de Janeiro Galeão Airport',
+      'ARBUE': 'Port of Buenos Aires',
+      'AREZE': 'Buenos Aires Ezeiza Airport',
+      'CLVAP': 'Port of Valparaiso',
+      'CLSAN': 'Port of San Antonio',
+      'CLSCL': 'Santiago Airport',
+      'PECAL': 'Port of Callao',
+      'PELIM': 'Lima Jorge Chávez Airport',
+      'COCAR': 'Port of Cartagena',
+      'COBOG': 'Bogotá El Dorado Airport',
+      'ECGYE': 'Port of Guayaquil',
+      'ECUIO': 'Quito Airport',
+      // Asia-Pacific
+      'CNSHA': 'Port of Shanghai',
+      'CNSZX': 'Port of Shenzhen',
+      'CNPVG': 'Shanghai Pudong Airport',
+      'CNPEK': 'Beijing Capital Airport',
+      'JPTYO': 'Port of Tokyo',
+      'JPYOK': 'Port of Yokohama',
+      'JPNRT': 'Tokyo Narita Airport',
+      'JPKIX': 'Kansai Osaka Airport',
+      'KRPUS': 'Port of Busan',
+      'KRICN': 'Seoul Incheon Airport',
+      'TWKAO': 'Port of Kaohsiung',
+      'TWTPE': 'Taipei Taoyuan Airport',
+      'HKHKG': 'Port of Hong Kong',
+      'HKHKG_AIR': 'Hong Kong Airport',
+      'SGSIN': 'Port of Singapore',
+      'SGSIN_AIR': 'Singapore Changi Airport',
+      'MYPKG': 'Port Klang',
+      'MYKUL': 'Kuala Lumpur Airport',
+      'THLCH': 'Port of Laem Chabang',
+      'THBKK': 'Bangkok Suvarnabhumi Airport',
+      'VNHPH': 'Port of Hai Phong',
+      'VNSGN': 'Port of Ho Chi Minh City',
+      'VNSGN_AIR': 'Ho Chi Minh City Airport',
+      'PHMNL': 'Port of Manila',
+      'PHMNL_AIR': 'Manila Airport',
+      'IDJKT': 'Port of Jakarta (Tanjung Priok)',
+      'IDCGK': 'Jakarta Soekarno-Hatta Airport',
+      'INJNP': 'Port of Jawaharlal Nehru',
+      'INMAA': 'Port of Chennai',
+      'INBOM': 'Mumbai Airport',
+      'INDEL': 'Delhi Airport',
+      'LKCMB': 'Port of Colombo',
+      'LKCMB_AIR': 'Colombo Airport',
+      'AUSYD': 'Port of Sydney',
+      'AUMEL': 'Port of Melbourne',
+      'AUSYD_AIR': 'Sydney Airport',
+      'AUMEL_AIR': 'Melbourne Airport',
+      'NZAKL': 'Port of Auckland',
+      'NZAKL_AIR': 'Auckland Airport',
+      // Middle East & Africa
+      'AEJEA': 'Port Jebel Ali (Dubai)',
+      'AEDXB': 'Dubai Airport',
+      'AEAUH': 'Abu Dhabi Airport',
+      'SAJED': 'King Abdulaziz Port (Dammam)',
+      'SARRH': 'Riyadh Airport',
+      'QADOH': 'Port of Doha',
+      'QADOH_AIR': 'Doha Hamad Airport',
+      'KWKWI': 'Port of Kuwait',
+      'KWKWI_AIR': 'Kuwait Airport',
+      'OMSLL': 'Port of Salalah',
+      'OMSLL_AIR': 'Salalah Airport',
+      'BHBAH': 'Port of Bahrain',
+      'BHBAH_AIR': 'Bahrain Airport',
+      'ILASH': 'Port of Ashdod',
+      'ILTLV': 'Tel Aviv Ben Gurion Airport',
+      'EGALY': 'Port of Alexandria',
+      'EGCAI': 'Cairo Airport',
+      'ZADUR': 'Port of Durban',
+      'ZACPT': 'Port of Cape Town',
+      'ZAJNB': 'Johannesburg OR Tambo Airport',
+      'MACAS': 'Port of Casablanca',
+      'MATAN': 'Port of Tanger Med',
+      'MACMN': 'Casablanca Mohammed V Airport',
+      'NGLOS': 'Port of Lagos',
+      'NGLOS_AIR': 'Lagos Airport',
+      'GHTEM': 'Port of Tema',
+      'GHACC': 'Accra Airport',
+      'CIABJ': 'Port of Abidjan',
+      'CIABJ_AIR': 'Abidjan Airport',
+      'KEMBA': 'Port of Mombasa',
+      'KENBO': 'Nairobi Jomo Kenyatta Airport',
+      'TZDAR': 'Port of Dar es Salaam',
+      'TZDAR_AIR': 'Dar es Salaam Airport',
+      'DZALG': 'Port of Algiers',
+      'DZALG_AIR': 'Algiers Airport',
+      'TNRAD': 'Port of Radès',
+      'TNTUN': 'Tunis-Carthage Airport'
     },
     // Region translations
     regions: {
@@ -700,6 +1830,8 @@ const I18N_TEXT = {
     port: 'Port',
     airport: 'Aéroport', 
     railTerminal: 'Terminal ferroviaire',
+    seaPort: 'Port maritime',
+    volume: 'Volume',
     businessAddress: 'Adresse commerciale',
     residentialAddress: 'Adresse résidentielle',
     chooseLocationDescription: 'Choisissez votre lieu de collecte',
@@ -745,6 +1877,10 @@ const I18N_TEXT = {
     searchCountryDescription: 'Recherchez le pays où vous souhaitez expédier vos marchandises',
     addressTypeQuestion: 'Quel type d\'adresse est votre destination ?',
     selectDestinationLocationType: 'Veuillez sélectionner un type de lieu de destination',
+    selectDestinationPort: 'Sélectionner le port de destination',
+    selectDestinationPortDescription: 'Choisissez le port ou aéroport spécifique pour la livraison',
+    searchPortsIn: 'Rechercher des ports en',
+    searchDestinationPorts: 'Rechercher des ports de destination',
     enterDestinationDetails: 'Entrez les détails de destination',
     // Messages de validation
     validationShippingType: 'Veuillez sélectionner un type d\'expédition',
@@ -796,6 +1932,7 @@ const I18N_TEXT = {
     annualVolume: "Volume annuel",
     // Port translations
     ports: {
+      // China pickup ports
       'SHA': 'Shanghai',
       'SZX': 'Shenzhen',
       'NGB': 'Ningbo-Zhoushan',
@@ -817,7 +1954,200 @@ const I18N_TEXT = {
       'ZIH': 'Terminal ferroviaire de Zhengzhou',
       'CQN': 'Terminal ferroviaire de Chongqing',
       'WUH': 'Terminal ferroviaire de Wuhan',
-      'CDU': 'Terminal ferroviaire de Chengdu'
+      'CDU': 'Terminal ferroviaire de Chengdu',
+      // Destination ports - Europe
+      'FRMRS': 'Port de Marseille-Fos',
+      'FRLEH': 'Port du Havre',
+      'FRCDG': 'Aéroport Charles de Gaulle',
+      'FRORY': 'Aéroport Paris-Orly',
+      'FRLYO': 'Aéroport Lyon-Saint Exupéry',
+      'DEHAM': 'Port de Hambourg',
+      'DEBRE': 'Port de Brême',
+      'DEFRA': 'Aéroport de Francfort',
+      'DEMUC': 'Aéroport de Munich',
+      'DEHAM_RAIL': 'Terminal ferroviaire de Hambourg',
+      'GBFXT': 'Port de Felixstowe',
+      'GBSOU': 'Port de Southampton',
+      'GBLHR': 'Aéroport de Londres Heathrow',
+      'GBLGW': 'Aéroport de Londres Gatwick',
+      'GBMAN': 'Aéroport de Manchester',
+      'NLRTM': 'Port de Rotterdam',
+      'NLAMS': 'Aéroport d\'Amsterdam Schiphol',
+      'BEANR': 'Port d\'Anvers',
+      'BEBRU': 'Aéroport de Bruxelles',
+      'BELGG': 'Aéroport de Liège',
+      'ITGOA': 'Port de Gênes',
+      'ITLSP': 'Port de La Spezia',
+      'ITMXP': 'Aéroport de Milan Malpensa',
+      'ITFCO': 'Aéroport de Rome Fiumicino',
+      'ESALG': 'Port d\'Algésiras',
+      'ESVAL': 'Port de Valence',
+      'ESMAD': 'Aéroport de Madrid-Barajas',
+      'ESBCN': 'Aéroport de Barcelone',
+      'PTLIS': 'Port de Lisbonne',
+      'PTLEX': 'Port de Leixões (Porto)',
+      'PTLIS_AIR': 'Aéroport de Lisbonne',
+      'PLGDN': 'Port de Gdansk',
+      'PLGDY': 'Port de Gdynia',
+      'PLWAW': 'Aéroport de Varsovie Chopin',
+      'GRPIR': 'Port du Pirée',
+      'GRTHE': 'Port de Thessalonique',
+      'GRATH': 'Aéroport d\'Athènes',
+      'TRMER': 'Port de Mersin',
+      'TRIST': 'Port d\'Istanbul',
+      'TRIST_AIR': 'Aéroport d\'Istanbul',
+      'NOOSL': 'Port d\'Oslo',
+      'NOOSLO': 'Aéroport d\'Oslo Gardermoen',
+      'SEGOT': 'Port de Göteborg',
+      'SESTO': 'Port de Stockholm',
+      'SEARN': 'Aéroport d\'Arlanda Stockholm',
+      'DKAAR': 'Port d\'Aarhus',
+      'DKCPH': 'Aéroport de Copenhague',
+      'FIHEN': 'Port d\'Helsinki',
+      'FIHEL': 'Aéroport d\'Helsinki-Vantaa',
+      'EETLL': 'Port de Tallinn',
+      'EETLL_AIR': 'Aéroport de Tallinn',
+      'LVRIX': 'Port de Riga',
+      'LVRIX_AIR': 'Aéroport de Riga',
+      'LTKLA': 'Port de Klaipeda',
+      'LTVNO': 'Aéroport de Vilnius',
+      'CZPRG': 'Aéroport de Prague',
+      'CZPRG_RAIL': 'Terminal ferroviaire de Prague',
+      'SKBTS': 'Aéroport de Bratislava',
+      'SKBTS_RAIL': 'Terminal ferroviaire de Bratislava',
+      'HUBUD': 'Aéroport de Budapest',
+      'HUBUD_RAIL': 'Terminal ferroviaire de Budapest',
+      'ROCND': 'Port de Constanta',
+      'ROBBU': 'Aéroport de Bucarest',
+      'BGVAR': 'Port de Varna',
+      'BGSOF': 'Aéroport de Sofia',
+      'HRRIU': 'Port de Rijeka',
+      'HRZAG': 'Aéroport de Zagreb',
+      'SIKOP': 'Port de Koper',
+      'SILJB': 'Aéroport de Ljubljana',
+      'ATVIE': 'Aéroport de Vienne',
+      'ATVIE_RAIL': 'Terminal ferroviaire de Vienne',
+      'CHZUR': 'Aéroport de Zurich',
+      'CHBAS_RAIL': 'Terminal ferroviaire de Bâle',
+      'IEDUB': 'Port de Dublin',
+      'IEDUB_AIR': 'Aéroport de Dublin',
+      'ISKEF': 'Aéroport de Reykjavik',
+      'RULED': 'Port de St-Pétersbourg',
+      'RUNVO': 'Port de Novorossiysk',
+      'RUSVO': 'Aéroport de Moscou Sheremetyevo',
+      'RUMOW_RAIL': 'Terminal ferroviaire de Moscou',
+      'UAODE': 'Port d\'Odessa',
+      'UAKBP': 'Aéroport de Kiev Boryspil',
+      'BYMSQ': 'Aéroport de Minsk',
+      'BYMSQ_RAIL': 'Terminal ferroviaire de Minsk',
+      // Americas
+      'USLAX': 'Port de Los Angeles',
+      'USLGB': 'Port de Long Beach',
+      'USNYC': 'Port de New York/New Jersey',
+      'USSAV': 'Port de Savannah',
+      'USJFK': 'Aéroport JFK New York',
+      'USLAX_AIR': 'Aéroport LAX Los Angeles',
+      'USMIA': 'Aéroport de Miami',
+      'USORD': 'Aéroport de Chicago O\'Hare',
+      'CAVAN': 'Port de Vancouver',
+      'CAHAL': 'Port d\'Halifax',
+      'CAYYZ': 'Aéroport de Toronto Pearson',
+      'CAVAN_AIR': 'Aéroport de Vancouver',
+      'MXVER': 'Port de Veracruz',
+      'MXMEX': 'Aéroport de Mexico',
+      'BRSAN': 'Port de Santos',
+      'BRRIG': 'Port de Rio Grande',
+      'BRGRU': 'Aéroport de São Paulo Guarulhos',
+      'BRGIG': 'Aéroport de Rio de Janeiro Galeão',
+      'ARBUE': 'Port de Buenos Aires',
+      'AREZE': 'Aéroport de Buenos Aires Ezeiza',
+      'CLVAP': 'Port de Valparaiso',
+      'CLSAN': 'Port de San Antonio',
+      'CLSCL': 'Aéroport de Santiago',
+      'PECAL': 'Port du Callao',
+      'PELIM': 'Aéroport de Lima Jorge Chávez',
+      'COCAR': 'Port de Carthagène',
+      'COBOG': 'Aéroport de Bogotá El Dorado',
+      'ECGYE': 'Port de Guayaquil',
+      'ECUIO': 'Aéroport de Quito',
+      // Asia-Pacific
+      'CNSHA': 'Port de Shanghai',
+      'CNSZX': 'Port de Shenzhen',
+      'CNPVG': 'Aéroport de Shanghai Pudong',
+      'CNPEK': 'Aéroport de Beijing Capital',
+      'JPTYO': 'Port de Tokyo',
+      'JPYOK': 'Port de Yokohama',
+      'JPNRT': 'Aéroport de Tokyo Narita',
+      'JPKIX': 'Aéroport de Kansai Osaka',
+      'KRPUS': 'Port de Busan',
+      'KRICN': 'Aéroport de Seoul Incheon',
+      'TWKAO': 'Port de Kaohsiung',
+      'TWTPE': 'Aéroport de Taipei Taoyuan',
+      'HKHKG': 'Port de Hong Kong',
+      'HKHKG_AIR': 'Aéroport de Hong Kong',
+      'SGSIN': 'Port de Singapour',
+      'SGSIN_AIR': 'Aéroport de Singapour Changi',
+      'MYPKG': 'Port Klang',
+      'MYKUL': 'Aéroport de Kuala Lumpur',
+      'THLCH': 'Port de Laem Chabang',
+      'THBKK': 'Aéroport de Bangkok Suvarnabhumi',
+      'VNHPH': 'Port de Hai Phong',
+      'VNSGN': 'Port de Ho Chi Minh Ville',
+      'VNSGN_AIR': 'Aéroport de Ho Chi Minh Ville',
+      'PHMNL': 'Port de Manille',
+      'PHMNL_AIR': 'Aéroport de Manille',
+      'IDJKT': 'Port de Jakarta (Tanjung Priok)',
+      'IDCGK': 'Aéroport de Jakarta Soekarno-Hatta',
+      'INJNP': 'Port de Jawaharlal Nehru',
+      'INMAA': 'Port de Chennai',
+      'INBOM': 'Aéroport de Mumbai',
+      'INDEL': 'Aéroport de Delhi',
+      'LKCMB': 'Port de Colombo',
+      'LKCMB_AIR': 'Aéroport de Colombo',
+      'AUSYD': 'Port de Sydney',
+      'AUMEL': 'Port de Melbourne',
+      'AUSYD_AIR': 'Aéroport de Sydney',
+      'AUMEL_AIR': 'Aéroport de Melbourne',
+      'NZAKL': 'Port d\'Auckland',
+      'NZAKL_AIR': 'Aéroport d\'Auckland',
+      // Middle East & Africa
+      'AEJEA': 'Port Jebel Ali (Dubai)',
+      'AEDXB': 'Aéroport de Dubai',
+      'AEAUH': 'Aéroport d\'Abu Dhabi',
+      'SAJED': 'Port du Roi Abdulaziz (Dammam)',
+      'SARRH': 'Aéroport de Riyadh',
+      'QADOH': 'Port de Doha',
+      'QADOH_AIR': 'Aéroport de Doha Hamad',
+      'KWKWI': 'Port du Koweït',
+      'KWKWI_AIR': 'Aéroport du Koweït',
+      'OMSLL': 'Port de Salalah',
+      'OMSLL_AIR': 'Aéroport de Salalah',
+      'BHBAH': 'Port de Bahreïn',
+      'BHBAH_AIR': 'Aéroport de Bahreïn',
+      'ILASH': 'Port d\'Ashdod',
+      'ILTLV': 'Aéroport de Tel Aviv Ben Gurion',
+      'EGALY': 'Port d\'Alexandrie',
+      'EGCAI': 'Aéroport du Caire',
+      'ZADUR': 'Port de Durban',
+      'ZACPT': 'Port du Cap',
+      'ZAJNB': 'Aéroport de Johannesburg OR Tambo',
+      'MACAS': 'Port de Casablanca',
+      'MATAN': 'Port de Tanger Med',
+      'MACMN': 'Aéroport de Casablanca Mohammed V',
+      'NGLOS': 'Port de Lagos',
+      'NGLOS_AIR': 'Aéroport de Lagos',
+      'GHTEM': 'Port de Tema',
+      'GHACC': 'Aéroport d\'Accra',
+      'CIABJ': 'Port d\'Abidjan',
+      'CIABJ_AIR': 'Aéroport d\'Abidjan',
+      'KEMBA': 'Port de Mombasa',
+      'KENBO': 'Aéroport de Nairobi Jomo Kenyatta',
+      'TZDAR': 'Port de Dar es Salaam',
+      'TZDAR_AIR': 'Aéroport de Dar es Salaam',
+      'DZALG': 'Port d\'Alger',
+      'DZALG_AIR': 'Aéroport d\'Alger',
+      'TNRAD': 'Port de Radès',
+      'TNTUN': 'Aéroport de Tunis-Carthage'
     },
     // Region translations
     regions: {
@@ -1078,6 +2408,8 @@ const I18N_TEXT = {
     port: '港口',
     airport: '机场', 
     railTerminal: '铁路枢纽',
+    seaPort: '海港',
+    volume: '体积',
     businessAddress: '商业地址',
     residentialAddress: '住宅地址',
     chooseLocationDescription: '选择您的取货地点',
@@ -1091,10 +2423,10 @@ const I18N_TEXT = {
     airFreightDesc: '快速，7-10天',
     express: '快递',
     expressDesc: '最快，3-5天',
-    unsureShipping: "我还不确定",
+    unsureShipping: '我还不确定',
     unsureShippingDesc: '让专家帮助您',
     unsureShippingBenefits: '专业指导',
-    unsureShippingFeedback: "很好的选择！我们将为您的具体需求推荐最佳的运输方案",
+    unsureShippingFeedback: '很好的选择！我们将为您的具体需求推荐最佳的运输方案',
     beginnerSectionTitle: '新手专区',
     beginnerSectionDesc: '让我们的专家免费为您提供建议',
     separatorText: '或自己选择',
@@ -1123,6 +2455,10 @@ const I18N_TEXT = {
     searchCountryDescription: '搜索您要运送货物的国家',
     addressTypeQuestion: '您的目的地是什么类型的地址？',
     selectDestinationLocationType: '请选择目的地位置类型',
+    selectDestinationPort: '选择目的地港口',
+    selectDestinationPortDescription: '选择具体的港口或机场进行交付',
+    searchPortsIn: '搜索港口在',
+    searchDestinationPorts: '搜索目的地港口',
     enterDestinationDetails: '输入目的地详情',
     // 验证消息
     validationShippingType: '请选择运输类型',
@@ -1166,14 +2502,15 @@ const I18N_TEXT = {
     portTerminalDescription: '选择具体的港口、码头或机场进行取货',
     pickupCity: '取货城市',
     pickupZipCode: '取货邮政编码',
-    dontKnowPort: "我不知道",
-    dontKnowPortDescription: "我不确定选择哪个港口/码头",
-    dontKnowPortFeedback: "没问题！我们会帮您选择最合适的港口/码头。",
-    perfectPortFeedback: "完美！我们将从以下地点取货：",
-    cityPickupFeedback: "太好了！我们将安排从中国{city}取货",
-    annualVolume: "年吞吐量",
+    dontKnowPort: '我不知道',
+    dontKnowPortDescription: '我不确定选择哪个港口/码头',
+    dontKnowPortFeedback: '没问题！我们会帮您选择最合适的港口/码头。',
+    perfectPortFeedback: '完美！我们将从以下地点取货：',
+    cityPickupFeedback: '太好了！我们将安排从中国{city}取货',
+    annualVolume: '年吞吐量',
     // Port translations
     ports: {
+      // China pickup ports
       'SHA': '上海港',
       'SZX': '深圳港',
       'NGB': '宁波-舟山港',
@@ -1195,7 +2532,200 @@ const I18N_TEXT = {
       'ZIH': '郑州铁路枢纽',
       'CQN': '重庆铁路枢纽',
       'WUH': '武汉铁路枢纽',
-      'CDU': '成都铁路枢纽'
+      'CDU': '成都铁路枢纽',
+      // Destination ports - Europe
+      'FRMRS': '马赛-福斯港',
+      'FRLEH': '勒阿弗尔港',
+      'FRCDG': '戴高乐机场',
+      'FRORY': '巴黎奥利机场',
+      'FRLYO': '里昂圣埃克苏佩里机场',
+      'DEHAM': '汉堡港',
+      'DEBRE': '不来梅港',
+      'DEFRA': '法兰克福机场',
+      'DEMUC': '慕尼黑机场',
+      'DEHAM_RAIL': '汉堡铁路终端',
+      'GBFXT': '费利克斯托港',
+      'GBSOU': '南安普敦港',
+      'GBLHR': '伦敦希思罗机场',
+      'GBLGW': '伦敦盖特威克机场',
+      'GBMAN': '曼彻斯特机场',
+      'NLRTM': '鹿特丹港',
+      'NLAMS': '阿姆斯特丹史基浦机场',
+      'BEANR': '安特卫普港',
+      'BEBRU': '布鲁塞尔机场',
+      'BELGG': '列日机场',
+      'ITGOA': '热那亚港',
+      'ITLSP': '拉斯佩齐亚港',
+      'ITMXP': '米兰马尔彭萨机场',
+      'ITFCO': '罗马菲乌米奇诺机场',
+      'ESALG': '阿尔赫西拉斯港',
+      'ESVAL': '瓦伦西亚港',
+      'ESMAD': '马德里巴拉哈斯机场',
+      'ESBCN': '巴塞罗那机场',
+      'PTLIS': '里斯本港',
+      'PTLEX': '莱雄港（波尔图）',
+      'PTLIS_AIR': '里斯本机场',
+      'PLGDN': '格但斯克港',
+      'PLGDY': '格丁尼亚港',
+      'PLWAW': '华沙肖邦机场',
+      'GRPIR': '比雷埃夫斯港',
+      'GRTHE': '塞萨洛尼基港',
+      'GRATH': '雅典机场',
+      'TRMER': '梅尔辛港',
+      'TRIST': '伊斯坦布尔港',
+      'TRIST_AIR': '伊斯坦布尔机场',
+      'NOOSL': '奥斯陆港',
+      'NOOSLO': '奥斯陆加勒穆恩机场',
+      'SEGOT': '哥德堡港',
+      'SESTO': '斯德哥尔摩港',
+      'SEARN': '斯德哥尔摩阿兰达机场',
+      'DKAAR': '奥胡斯港',
+      'DKCPH': '哥本哈根机场',
+      'FIHEN': '赫尔辛基港',
+      'FIHEL': '赫尔辛基万塔机场',
+      'EETLL': '塔林港',
+      'EETLL_AIR': '塔林机场',
+      'LVRIX': '里加港',
+      'LVRIX_AIR': '里加机场',
+      'LTKLA': '克莱佩达港',
+      'LTVNO': '维尔纽斯机场',
+      'CZPRG': '布拉格机场',
+      'CZPRG_RAIL': '布拉格铁路终端',
+      'SKBTS': '布拉迪斯拉发机场',
+      'SKBTS_RAIL': '布拉迪斯拉发铁路终端',
+      'HUBUD': '布达佩斯机场',
+      'HUBUD_RAIL': '布达佩斯铁路终端',
+      'ROCND': '康斯坦察港',
+      'ROBBU': '布加勒斯特机场',
+      'BGVAR': '瓦尔纳港',
+      'BGSOF': '索非亚机场',
+      'HRRIU': '里耶卡港',
+      'HRZAG': '萨格勒布机场',
+      'SIKOP': '科佩尔港',
+      'SILJB': '卢布尔雅那机场',
+      'ATVIE': '维也纳机场',
+      'ATVIE_RAIL': '维也纳铁路终端',
+      'CHZUR': '苏黎世机场',
+      'CHBAS_RAIL': '巴塞尔铁路终端',
+      'IEDUB': '都柏林港',
+      'IEDUB_AIR': '都柏林机场',
+      'ISKEF': '雷克雅未克机场',
+      'RULED': '圣彼得堡港',
+      'RUNVO': '新罗西斯克港',
+      'RUSVO': '莫斯科谢列梅捷沃机场',
+      'RUMOW_RAIL': '莫斯科铁路终端',
+      'UAODE': '敖德萨港',
+      'UAKBP': '基辅鲍里斯波尔机场',
+      'BYMSQ': '明斯克机场',
+      'BYMSQ_RAIL': '明斯克铁路终端',
+      // Americas
+      'USLAX': '洛杉矶港',
+      'USLGB': '长滩港',
+      'USNYC': '纽约/新泽西港',
+      'USSAV': '萨凡纳港',
+      'USJFK': 'JFK纽约机场',
+      'USLAX_AIR': 'LAX洛杉矶机场',
+      'USMIA': '迈阿密机场',
+      'USORD': '芝加哥奥黑尔机场',
+      'CAVAN': '温哥华港',
+      'CAHAL': '哈利法克斯港',
+      'CAYYZ': '多伦多皮尔逊机场',
+      'CAVAN_AIR': '温哥华机场',
+      'MXVER': '韦拉克鲁斯港',
+      'MXMEX': '墨西哥城机场',
+      'BRSAN': '桑托斯港',
+      'BRRIG': '里奥格兰德港',
+      'BRGRU': '圣保罗瓜鲁柳斯机场',
+      'BRGIG': '里约热内卢加利昂机场',
+      'ARBUE': '布宜诺斯艾利斯港',
+      'AREZE': '布宜诺斯艾利斯埃塞萨机场',
+      'CLVAP': '瓦尔帕莱索港',
+      'CLSAN': '圣安东尼奥港',
+      'CLSCL': '圣地亚哥机场',
+      'PECAL': '卡亚俄港',
+      'PELIM': '利马豪尔赫·查韦斯机场',
+      'COCAR': '卡塔赫纳港',
+      'COBOG': '波哥大埃尔多拉多机场',
+      'ECGYE': '瓜亚基尔港',
+      'ECUIO': '基多机场',
+      // Asia-Pacific
+      'CNSHA': '上海港',
+      'CNSZX': '深圳港',
+      'CNPVG': '上海浦东机场',
+      'CNPEK': '北京首都机场',
+      'JPTYO': '东京港',
+      'JPYOK': '横滨港',
+      'JPNRT': '东京成田机场',
+      'JPKIX': '关西大阪机场',
+      'KRPUS': '釜山港',
+      'KRICN': '首尔仁川机场',
+      'TWKAO': '高雄港',
+      'TWTPE': '台北桃园机场',
+      'HKHKG': '香港港',
+      'HKHKG_AIR': '香港机场',
+      'SGSIN': '新加坡港',
+      'SGSIN_AIR': '新加坡樟宜机场',
+      'MYPKG': '巴生港',
+      'MYKUL': '吉隆坡机场',
+      'THLCH': '林查班港',
+      'THBKK': '曼谷素万那普机场',
+      'VNHPH': '海防港',
+      'VNSGN': '胡志明市港',
+      'VNSGN_AIR': '胡志明市机场',
+      'PHMNL': '马尼拉港',
+      'PHMNL_AIR': '马尼拉机场',
+      'IDJKT': '雅加达港（丹戎不碌）',
+      'IDCGK': '雅加达苏加诺-哈达机场',
+      'INJNP': '贾瓦哈拉尔·尼赫鲁港',
+      'INMAA': '钦奈港',
+      'INBOM': '孟买机场',
+      'INDEL': '德里机场',
+      'LKCMB': '科伦坡港',
+      'LKCMB_AIR': '科伦坡机场',
+      'AUSYD': '悉尼港',
+      'AUMEL': '墨尔本港',
+      'AUSYD_AIR': '悉尼机场',
+      'AUMEL_AIR': '墨尔本机场',
+      'NZAKL': '奥克兰港',
+      'NZAKL_AIR': '奥克兰机场',
+      // Middle East & Africa
+      'AEJEA': '杰贝阿里港（迪拜）',
+      'AEDXB': '迪拜机场',
+      'AEAUH': '阿布扎比机场',
+      'SAJED': '阿卜杜勒阿齐兹国王港（达曼）',
+      'SARRH': '利雅得机场',
+      'QADOH': '多哈港',
+      'QADOH_AIR': '多哈哈马德机场',
+      'KWKWI': '科威特港',
+      'KWKWI_AIR': '科威特机场',
+      'OMSLL': '萨拉拉港',
+      'OMSLL_AIR': '萨拉拉机场',
+      'BHBAH': '巴林港',
+      'BHBAH_AIR': '巴林机场',
+      'ILASH': '阿什杜德港',
+      'ILTLV': '特拉维夫本古里安机场',
+      'EGALY': '亚历山大港',
+      'EGCAI': '开罗机场',
+      'ZADUR': '德班港',
+      'ZACPT': '开普敦港',
+      'ZAJNB': '约翰内斯堡OR坦博机场',
+      'MACAS': '卡萨布兰卡港',
+      'MATAN': '丹吉尔地中海港',
+      'MACMN': '卡萨布兰卡穆罕默德五世机场',
+      'NGLOS': '拉各斯港',
+      'NGLOS_AIR': '拉各斯机场',
+      'GHTEM': '特马港',
+      'GHACC': '阿克拉机场',
+      'CIABJ': '阿比让港',
+      'CIABJ_AIR': '阿比让机场',
+      'KEMBA': '蒙巴萨港',
+      'KENBO': '内罗毕乔莫·肯雅塔机场',
+      'TZDAR': '达累斯萨拉姆港',
+      'TZDAR_AIR': '达累斯萨拉姆机场',
+      'DZALG': '阿尔及尔港',
+      'DZALG_AIR': '阿尔及尔机场',
+      'TNRAD': '拉德斯港',
+      'TNTUN': '突尼斯迦太基机场'
     },
     // Region translations
     regions: {
@@ -1422,14 +2952,6 @@ const I18N_TEXT = {
       container40: "40' 标准 (67 CBM)",
       container40HC: "40' 高箱 (76 CBM)",
       container45HC: "45' 高箱 (86 CBM)",
-      // Additional shipment summary translations
-      shipmentTitle: '货运',
-      setupPending: '设置待处理...',
-      addAnotherShipment: '添加另一个货运',
-      items: '项目',
-      each: '每个',
-      totalCalculation: '总计算',
-      overweight: '超重',
   },
   de: {
     // Header
@@ -1463,6 +2985,8 @@ const I18N_TEXT = {
     port: 'Hafen',
     airport: 'Flughafen', 
     railTerminal: 'Bahnterminal',
+    seaPort: 'Seehafen',
+    volume: 'Volumen',
     businessAddress: 'Geschäftsadresse',
     residentialAddress: 'Wohnadresse',
     chooseLocationDescription: 'Wählen Sie Ihren Abholort',
@@ -1476,10 +3000,10 @@ const I18N_TEXT = {
     airFreightDesc: 'Schnell, 7-10 Tage',
     express: 'Express',
     expressDesc: 'Am schnellsten, 3-5 Tage',
-    unsureShipping: "Ich bin mir noch nicht sicher",
+    unsureShipping: 'Ich bin mir noch nicht sicher',
     unsureShippingDesc: 'Lassen Sie die Experten helfen',
     unsureShippingBenefits: 'Professionelle Beratung',
-    unsureShippingFeedback: "Ausgezeichnete Wahl! Wir empfehlen die beste Versandoption für Ihre spezifischen Bedürfnisse",
+    unsureShippingFeedback: 'Ausgezeichnete Wahl! Wir empfehlen die beste Versandoption für Ihre spezifischen Bedürfnisse',
     beginnerSectionTitle: 'Für Anfänger',
     beginnerSectionDesc: 'Lassen Sie sich kostenlos von unseren Experten beraten',
     separatorText: 'Oder wählen Sie selbst',
@@ -1508,6 +3032,10 @@ const I18N_TEXT = {
     searchCountryDescription: 'Suchen Sie das Land, in das Sie Ihre Waren versenden möchten',
     addressTypeQuestion: 'Welcher Adresstyp ist Ihr Ziel?',
     selectDestinationLocationType: 'Bitte wählen Sie einen Zielort-Typ',
+    selectDestinationPort: 'Zielhafen auswählen',
+    selectDestinationPortDescription: 'Wählen Sie den spezifischen Hafen oder Flughafen für die Lieferung',
+    searchPortsIn: 'Häfen suchen in',
+    searchDestinationPorts: 'Zielhäfen suchen',
     enterDestinationDetails: 'Zieldetails eingeben',
     // Validierungsnachrichten
     validationShippingType: 'Bitte wählen Sie einen Versandtyp',
@@ -1551,14 +3079,15 @@ const I18N_TEXT = {
     portTerminalDescription: 'Wählen Sie den spezifischen Hafen, Terminal oder Flughafen für die Abholung',
     pickupCity: 'Abholstadt',
     pickupZipCode: 'Abhol-Postleitzahl',
-    dontKnowPort: "Ich weiß nicht",
-    dontKnowPortDescription: "Ich bin mir nicht sicher, welchen Hafen/Terminal ich wählen soll",
-    dontKnowPortFeedback: "Kein Problem! Wir helfen Ihnen bei der Auswahl des besten Hafens/Terminals für Ihre Sendung.",
-    perfectPortFeedback: "Perfekt! Wir holen ab von",
-    cityPickupFeedback: "Großartig! Wir arrangieren die Abholung von {city}, China",
-    annualVolume: "Jahresvolumen",
+    dontKnowPort: 'Ich weiß nicht',
+    dontKnowPortDescription: 'Ich bin mir nicht sicher, welchen Hafen/Terminal ich wählen soll',
+    dontKnowPortFeedback: 'Kein Problem! Wir helfen Ihnen bei der Auswahl des besten Hafens/Terminals für Ihre Sendung.',
+    perfectPortFeedback: 'Perfekt! Wir holen ab von',
+    cityPickupFeedback: 'Großartig! Wir arrangieren die Abholung von {city}, China',
+    annualVolume: 'Jahresvolumen',
     // Port translations
     ports: {
+      // China pickup ports
       'SHA': 'Shanghai',
       'SZX': 'Shenzhen',
       'NGB': 'Ningbo-Zhoushan',
@@ -1580,7 +3109,200 @@ const I18N_TEXT = {
       'ZIH': 'Bahnhof Zhengzhou',
       'CQN': 'Bahnhof Chongqing',
       'WUH': 'Bahnhof Wuhan',
-      'CDU': 'Bahnhof Chengdu'
+      'CDU': 'Bahnhof Chengdu',
+      // Destination ports - Europe
+      'FRMRS': 'Hafen Marseille-Fos',
+      'FRLEH': 'Hafen Le Havre',
+      'FRCDG': 'Flughafen Charles de Gaulle',
+      'FRORY': 'Flughafen Paris-Orly',
+      'FRLYO': 'Flughafen Lyon-Saint Exupéry',
+      'DEHAM': 'Hafen Hamburg',
+      'DEBRE': 'Hafen Bremen',
+      'DEFRA': 'Flughafen Frankfurt',
+      'DEMUC': 'Flughafen München',
+      'DEHAM_RAIL': 'Bahnhof Hamburg',
+      'GBFXT': 'Hafen Felixstowe',
+      'GBSOU': 'Hafen Southampton',
+      'GBLHR': 'Flughafen London Heathrow',
+      'GBLGW': 'Flughafen London Gatwick',
+      'GBMAN': 'Flughafen Manchester',
+      'NLRTM': 'Hafen Rotterdam',
+      'NLAMS': 'Flughafen Amsterdam Schiphol',
+      'BEANR': 'Hafen Antwerpen',
+      'BEBRU': 'Flughafen Brüssel',
+      'BELGG': 'Flughafen Lüttich',
+      'ITGOA': 'Hafen Genua',
+      'ITLSP': 'Hafen La Spezia',
+      'ITMXP': 'Flughafen Mailand Malpensa',
+      'ITFCO': 'Flughafen Rom Fiumicino',
+      'ESALG': 'Hafen Algeciras',
+      'ESVAL': 'Hafen Valencia',
+      'ESMAD': 'Flughafen Madrid-Barajas',
+      'ESBCN': 'Flughafen Barcelona',
+      'PTLIS': 'Hafen Lissabon',
+      'PTLEX': 'Hafen Leixões (Porto)',
+      'PTLIS_AIR': 'Flughafen Lissabon',
+      'PLGDN': 'Hafen Danzig',
+      'PLGDY': 'Hafen Gdynia',
+      'PLWAW': 'Flughafen Warschau Chopin',
+      'GRPIR': 'Hafen Piräus',
+      'GRTHE': 'Hafen Thessaloniki',
+      'GRATH': 'Flughafen Athen',
+      'TRMER': 'Hafen Mersin',
+      'TRIST': 'Hafen Istanbul',
+      'TRIST_AIR': 'Flughafen Istanbul',
+      'NOOSL': 'Hafen Oslo',
+      'NOOSLO': 'Flughafen Oslo Gardermoen',
+      'SEGOT': 'Hafen Göteborg',
+      'SESTO': 'Hafen Stockholm',
+      'SEARN': 'Flughafen Stockholm Arlanda',
+      'DKAAR': 'Hafen Aarhus',
+      'DKCPH': 'Flughafen Kopenhagen',
+      'FIHEN': 'Hafen Helsinki',
+      'FIHEL': 'Flughafen Helsinki-Vantaa',
+      'EETLL': 'Hafen Tallinn',
+      'EETLL_AIR': 'Flughafen Tallinn',
+      'LVRIX': 'Hafen Riga',
+      'LVRIX_AIR': 'Flughafen Riga',
+      'LTKLA': 'Hafen Klaipeda',
+      'LTVNO': 'Flughafen Vilnius',
+      'CZPRG': 'Flughafen Prag',
+      'CZPRG_RAIL': 'Bahnhof Prag',
+      'SKBTS': 'Flughafen Bratislava',
+      'SKBTS_RAIL': 'Bahnhof Bratislava',
+      'HUBUD': 'Flughafen Budapest',
+      'HUBUD_RAIL': 'Bahnhof Budapest',
+      'ROCND': 'Hafen Constanta',
+      'ROBBU': 'Flughafen Bukarest',
+      'BGVAR': 'Hafen Varna',
+      'BGSOF': 'Flughafen Sofia',
+      'HRRIU': 'Hafen Rijeka',
+      'HRZAG': 'Flughafen Zagreb',
+      'SIKOP': 'Hafen Koper',
+      'SILJB': 'Flughafen Ljubljana',
+      'ATVIE': 'Flughafen Wien',
+      'ATVIE_RAIL': 'Bahnhof Wien',
+      'CHZUR': 'Flughafen Zürich',
+      'CHBAS_RAIL': 'Bahnhof Basel',
+      'IEDUB': 'Hafen Dublin',
+      'IEDUB_AIR': 'Flughafen Dublin',
+      'ISKEF': 'Flughafen Reykjavik',
+      'RULED': 'Hafen St. Petersburg',
+      'RUNVO': 'Hafen Noworossijsk',
+      'RUSVO': 'Flughafen Moskau Sheremetyevo',
+      'RUMOW_RAIL': 'Bahnhof Moskau',
+      'UAODE': 'Hafen Odessa',
+      'UAKBP': 'Flughafen Kiew Boryspil',
+      'BYMSQ': 'Flughafen Minsk',
+      'BYMSQ_RAIL': 'Bahnhof Minsk',
+      // Americas
+      'USLAX': 'Hafen Los Angeles',
+      'USLGB': 'Hafen Long Beach',
+      'USNYC': 'Hafen New York/New Jersey',
+      'USSAV': 'Hafen Savannah',
+      'USJFK': 'Flughafen JFK New York',
+      'USLAX_AIR': 'Flughafen LAX Los Angeles',
+      'USMIA': 'Flughafen Miami',
+      'USORD': 'Flughafen Chicago O\'Hare',
+      'CAVAN': 'Hafen Vancouver',
+      'CAHAL': 'Hafen Halifax',
+      'CAYYZ': 'Flughafen Toronto Pearson',
+      'CAVAN_AIR': 'Flughafen Vancouver',
+      'MXVER': 'Hafen Veracruz',
+      'MXMEX': 'Flughafen Mexiko-Stadt',
+      'BRSAN': 'Hafen Santos',
+      'BRRIG': 'Hafen Rio Grande',
+      'BRGRU': 'Flughafen São Paulo Guarulhos',
+      'BRGIG': 'Flughafen Rio de Janeiro Galeão',
+      'ARBUE': 'Hafen Buenos Aires',
+      'AREZE': 'Flughafen Buenos Aires Ezeiza',
+      'CLVAP': 'Hafen Valparaiso',
+      'CLSAN': 'Hafen San Antonio',
+      'CLSCL': 'Flughafen Santiago',
+      'PECAL': 'Hafen Callao',
+      'PELIM': 'Flughafen Lima Jorge Chávez',
+      'COCAR': 'Hafen Cartagena',
+      'COBOG': 'Flughafen Bogotá El Dorado',
+      'ECGYE': 'Hafen Guayaquil',
+      'ECUIO': 'Flughafen Quito',
+      // Asia-Pacific
+      'CNSHA': 'Hafen Shanghai',
+      'CNSZX': 'Hafen Shenzhen',
+      'CNPVG': 'Flughafen Shanghai Pudong',
+      'CNPEK': 'Flughafen Beijing Capital',
+      'JPTYO': 'Hafen Tokio',
+      'JPYOK': 'Hafen Yokohama',
+      'JPNRT': 'Flughafen Tokio Narita',
+      'JPKIX': 'Flughafen Kansai Osaka',
+      'KRPUS': 'Hafen Busan',
+      'KRICN': 'Flughafen Seoul Incheon',
+      'TWKAO': 'Hafen Kaohsiung',
+      'TWTPE': 'Flughafen Taipei Taoyuan',
+      'HKHKG': 'Hafen Hongkong',
+      'HKHKG_AIR': 'Flughafen Hongkong',
+      'SGSIN': 'Hafen Singapur',
+      'SGSIN_AIR': 'Flughafen Singapur Changi',
+      'MYPKG': 'Hafen Klang',
+      'MYKUL': 'Flughafen Kuala Lumpur',
+      'THLCH': 'Hafen Laem Chabang',
+      'THBKK': 'Flughafen Bangkok Suvarnabhumi',
+      'VNHPH': 'Hafen Hai Phong',
+      'VNSGN': 'Hafen Ho-Chi-Minh-Stadt',
+      'VNSGN_AIR': 'Flughafen Ho-Chi-Minh-Stadt',
+      'PHMNL': 'Hafen Manila',
+      'PHMNL_AIR': 'Flughafen Manila',
+      'IDJKT': 'Hafen Jakarta (Tanjung Priok)',
+      'IDCGK': 'Flughafen Jakarta Soekarno-Hatta',
+      'INJNP': 'Hafen Jawaharlal Nehru',
+      'INMAA': 'Hafen Chennai',
+      'INBOM': 'Flughafen Mumbai',
+      'INDEL': 'Flughafen Delhi',
+      'LKCMB': 'Hafen Colombo',
+      'LKCMB_AIR': 'Flughafen Colombo',
+      'AUSYD': 'Hafen Sydney',
+      'AUMEL': 'Hafen Melbourne',
+      'AUSYD_AIR': 'Flughafen Sydney',
+      'AUMEL_AIR': 'Flughafen Melbourne',
+      'NZAKL': 'Hafen Auckland',
+      'NZAKL_AIR': 'Flughafen Auckland',
+      // Middle East & Africa
+      'AEJEA': 'Hafen Jebel Ali (Dubai)',
+      'AEDXB': 'Flughafen Dubai',
+      'AEAUH': 'Flughafen Abu Dhabi',
+      'SAJED': 'König-Abdulaziz-Hafen (Dammam)',
+      'SARRH': 'Flughafen Riad',
+      'QADOH': 'Hafen Doha',
+      'QADOH_AIR': 'Flughafen Doha Hamad',
+      'KWKWI': 'Hafen Kuwait',
+      'KWKWI_AIR': 'Flughafen Kuwait',
+      'OMSLL': 'Hafen Salalah',
+      'OMSLL_AIR': 'Flughafen Salalah',
+      'BHBAH': 'Hafen Bahrain',
+      'BHBAH_AIR': 'Flughafen Bahrain',
+      'ILASH': 'Hafen Ashdod',
+      'ILTLV': 'Flughafen Tel Aviv Ben Gurion',
+      'EGALY': 'Hafen Alexandria',
+      'EGCAI': 'Flughafen Kairo',
+      'ZADUR': 'Hafen Durban',
+      'ZACPT': 'Hafen Kapstadt',
+      'ZAJNB': 'Flughafen Johannesburg OR Tambo',
+      'MACAS': 'Hafen Casablanca',
+      'MATAN': 'Hafen Tanger Med',
+      'MACMN': 'Flughafen Casablanca Mohammed V',
+      'NGLOS': 'Hafen Lagos',
+      'NGLOS_AIR': 'Flughafen Lagos',
+      'GHTEM': 'Hafen Tema',
+      'GHACC': 'Flughafen Accra',
+      'CIABJ': 'Hafen Abidjan',
+      'CIABJ_AIR': 'Flughafen Abidjan',
+      'KEMBA': 'Hafen Mombasa',
+      'KENBO': 'Flughafen Nairobi Jomo Kenyatta',
+      'TZDAR': 'Hafen Dar es Salaam',
+      'TZDAR_AIR': 'Flughafen Dar es Salaam',
+      'DZALG': 'Hafen Algier',
+      'DZALG_AIR': 'Flughafen Algier',
+      'TNRAD': 'Hafen Radès',
+      'TNTUN': 'Flughafen Tunis-Karthago'
     },
     // Region translations
     regions: {
@@ -1806,14 +3528,6 @@ const I18N_TEXT = {
       container40: "40' Standard (67 CBM)",
       container40HC: "40' High Cube (76 CBM)",
       container45HC: "45' High Cube (86 CBM)",
-      // Additional shipment summary translations
-      shipmentTitle: 'Sendung',
-      setupPending: 'Einrichtung ausstehend...',
-      addAnotherShipment: 'Weitere Sendung hinzufügen',
-      items: 'Artikel',
-      each: 'jeweils',
-      totalCalculation: 'Gesamtberechnung',
-      overweight: 'Übergewicht',
   },
   es: {
     // Header
@@ -1847,6 +3561,8 @@ const I18N_TEXT = {
     port: 'Puerto',
     airport: 'Aeropuerto', 
     railTerminal: 'Terminal ferroviario',
+    seaPort: 'Puerto marítimo',
+    volume: 'Volumen',
     businessAddress: 'Dirección comercial',
     residentialAddress: 'Dirección residencial',
     chooseLocationDescription: 'Elija su lugar de recogida',
@@ -1860,10 +3576,10 @@ const I18N_TEXT = {
     airFreightDesc: 'Rápido, 7-10 días',
     express: 'Express',
     expressDesc: 'Más rápido, 3-5 días',
-    unsureShipping: "Aún no estoy seguro",
+    unsureShipping: 'Aún no estoy seguro',
     unsureShippingDesc: 'Deja que los expertos ayuden',
     unsureShippingBenefits: 'Orientación profesional',
-    unsureShippingFeedback: "¡Excelente elección! Recomendaremos la mejor opción de envío para tus necesidades específicas",
+    unsureShippingFeedback: '¡Excelente elección! Recomendaremos la mejor opción de envío para tus necesidades específicas',
     beginnerSectionTitle: 'Para principiantes',
     beginnerSectionDesc: 'Deja que nuestros expertos te aconsejen gratis',
     separatorText: 'O elige tú mismo',
@@ -1892,6 +3608,10 @@ const I18N_TEXT = {
     searchCountryDescription: 'Busque el país donde desea enviar sus mercancías',
     addressTypeQuestion: '¿Qué tipo de dirección es su destino?',
     selectDestinationLocationType: 'Por favor seleccione un tipo de ubicación de destino',
+    selectDestinationPort: 'Seleccionar puerto de destino',
+    selectDestinationPortDescription: 'Elija el puerto o aeropuerto específico para la entrega',
+    searchPortsIn: 'Buscar puertos en',
+    searchDestinationPorts: 'Buscar puertos de destino',
     enterDestinationDetails: 'Ingrese detalles del destino',
     // Mensajes de validación
     validationShippingType: 'Por favor seleccione un tipo de envío',
@@ -1935,14 +3655,15 @@ const I18N_TEXT = {
     portTerminalDescription: 'Elija el puerto, terminal o aeropuerto específico para la recogida',
     pickupCity: 'Ciudad de recogida',
     pickupZipCode: 'Código postal de recogida',
-    dontKnowPort: "No lo sé",
-    dontKnowPortDescription: "No estoy seguro de qué puerto/terminal elegir",
-    dontKnowPortFeedback: "¡No hay problema! Te ayudaremos a elegir el mejor puerto/terminal para tu envío.",
-    perfectPortFeedback: "¡Perfecto! Recogeremos desde",
-    cityPickupFeedback: "¡Perfecto! Organizaremos la recogida desde {city}, China",
-    annualVolume: "Volumen anual",
+    dontKnowPort: 'No lo sé',
+    dontKnowPortDescription: 'No estoy seguro de qué puerto/terminal elegir',
+    dontKnowPortFeedback: '¡No hay problema! Te ayudaremos a elegir el mejor puerto/terminal para tu envío.',
+    perfectPortFeedback: '¡Perfecto! Recogeremos desde',
+    cityPickupFeedback: '¡Perfecto! Organizaremos la recogida desde {city}, China',
+    annualVolume: 'Volumen anual',
     // Port translations
     ports: {
+      // China pickup ports
       'SHA': 'Shanghai',
       'SZX': 'Shenzhen',
       'NGB': 'Ningbo-Zhoushan',
@@ -1964,7 +3685,200 @@ const I18N_TEXT = {
       'ZIH': 'Terminal ferroviaria de Zhengzhou',
       'CQN': 'Terminal ferroviaria de Chongqing',
       'WUH': 'Terminal ferroviaria de Wuhan',
-      'CDU': 'Terminal ferroviaria de Chengdu'
+      'CDU': 'Terminal ferroviaria de Chengdu',
+      // Destination ports - Europe
+      'FRMRS': 'Puerto de Marsella-Fos',
+      'FRLEH': 'Puerto de Le Havre',
+      'FRCDG': 'Aeropuerto Charles de Gaulle',
+      'FRORY': 'Aeropuerto París-Orly',
+      'FRLYO': 'Aeropuerto Lyon-Saint Exupéry',
+      'DEHAM': 'Puerto de Hamburgo',
+      'DEBRE': 'Puerto de Bremen',
+      'DEFRA': 'Aeropuerto de Fráncfort',
+      'DEMUC': 'Aeropuerto de Múnich',
+      'DEHAM_RAIL': 'Terminal ferroviaria de Hamburgo',
+      'GBFXT': 'Puerto de Felixstowe',
+      'GBSOU': 'Puerto de Southampton',
+      'GBLHR': 'Aeropuerto de Londres Heathrow',
+      'GBLGW': 'Aeropuerto de Londres Gatwick',
+      'GBMAN': 'Aeropuerto de Manchester',
+      'NLRTM': 'Puerto de Róterdam',
+      'NLAMS': 'Aeropuerto de Ámsterdam Schiphol',
+      'BEANR': 'Puerto de Amberes',
+      'BEBRU': 'Aeropuerto de Bruselas',
+      'BELGG': 'Aeropuerto de Lieja',
+      'ITGOA': 'Puerto de Génova',
+      'ITLSP': 'Puerto de La Spezia',
+      'ITMXP': 'Aeropuerto de Milán Malpensa',
+      'ITFCO': 'Aeropuerto de Roma Fiumicino',
+      'ESALG': 'Puerto de Algeciras',
+      'ESVAL': 'Puerto de Valencia',
+      'ESMAD': 'Aeropuerto de Madrid-Barajas',
+      'ESBCN': 'Aeropuerto de Barcelona',
+      'PTLIS': 'Puerto de Lisboa',
+      'PTLEX': 'Puerto de Leixões (Oporto)',
+      'PTLIS_AIR': 'Aeropuerto de Lisboa',
+      'PLGDN': 'Puerto de Gdansk',
+      'PLGDY': 'Puerto de Gdynia',
+      'PLWAW': 'Aeropuerto Chopin de Varsovia',
+      'GRPIR': 'Puerto del Pireo',
+      'GRTHE': 'Puerto de Tesalónica',
+      'GRATH': 'Aeropuerto de Atenas',
+      'TRMER': 'Puerto de Mersin',
+      'TRIST': 'Puerto de Estambul',
+      'TRIST_AIR': 'Aeropuerto de Estambul',
+      'NOOSL': 'Puerto de Oslo',
+      'NOOSLO': 'Aeropuerto de Oslo Gardermoen',
+      'SEGOT': 'Puerto de Gotemburgo',
+      'SESTO': 'Puerto de Estocolmo',
+      'SEARN': 'Aeropuerto Arlanda de Estocolmo',
+      'DKAAR': 'Puerto de Aarhus',
+      'DKCPH': 'Aeropuerto de Copenhague',
+      'FIHEN': 'Puerto de Helsinki',
+      'FIHEL': 'Aeropuerto Helsinki-Vantaa',
+      'EETLL': 'Puerto de Tallín',
+      'EETLL_AIR': 'Aeropuerto de Tallín',
+      'LVRIX': 'Puerto de Riga',
+      'LVRIX_AIR': 'Aeropuerto de Riga',
+      'LTKLA': 'Puerto de Klaipeda',
+      'LTVNO': 'Aeropuerto de Vilnius',
+      'CZPRG': 'Aeropuerto de Praga',
+      'CZPRG_RAIL': 'Terminal ferroviaria de Praga',
+      'SKBTS': 'Aeropuerto de Bratislava',
+      'SKBTS_RAIL': 'Terminal ferroviaria de Bratislava',
+      'HUBUD': 'Aeropuerto de Budapest',
+      'HUBUD_RAIL': 'Terminal ferroviaria de Budapest',
+      'ROCND': 'Puerto de Constanza',
+      'ROBBU': 'Aeropuerto de Bucarest',
+      'BGVAR': 'Puerto de Varna',
+      'BGSOF': 'Aeropuerto de Sofía',
+      'HRRIU': 'Puerto de Rijeka',
+      'HRZAG': 'Aeropuerto de Zagreb',
+      'SIKOP': 'Puerto de Koper',
+      'SILJB': 'Aeropuerto de Liubliana',
+      'ATVIE': 'Aeropuerto de Viena',
+      'ATVIE_RAIL': 'Terminal ferroviaria de Viena',
+      'CHZUR': 'Aeropuerto de Zúrich',
+      'CHBAS_RAIL': 'Terminal ferroviaria de Basilea',
+      'IEDUB': 'Puerto de Dublín',
+      'IEDUB_AIR': 'Aeropuerto de Dublín',
+      'ISKEF': 'Aeropuerto de Reikiavik',
+      'RULED': 'Puerto de San Petersburgo',
+      'RUNVO': 'Puerto de Novorossiysk',
+      'RUSVO': 'Aeropuerto Sheremetyevo de Moscú',
+      'RUMOW_RAIL': 'Terminal ferroviaria de Moscú',
+      'UAODE': 'Puerto de Odesa',
+      'UAKBP': 'Aeropuerto Boryspil de Kiev',
+      'BYMSQ': 'Aeropuerto de Minsk',
+      'BYMSQ_RAIL': 'Terminal ferroviaria de Minsk',
+      // Americas
+      'USLAX': 'Puerto de Los Ángeles',
+      'USLGB': 'Puerto de Long Beach',
+      'USNYC': 'Puerto de Nueva York/Nueva Jersey',
+      'USSAV': 'Puerto de Savannah',
+      'USJFK': 'Aeropuerto JFK Nueva York',
+      'USLAX_AIR': 'Aeropuerto LAX Los Ángeles',
+      'USMIA': 'Aeropuerto de Miami',
+      'USORD': 'Aeropuerto Chicago O\'Hare',
+      'CAVAN': 'Puerto de Vancouver',
+      'CAHAL': 'Puerto de Halifax',
+      'CAYYZ': 'Aeropuerto Pearson de Toronto',
+      'CAVAN_AIR': 'Aeropuerto de Vancouver',
+      'MXVER': 'Puerto de Veracruz',
+      'MXMEX': 'Aeropuerto de Ciudad de México',
+      'BRSAN': 'Puerto de Santos',
+      'BRRIG': 'Puerto de Rio Grande',
+      'BRGRU': 'Aeropuerto Guarulhos de São Paulo',
+      'BRGIG': 'Aeropuerto Galeão de Río de Janeiro',
+      'ARBUE': 'Puerto de Buenos Aires',
+      'AREZE': 'Aeropuerto Ezeiza de Buenos Aires',
+      'CLVAP': 'Puerto de Valparaíso',
+      'CLSAN': 'Puerto de San Antonio',
+      'CLSCL': 'Aeropuerto de Santiago',
+      'PECAL': 'Puerto del Callao',
+      'PELIM': 'Aeropuerto Jorge Chávez de Lima',
+      'COCAR': 'Puerto de Cartagena',
+      'COBOG': 'Aeropuerto El Dorado de Bogotá',
+      'ECGYE': 'Puerto de Guayaquil',
+      'ECUIO': 'Aeropuerto de Quito',
+      // Asia-Pacific
+      'CNSHA': 'Puerto de Shanghai',
+      'CNSZX': 'Puerto de Shenzhen',
+      'CNPVG': 'Aeropuerto Pudong de Shanghai',
+      'CNPEK': 'Aeropuerto Capital de Beijing',
+      'JPTYO': 'Puerto de Tokio',
+      'JPYOK': 'Puerto de Yokohama',
+      'JPNRT': 'Aeropuerto Narita de Tokio',
+      'JPKIX': 'Aeropuerto Kansai de Osaka',
+      'KRPUS': 'Puerto de Busan',
+      'KRICN': 'Aeropuerto Incheon de Seúl',
+      'TWKAO': 'Puerto de Kaohsiung',
+      'TWTPE': 'Aeropuerto Taoyuan de Taipéi',
+      'HKHKG': 'Puerto de Hong Kong',
+      'HKHKG_AIR': 'Aeropuerto de Hong Kong',
+      'SGSIN': 'Puerto de Singapur',
+      'SGSIN_AIR': 'Aeropuerto Changi de Singapur',
+      'MYPKG': 'Puerto Klang',
+      'MYKUL': 'Aeropuerto de Kuala Lumpur',
+      'THLCH': 'Puerto de Laem Chabang',
+      'THBKK': 'Aeropuerto Suvarnabhumi de Bangkok',
+      'VNHPH': 'Puerto de Hai Phong',
+      'VNSGN': 'Puerto de Ciudad Ho Chi Minh',
+      'VNSGN_AIR': 'Aeropuerto de Ciudad Ho Chi Minh',
+      'PHMNL': 'Puerto de Manila',
+      'PHMNL_AIR': 'Aeropuerto de Manila',
+      'IDJKT': 'Puerto de Yakarta (Tanjung Priok)',
+      'IDCGK': 'Aeropuerto Soekarno-Hatta de Yakarta',
+      'INJNP': 'Puerto Jawaharlal Nehru',
+      'INMAA': 'Puerto de Chennai',
+      'INBOM': 'Aeropuerto de Bombay',
+      'INDEL': 'Aeropuerto de Delhi',
+      'LKCMB': 'Puerto de Colombo',
+      'LKCMB_AIR': 'Aeropuerto de Colombo',
+      'AUSYD': 'Puerto de Sídney',
+      'AUMEL': 'Puerto de Melbourne',
+      'AUSYD_AIR': 'Aeropuerto de Sídney',
+      'AUMEL_AIR': 'Aeropuerto de Melbourne',
+      'NZAKL': 'Puerto de Auckland',
+      'NZAKL_AIR': 'Aeropuerto de Auckland',
+      // Middle East & Africa
+      'AEJEA': 'Puerto Jebel Ali (Dubái)',
+      'AEDXB': 'Aeropuerto de Dubái',
+      'AEAUH': 'Aeropuerto de Abu Dabi',
+      'SAJED': 'Puerto Rey Abdulaziz (Dammam)',
+      'SARRH': 'Aeropuerto de Riad',
+      'QADOH': 'Puerto de Doha',
+      'QADOH_AIR': 'Aeropuerto Hamad de Doha',
+      'KWKWI': 'Puerto de Kuwait',
+      'KWKWI_AIR': 'Aeropuerto de Kuwait',
+      'OMSLL': 'Puerto de Salalah',
+      'OMSLL_AIR': 'Aeropuerto de Salalah',
+      'BHBAH': 'Puerto de Bahréin',
+      'BHBAH_AIR': 'Aeropuerto de Bahréin',
+      'ILASH': 'Puerto de Ashdod',
+      'ILTLV': 'Aeropuerto Ben Gurion de Tel Aviv',
+      'EGALY': 'Puerto de Alejandría',
+      'EGCAI': 'Aeropuerto de El Cairo',
+      'ZADUR': 'Puerto de Durban',
+      'ZACPT': 'Puerto de Ciudad del Cabo',
+      'ZAJNB': 'Aeropuerto OR Tambo de Johannesburgo',
+      'MACAS': 'Puerto de Casablanca',
+      'MATAN': 'Puerto Tánger Med',
+      'MACMN': 'Aeropuerto Mohammed V de Casablanca',
+      'NGLOS': 'Puerto de Lagos',
+      'NGLOS_AIR': 'Aeropuerto de Lagos',
+      'GHTEM': 'Puerto de Tema',
+      'GHACC': 'Aeropuerto de Accra',
+      'CIABJ': 'Puerto de Abiyán',
+      'CIABJ_AIR': 'Aeropuerto de Abiyán',
+      'KEMBA': 'Puerto de Mombasa',
+      'KENBO': 'Aeropuerto Jomo Kenyatta de Nairobi',
+      'TZDAR': 'Puerto de Dar es Salaam',
+      'TZDAR_AIR': 'Aeropuerto de Dar es Salaam',
+      'DZALG': 'Puerto de Argel',
+      'DZALG_AIR': 'Aeropuerto de Argel',
+      'TNRAD': 'Puerto de Radès',
+      'TNTUN': 'Aeropuerto Túnez-Cartago'
     },
     // Region translations
     regions: {
@@ -2186,14 +4100,6 @@ const I18N_TEXT = {
       getMyQuote: 'Obtener Mi Cotización',
       shipment: 'envío',
       shipments: 'envíos',
-      // Additional shipment summary translations
-      shipmentTitle: 'Envío',
-      setupPending: 'Configuración pendiente...',
-      addAnotherShipment: 'Agregar Otro Envío',
-      items: 'Artículos',
-      each: 'cada uno',
-      totalCalculation: 'Cálculo total',
-      overweight: 'Sobrepeso',
   },
   it: {
     // Header
@@ -2227,6 +4133,8 @@ const I18N_TEXT = {
     port: 'Porto',
     airport: 'Aeroporto', 
     railTerminal: 'Terminal ferroviario',
+    seaPort: 'Porto marittimo',
+    volume: 'Volume',
     businessAddress: 'Indirizzo commerciale',
     residentialAddress: 'Indirizzo residenziale',
     chooseLocationDescription: 'Scegli il tuo luogo di ritiro',
@@ -2264,6 +4172,10 @@ const I18N_TEXT = {
     searchCountryDescription: 'Cerca il paese dove vuoi spedire le tue merci',
     addressTypeQuestion: 'Che tipo di indirizzo è la tua destinazione?',
     selectDestinationLocationType: 'Per favore seleziona un tipo di ubicazione di destinazione',
+    selectDestinationPort: 'Seleziona porto di destinazione',
+    selectDestinationPortDescription: 'Scegli il porto o aeroporto specifico per la consegna',
+    searchPortsIn: 'Cerca porti in',
+    searchDestinationPorts: 'Cerca porti di destinazione',
     enterDestinationDetails: 'Inserisci dettagli destinazione',
     // Messaggi di validazione
     validationShippingType: 'Per favore seleziona un tipo di spedizione',
@@ -2307,12 +4219,12 @@ const I18N_TEXT = {
     portTerminalDescription: 'Scegli il porto, terminal o aeroporto specifico per il ritiro',
     pickupCity: 'Città di ritiro',
     pickupZipCode: 'Codice postale di ritiro',
-    dontKnowPort: "Non lo so",
-    dontKnowPortDescription: "Non sono sicuro di quale porto/terminal scegliere",
-    dontKnowPortFeedback: "Nessun problema! Ti aiuteremo a scegliere il miglior porto/terminal per la tua spedizione.",
-    perfectPortFeedback: "Perfetto! Ritireremo da",
-    cityPickupFeedback: "Perfetto! Organizzeremo il ritiro da {city}, Cina",
-    annualVolume: "Volume annuale",
+    dontKnowPort: 'Non lo so',
+    dontKnowPortDescription: 'Non sono sicuro di quale porto/terminal scegliere',
+    dontKnowPortFeedback: 'Nessun problema! Ti aiuteremo a scegliere il miglior porto/terminal per la tua spedizione.',
+    perfectPortFeedback: 'Perfetto! Ritireremo da',
+    cityPickupFeedback: 'Perfetto! Organizzeremo il ritiro da {city}, Cina',
+    annualVolume: 'Volume annuale',
     // Port translations
     ports: {
       'SHA': 'Shanghai',
@@ -2559,14 +4471,6 @@ const I18N_TEXT = {
       container40: "40' Standard (67 CBM)",
       container40HC: "40' High Cube (76 CBM)",
       container45HC: "45' High Cube (86 CBM)",
-      // Additional shipment summary translations
-      shipmentTitle: 'Spedizione',
-      setupPending: 'Configurazione in attesa...',
-      addAnotherShipment: 'Aggiungi Altra Spedizione',
-      items: 'Articoli',
-      each: 'ciascuno',
-      totalCalculation: 'Calcolo totale',
-      overweight: 'Sovrappeso',
   },
   nl: {
     // Header
@@ -2600,6 +4504,8 @@ const I18N_TEXT = {
     port: 'Haven',
     airport: 'Luchthaven', 
     railTerminal: 'Spoorwegterminal',
+    seaPort: 'Zeehaven',
+    volume: 'Volume',
     businessAddress: 'Bedrijfsadres',
     residentialAddress: 'Woonadres',
     chooseLocationDescription: 'Kies uw ophaallocatie',
@@ -2637,6 +4543,10 @@ const I18N_TEXT = {
     searchCountryDescription: 'Zoek het land waar u uw goederen naartoe wilt verzenden',
     addressTypeQuestion: 'Welk type adres is uw bestemming?',
     selectDestinationLocationType: 'Selecteer een bestemmingslocatie type',
+    selectDestinationPort: 'Selecteer bestemmingshaven',
+    selectDestinationPortDescription: 'Kies de specifieke haven of luchthaven voor levering',
+    searchPortsIn: 'Zoek havens in',
+    searchDestinationPorts: 'Zoek bestemmingshavens',
     enterDestinationDetails: 'Voer bestemmingsdetails in',
     // Validatieberichten
     validationShippingType: 'Selecteer een verzendtype',
@@ -2680,12 +4590,12 @@ const I18N_TEXT = {
     portTerminalDescription: 'Kies de specifieke haven, terminal of luchthaven voor ophaal',
     pickupCity: 'Ophaalstad',
     pickupZipCode: 'Ophaal postcode',
-    dontKnowPort: "Ik weet het niet",
-    dontKnowPortDescription: "Ik weet niet zeker welke haven/terminal te kiezen",
-    dontKnowPortFeedback: "Geen probleem! We helpen je de beste haven/terminal voor je zending te kiezen.",
-    perfectPortFeedback: "Perfect! We halen op van",
-    cityPickupFeedback: "Geweldig! We regelen ophaal uit {city}, China",
-    annualVolume: "Jaarlijks volume",
+    dontKnowPort: 'Ik weet het niet',
+    dontKnowPortDescription: 'Ik weet niet zeker welke haven/terminal te kiezen',
+    dontKnowPortFeedback: 'Geen probleem! We helpen je de beste haven/terminal voor je zending te kiezen.',
+    perfectPortFeedback: 'Perfect! We halen op van',
+    cityPickupFeedback: 'Geweldig! We regelen ophaal uit {city}, China',
+    annualVolume: 'Jaarlijks volume',
     // Port translations
     ports: {
       'SHA': 'Shanghai',
@@ -2933,14 +4843,6 @@ const I18N_TEXT = {
       container40: "40' Standaard (67 CBM)",
       container40HC: "40' High Cube (76 CBM)",
       container45HC: "45' High Cube (86 CBM)",
-      // Additional shipment summary translations
-      shipmentTitle: 'Zending',
-      setupPending: 'Setup in behandeling...',
-      addAnotherShipment: 'Voeg Nog Een Zending Toe',
-      items: 'Items',
-      each: 'elk',
-      totalCalculation: 'Totale berekening',
-      overweight: 'Overgewicht',
   },
   ar: {
     // Header
@@ -2974,6 +4876,8 @@ const I18N_TEXT = {
     port: 'ميناء',
     airport: 'مطار', 
     railTerminal: 'محطة السكك الحديدية',
+    seaPort: 'ميناء بحري',
+    volume: 'الحجم',
     businessAddress: 'عنوان العمل',
     residentialAddress: 'عنوان سكني',
     chooseLocationDescription: 'اختر موقع الاستلام',
@@ -3011,6 +4915,10 @@ const I18N_TEXT = {
     searchCountryDescription: 'ابحث عن البلد الذي تريد شحن بضائعك إليه',
     addressTypeQuestion: 'ما نوع العنوان الذي هو وجهتك؟',
     selectDestinationLocationType: 'يرجى اختيار نوع موقع الوجهة',
+    selectDestinationPort: 'اختر ميناء الوجهة',
+    selectDestinationPortDescription: 'اختر الميناء أو المطار المحدد للتسليم',
+    searchPortsIn: 'البحث عن الموانئ في',
+    searchDestinationPorts: 'البحث عن موانئ الوجهة',
     enterDestinationDetails: 'أدخل تفاصيل الوجهة',
     // رسائل التحقق
     validationShippingType: 'يرجى اختيار نوع الشحن',
@@ -3054,12 +4962,12 @@ const I18N_TEXT = {
     portTerminalDescription: 'اختر الميناء أو المحطة أو المطار المحدد للاستلام',
     pickupCity: 'مدينة الاستلام',
     pickupZipCode: 'الرمز البريدي للاستلام',
-    dontKnowPort: "لا أعرف",
-    dontKnowPortDescription: "لست متأكداً من الميناء/المحطة التي يجب اختيارها",
-    dontKnowPortFeedback: "لا مشكلة! سنساعدك في اختيار أفضل ميناء/محطة لشحنتك.",
-    perfectPortFeedback: "ممتاز! سنقوم بالتحصيل من",
-    cityPickupFeedback: "رائع! سنرتب الاستلام من {city}، الصين",
-    annualVolume: "الحجم السنوي",
+    dontKnowPort: 'لا أعرف',
+    dontKnowPortDescription: 'لست متأكداً من الميناء/المحطة التي يجب اختيارها',
+    dontKnowPortFeedback: 'لا مشكلة! سنساعدك في اختيار أفضل ميناء/محطة لشحنتك.',
+    perfectPortFeedback: 'ممتاز! سنقوم بالتحصيل من',
+    cityPickupFeedback: 'رائع! سنرتب الاستلام من {city}، الصين',
+    annualVolume: 'الحجم السنوي',
     // Port translations
     ports: {
       'SHA': 'شانغهاي',
@@ -3244,67 +5152,64 @@ const I18N_TEXT = {
       shipments: 'شحنات',
       // Step 4 translations
       step4Title: 'ماذا تشحن؟',
-      managingShipments: 'إدارة {count} شحنة',
-      configureShipments: 'قم بتكوين كل شحنة على حدة أو أضف شحنات متعددة للطلبات المعقدة',
+      managingShipments: 'إدارة {count} شحنة{plural}',
+      configureShipments: 'قم بتكوين كل شحنة بشكل فردي أو أضف عدة شحنات للطلبات المعقدة',
       addShipment: 'إضافة شحنة',
-      validating: 'جاري التحقق...',
+      validating: 'التحقق...',
       active: 'نشط',
       shipmentsCount: 'الشحنات ({count})',
       addNewShipment: 'إضافة شحنة جديدة',
-      duplicateShipment: 'نسخ هذه الشحنة',
+      duplicateShipment: 'تكرار هذه الشحنة',
       removeShipment: 'إزالة هذه الشحنة',
-      consolidatedSummary: 'الملخص المدمج',
+      consolidatedSummary: 'ملخص مجمع',
       totalVolume: 'الحجم الإجمالي',
       totalWeight: 'الوزن الإجمالي',
       totalShipments: 'الشحنات',
       totalContainers: 'الحاويات',
-      chooseShippingType: 'اختر نوع الشحن',
-      shipmentXofY: 'الشحنة {current} من {total}',
+      chooseShippingType: 'اختر نوع الشحن الخاص بك',
+      shipmentXofY: 'شحنة {current} من {total}',
       selectPackagingMethod: 'اختر كيفية تعبئة بضائعك للشحن',
       forThisSpecificShipment: 'لهذه الشحنة المحددة',
-      looseCargo: 'البضائع السائبة',
-      looseCargoDesc: 'منصات، صناديق أو عناصر فردية',
+      looseCargo: 'بضائع سائبة',
+      looseCargoDesc: 'منصات أو صناديق أو عناصر فردية',
       fullContainer: 'حاوية كاملة',
       fullContainerDesc: 'حاوية كاملة (FCL)',
-      imNotSure: 'لست متأكد',
-      teamWillHelp: 'فريقنا سيساعدك في اختيار أفضل خيار',
-      looseCargoFeedback: 'مثالي للبضائع المختلطة، الكميات الصغيرة إلى المتوسطة، أو عندما تحتاج لتعبئة مرنة',
-      containerFeedback: 'خيار ممتاز للأحجام الكبيرة، خطوط الإنتاج الكاملة، أو عندما يكون لديك بضائع كافية لملء حاوية',
-      unsureFeedback: 'لا تقلق! فريقنا ذو الخبرة سيرشدك خلال العملية وسيوصي بأفضل حل شحن لاحتياجاتك المحددة. نحن نتولى جميع التفاصيل التقنية.',
-      whatHappensNext: 'ما يحدث بعد ذلك:',
-      expertsContact: 'خبراء الشحن لدينا يتصلون بك خلال 24 ساعة',
-      discussRequirements: 'نناقش تفاصيل شحنتك ومتطلباتك',
-      personalizedRecommendations: 'تحصل على توصيات وأسعار مخصصة',
-
-      describeLooseCargo: 'صف البضائع السائبة',
-      configureContainer: 'قم بتكوين حاويتك',
-      provideDimensionsWeight: 'قدم الأبعاد وتفاصيل الوزن للتسعير الدقيق',
-      selectContainerType: 'اختر نوع وكمية الحاوية لشحنتك',
-      calculateByUnit: 'احسب حسب نوع الوحدة',
-      calculateByTotal: 'احسب حسب إجمالي الشحنة',
-      packageType: 'نوع الحزمة',
-      pallets: 'المنصات',
-      boxesCrates: 'الصناديق/الحاويات',
+      imNotSure: 'لست متأكداً',
+      teamWillHelp: 'سيساعدك فريقنا في اختيار الخيار الأفضل',
+      unsureFeedback: 'لا تقلق! سيرشدك فريقنا ذو الخبرة خلال العملية ويوصي بأفضل حل نقل لاحتياجاتك المحددة. سنتولى جميع التفاصيل التقنية.',
+      whatHappensNext: 'ما سيحدث بعد ذلك:',
+      expertsContact: 'سيتواصل معك خبراء النقل لدينا خلال 24 ساعة',
+      discussRequirements: 'سنناقش تفاصيل بضائعك ومتطلباتك',
+      personalizedRecommendations: 'ستحصل على توصيات وأسعار مخصصة',
+      describeLooseCargo: 'صف بضائعك السائبة',
+      configureContainer: 'اكوّن حاويتك',
+      provideDimensionsWeight: 'قدم تفاصيل الأبعاد والوزن للحصول على تسعير دقيق',
+      selectContainerType: 'اختر نوع الحاوية والكمية لشحنتك',
+      calculateByUnit: 'حساب حسب نوع الوحدة',
+      calculateByTotal: 'حساب حسب إجمالي الشحنة',
+      packageType: 'نوع التعبئة',
+      pallets: 'منصات',
+      boxesCrates: 'صناديق/صناديق خشبية',
       numberOfUnits: 'عدد الوحدات',
       palletType: 'نوع المنصة',
       nonSpecified: 'غير محدد',
-      euroPallet: 'منصة أوروبية (120x80 سم)',
-      standardPallet: 'منصة قياسية (120x100 سم)',
+      euroPallet: 'منصة أوروبية (120×80 سم)',
+      standardPallet: 'منصة قياسية (120×100 سم)',
       customSize: 'حجم مخصص',
-      dimensionsPerUnit: 'الأبعاد (الطول×العرض×الارتفاع لكل وحدة)',
+      dimensionsPerUnit: 'الأبعاد (لكل وحدة الطول×العرض×الارتفاع)',
       weightPerUnit: 'الوزن (لكل وحدة)',
       required: 'مطلوب',
-      containerInfoBanner: 'اختر نوع وكمية الحاوية التي تناسب حجم شحنتك بشكل أفضل.',
-      unitInfoBanner: 'قدم تفاصيل حول كل عنصر فردي أو منصة للحساب الدقيق.',
-      totalInfoBanner: 'توفير أرقام الشحنة الإجمالية قد يكون أقل دقة. الأبعاد غير الدقيقة أو كبيرة الحجم قد تؤدي إلى رسوم إضافية.',
-      totalDescription: 'أدخل الأبعاد الإجمالية ووزن شحنتك.',
+      containerInfoBanner: 'اختر نوع الحاوية والكمية الأنسب لحجم بضائعك.',
+      unitInfoBanner: 'قدم تفاصيل دقيقة لكل عنصر فردي أو منصة للحصول على حساب دقيق.',
+      totalInfoBanner: 'قد يكون تقديم أرقام الشحنة الإجمالية أقل دقة. قد تؤدي الأبعاد غير الدقيقة أو كبيرة الحجم إلى تكاليف إضافية.',
+      totalDescription: 'أدخل الأبعاد والوزن الإجمالي لشحنتك.',
       containerType: 'نوع الحاوية',
       numberOfContainers: 'عدد الحاويات',
       overweightContainer: 'حاوية زائدة الوزن (>25 طن)',
-      container20: "20' قياسي (33 متر مكعب)",
-      container40: "40' قياسي (67 متر مكعب)",
-      container40HC: "40' عالي المكعب (76 متر مكعب)",
-      container45HC: "45' عالي المكعب (86 متر مكعب)",
+      container20: "20' قياسية (33 متر مكعب)",
+      container40: "40' قياسية (67 متر مكعب)",
+      container40HC: "40' عالية المكعب (76 متر مكعب)",
+      container45HC: "45' عالية المكعب (86 متر مكعب)",
       // Additional shipment summary translations
       shipmentTitle: 'شحنة',
       setupPending: 'الإعداد معلق...',
@@ -3346,6 +5251,8 @@ const I18N_TEXT = {
     port: 'Porto',
     airport: 'Aeroporto', 
     railTerminal: 'Terminal ferroviário',
+    seaPort: 'Porto marítimo',
+    volume: 'Volume',
     businessAddress: 'Endereço comercial',
     residentialAddress: 'Endereço residencial',
     chooseLocationDescription: 'Escolha seu local de coleta',
@@ -3383,6 +5290,10 @@ const I18N_TEXT = {
     searchCountryDescription: 'Procure o país para onde deseja enviar suas mercadorias',
     addressTypeQuestion: 'Que tipo de endereço é seu destino?',
     selectDestinationLocationType: 'Por favor, selecione um tipo de localização de destino',
+    selectDestinationPort: 'Selecionar porto de destino',
+    selectDestinationPortDescription: 'Escolha o porto ou aeroporto específico para entrega',
+    searchPortsIn: 'Pesquisar portos em',
+    searchDestinationPorts: 'Pesquisar portos de destino',
     enterDestinationDetails: 'Digite detalhes do destino',
     // Mensagens de validação
     validationShippingType: 'Por favor, selecione um tipo de envio',
@@ -3426,12 +5337,12 @@ const I18N_TEXT = {
     portTerminalDescription: 'Escolha o porto, terminal ou aeroporto específico para coleta',
     pickupCity: 'Cidade de coleta',
     pickupZipCode: 'Código postal de coleta',
-    dontKnowPort: "Não sei",
-    dontKnowPortDescription: "Não tenho certeza de qual porto/terminal escolher",
-    dontKnowPortFeedback: "Sem problema! Vamos ajudá-lo a escolher o melhor porto/terminal para seu frete.",
-    perfectPortFeedback: "Perfeito! Vamos coletar de",
-    cityPickupFeedback: "Perfeito! Vamos organizar a coleta de {city}, China",
-    annualVolume: "Volume anual",
+    dontKnowPort: 'Não sei',
+    dontKnowPortDescription: 'Não tenho certeza de qual porto/terminal escolher',
+    dontKnowPortFeedback: 'Sem problema! Vamos ajudá-lo a escolher o melhor porto/terminal para seu frete.',
+    perfectPortFeedback: 'Perfeito! Vamos coletar de',
+    cityPickupFeedback: 'Perfeito! Vamos organizar a coleta de {city}, China',
+    annualVolume: 'Volume anual',
     // Port translations
     ports: {
       'SHA': 'Shanghai',
@@ -3602,9 +5513,9 @@ const I18N_TEXT = {
       chinaOffices: 'Escritórios na China: Shenzhen, Shanghai, Qingdao, Ningbo',
       hkOffice: 'Sede em Hong Kong: Tsim Sha Tsui',
       needHelp: 'Precisa de Ajuda?',
-      whatsappLine: "Linha WhatsApp",
-      contactEmail: "E-mail",
-      businessHours: "9h-18h (Horário da China)",
+      whatsappLine: 'Linha WhatsApp',
+      contactEmail: 'E-mail',
+      businessHours: '9h-18h (Horário da China)',
       actions: 'Ações Rápidas',
       newRequest: 'Enviar Nova Solicitação',
       viewServices: 'Ver Nossos Serviços',
@@ -3622,9 +5533,9 @@ const I18N_TEXT = {
       validating: 'Validando...',
       active: 'Ativo',
       shipmentsCount: 'Remessas ({count})',
-      addNewShipment: 'Adicionar Nova Remessa',
-      duplicateShipment: 'Duplicar Esta Remessa',
-      removeShipment: 'Remover Esta Remessa',
+      addNewShipment: 'Adicionar nova remessa',
+      duplicateShipment: 'Duplicar esta remessa',
+      removeShipment: 'Remover esta remessa',
       consolidatedSummary: 'Resumo Consolidado',
       totalVolume: 'Volume Total',
       totalWeight: 'Peso Total',
@@ -3632,59 +5543,57 @@ const I18N_TEXT = {
       totalContainers: 'Contêineres',
       chooseShippingType: 'Escolha seu tipo de envio',
       shipmentXofY: 'Remessa {current} de {total}',
-      selectPackagingMethod: 'Selecione como suas mercadorias estão embaladas para envio',
-      forThisSpecificShipment: 'Para esta remessa específica',
+      selectPackagingMethod: 'Selecione como suas mercadorias são embaladas para envio',
+      forThisSpecificShipment: 'para esta remessa específica',
       looseCargo: 'Carga Solta',
       looseCargoDesc: 'Paletes, caixas ou itens individuais',
       fullContainer: 'Contêiner Completo',
       fullContainerDesc: 'Contêiner completo (FCL)',
       imNotSure: 'Não tenho certeza',
       teamWillHelp: 'Nossa equipe ajudará você a escolher a melhor opção',
-      looseCargoFeedback: 'Perfeito para mercadorias mistas, quantidades pequenas a médias, ou quando você precisa de embalagem flexível',
-      containerFeedback: 'Excelente escolha para grandes volumes, linhas de produtos completas, ou quando você tem mercadorias suficientes para encher um contêiner',
-      unsureFeedback: 'Não se preocupe! Nossa equipe experiente o guiará através do processo e recomendará a melhor solução de envio para suas necessidades específicas. Cuidamos de todos os detalhes técnicos.',
+      unsureFeedback: 'Não se preocupe! Nossa equipe experiente o guiará através do processo e recomendará a melhor solução de transporte para suas necessidades específicas. Cuidaremos de todos os detalhes técnicos.',
       whatHappensNext: 'O que acontece a seguir:',
-      expertsContact: 'Nossos especialistas em envio entram em contato em até 24 horas',
-      discussRequirements: 'Discutimos os detalhes e requisitos da sua carga',
-      personalizedRecommendations: 'Você recebe recomendações e preços personalizados',
-  
+      expertsContact: 'Nossos especialistas em transporte entrarão em contato em 24 horas',
+      discussRequirements: 'Discutiremos os detalhes e requisitos de suas mercadorias',
+      personalizedRecommendations: 'Você receberá recomendações personalizadas e preços',
       describeLooseCargo: 'Descreva sua carga solta',
       configureContainer: 'Configure seu contêiner',
-      provideDimensionsWeight: 'Forneça dimensões e detalhes de peso para preços precisos',
-      selectContainerType: 'Selecione tipo e quantidade de contêiner para sua remessa',
+      provideDimensionsWeight: 'Forneça detalhes de dimensões e peso para preços precisos',
+      selectContainerType: 'Selecione o tipo e quantidade de contêiner para seu frete',
       calculateByUnit: 'Calcular por tipo de unidade',
-      calculateByTotal: 'Calcular por remessa total',
-      packageType: 'Tipo de pacote',
+      calculateByTotal: 'Calcular por total do frete',
+      packageType: 'Tipo de embalagem',
       pallets: 'Paletes',
       boxesCrates: 'Caixas/Engradados',
       numberOfUnits: 'Número de unidades',
       palletType: 'Tipo de palete',
       nonSpecified: 'Não especificado',
-      euroPallet: 'Europalete (120x80 cm)',
-      standardPallet: 'Palete padrão (120x100 cm)',
+      euroPallet: 'Palete Europeu (120x80 cm)',
+      standardPallet: 'Palete Padrão (120x100 cm)',
       customSize: 'Tamanho personalizado',
-      dimensionsPerUnit: 'Dimensões (C×L×A por unidade)',
-      weightPerUnit: 'Peso (Por unidade)',
+      dimensionsPerUnit: 'Dimensões (por unidade L×W×H)',
+      weightPerUnit: 'Peso (por unidade)',
       required: 'Obrigatório',
-      containerInfoBanner: 'Selecione o tipo e quantidade de contêiner que melhor se adequa ao seu volume de carga.',
-      unitInfoBanner: 'Forneça detalhes sobre cada item individual ou palete para cálculo preciso.',
-      totalInfoBanner: 'Fornecer números totais de remessa pode ser menos preciso. Dimensões imprecisas ou oversized podem resultar em taxas adicionais.',
-      totalDescription: 'Digite as dimensões totais e o peso da sua remessa.',
+      containerInfoBanner: 'Escolha o tipo e quantidade de contêiner mais adequados para o volume de suas mercadorias.',
+      unitInfoBanner: 'Forneça detalhes precisos para cada item individual ou palete para cálculo preciso.',
+      totalInfoBanner: 'Fornecer números totais de remessa pode ser menos preciso. Dimensões imprecisas ou grandes podem resultar em custos adicionais.',
+      totalDescription: 'Digite as dimensões e peso total de sua remessa.',
       containerType: 'Tipo de contêiner',
       numberOfContainers: 'Número de contêineres',
-      overweightContainer: 'Contêiner com excesso de peso (>25 ton)',
+      overweightContainer: 'Contêiner com excesso de peso (>25 toneladas)',
       container20: "20' Padrão (33 CBM)",
       container40: "40' Padrão (67 CBM)",
       container40HC: "40' High Cube (76 CBM)",
       container45HC: "45' High Cube (86 CBM)",
       // Additional shipment summary translations
-      shipmentTitle: 'Envio',
+      shipmentTitle: 'Remessa',
       setupPending: 'Configuração pendente...',
-      addAnotherShipment: 'Adicionar Outro Envio',
+      addAnotherShipment: 'Adicionar Outra Remessa',
       items: 'Itens',
       each: 'cada',
       totalCalculation: 'Cálculo total',
-      overweight: 'Sobrepeso',
+      overweight: 'Excesso de peso',
+
   },
   tr: {
     // Header
@@ -3718,6 +5627,8 @@ const I18N_TEXT = {
     port: 'Liman',
     airport: 'Havaalanı', 
     railTerminal: 'Demiryolu terminali',
+    seaPort: 'Deniz Limanı',
+    volume: 'Hacim',
     businessAddress: 'İş adresi',
     residentialAddress: 'Konut adresi',
     chooseLocationDescription: 'Teslim alma yerinizi seçin',
@@ -3755,6 +5666,10 @@ const I18N_TEXT = {
       searchCountryDescription: 'Mallarınızı göndermek istediğiniz ülkeyi arayın',
       addressTypeQuestion: 'Hedefiniz ne tür bir adres?',
     selectDestinationLocationType: 'Lütfen bir hedef konum türü seçin',
+    selectDestinationPort: 'Hedef limanını seçin',
+    selectDestinationPortDescription: 'Teslimat için belirli limanı veya havaalanını seçin',
+    searchPortsIn: 'Limanları ara',
+    searchDestinationPorts: 'Hedef limanları ara',
       enterDestinationDetails: 'Hedef detaylarını girin',
     // Doğrulama mesajları
     validationShippingType: 'Lütfen bir kargo türü seçin',
@@ -3795,15 +5710,15 @@ const I18N_TEXT = {
       pickupCityPostalDescription: 'Çin\'de teslim alma şehri ve posta kodunu belirtin',
       searchPortTerminal: 'Liman/terminal/havaalanı ara...',
       selectPortTerminal: 'Teslim alma limanı/terminali/havaalanını seçin',
-      portTerminalDescription: 'Teslim alma için özel liman, terminal veya havaalanını seçin',
+      portTerminalDescription: 'Teslim alma için özel liman, terminal veya havaalanı seçin',
       pickupCity: 'Teslim alma şehri',
       pickupZipCode: 'Teslim alma posta kodu',
-      dontKnowPort: "Bilmiyorum",
-      dontKnowPortDescription: "Hangi liman/terminali seçeceğimden emin değilim",
-      dontKnowPortFeedback: "Sorun değil! Kargonuz için en iyi liman/terminali seçmenizde yardımcı olacağız.",
-      perfectPortFeedback: "Mükemmel! Şuradan alacağız:",
-      cityPickupFeedback: "Mükemmel! {city}, Çin'den teslim alma organize edeceğiz",
-      annualVolume: "Yıllık hacim",
+      dontKnowPort: 'Bilmiyorum',
+      dontKnowPortDescription: 'Hangi liman/terminali seçeceğimden emin değilim',
+      dontKnowPortFeedback: 'Sorun değil! Kargonuz için en iyi liman/terminali seçmenizde yardımcı olacağız.',
+      perfectPortFeedback: 'Mükemmel! Şuradan alacağız:',
+      cityPickupFeedback: 'Mükemmel! {city}, Çin\'den teslim alma organize edeceğiz',
+      annualVolume: 'Yıllık hacim',
       // Port translations
       ports: {
         'SHA': 'Şangay',
@@ -3960,64 +5875,61 @@ const I18N_TEXT = {
       shipment: 'gönderi',
       shipments: 'gönderiler',
       // Step 4 translations
-      step4Title: 'Ne gönderiyorsunuz?',
+      step4Title: 'Neyi gönderiyorsunuz?',
       managingShipments: '{count} Gönderi{plural} Yönetimi',
       configureShipments: 'Her gönderiyi ayrı ayrı yapılandırın veya karmaşık siparişler için birden fazla gönderi ekleyin',
       addShipment: 'Gönderi Ekle',
-      validating: 'Doğrulanıyor...',
+      validating: 'Doğrulama...',
       active: 'Aktif',
       shipmentsCount: 'Gönderiler ({count})',
-      addNewShipment: 'Yeni Gönderi Ekle',
-      duplicateShipment: 'Bu Gönderiyi Çoğalt',
-      removeShipment: 'Bu Gönderiyi Kaldır',
+      addNewShipment: 'Yeni gönderi ekle',
+      duplicateShipment: 'Bu gönderiyi kopyala',
+      removeShipment: 'Bu gönderiyi kaldır',
       consolidatedSummary: 'Konsolide Özet',
       totalVolume: 'Toplam Hacim',
       totalWeight: 'Toplam Ağırlık',
       totalShipments: 'Gönderiler',
       totalContainers: 'Konteynerler',
-      chooseShippingType: 'Gönderi türünüzü seçin',
+      chooseShippingType: 'Nakliye türünü seçin',
       shipmentXofY: 'Gönderi {current} / {total}',
-      selectPackagingMethod: 'Mallarınızın gönderi için nasıl paketlendiğini seçin',
-      forThisSpecificShipment: 'Bu özel gönderi için',
-      looseCargo: 'Dökme Kargo',
+      selectPackagingMethod: 'Mallarınızın nakliye için nasıl paketlendiğini seçin',
+      forThisSpecificShipment: 'bu özel gönderi için',
+      looseCargo: 'Gevşek Kargo',
       looseCargoDesc: 'Paletler, kutular veya bireysel öğeler',
       fullContainer: 'Tam Konteyner',
       fullContainerDesc: 'Tam konteyner (FCL)',
       imNotSure: 'Emin değilim',
-      teamWillHelp: 'Ekibimiz en iyi seçeneği seçmenizde yardımcı olacak',
-      looseCargoFeedback: 'Karışık mallar, küçük ila orta miktarlar veya esnek paketlemeye ihtiyaç duyduğunuzda mükemmel',
-      containerFeedback: 'Büyük hacimler, eksiksiz ürün hatları veya konteyner doldurmaya yetecek kadar malınız olduğunda mükemmel seçim',
-      unsureFeedback: 'Endişelenmeyin! Deneyimli ekibimiz süreç boyunca size rehberlik edecek ve özel ihtiyaçlarınız için en iyi gönderi çözümünü önerecek. Tüm teknik detayları biz hallederiz.',
-      whatHappensNext: 'Sırada ne oluyor:',
-      expertsContact: 'Gönderi uzmanlarımız 24 saat içinde sizinle iletişime geçer',
-      discussRequirements: 'Kargo detaylarınızı ve gereksinimlerinizi tartışırız',
-      personalizedRecommendations: 'Kişiselleştirilmiş öneriler ve fiyatlar alırsınız',
-
-      describeLooseCargo: 'Dökme kargonuzu açıklayın',
+      teamWillHelp: 'Ekibimiz en iyi seçeneği seçmenize yardımcı olacak',
+      unsureFeedback: 'Endişelenmeyin! Deneyimli ekibimiz süreç boyunca size rehberlik edecek ve özel ihtiyaçlarınız için en iyi nakliye çözümünü önerecek. Tüm teknik detayları hallederiz.',
+      whatHappensNext: 'Bundan sonra ne olacak:',
+      expertsContact: 'Nakliye uzmanlarımız 24 saat içinde iletişime geçecek',
+      discussRequirements: 'Mal detaylarınızı ve gereksinimlerinizi tartışacağız',
+      personalizedRecommendations: 'Kişiselleştirilmiş öneriler ve fiyatlandırma alacaksınız',
+      describeLooseCargo: 'Gevşek kargonuzu tanımlayın',
       configureContainer: 'Konteynerinizi yapılandırın',
-      provideDimensionsWeight: 'Doğru fiyatlandırma için boyutlar ve ağırlık detayları sağlayın',
-      selectContainerType: 'Gönderiniz için konteyner türü ve miktarını seçin',
+      provideDimensionsWeight: 'Doğru fiyatlandırma için boyut ve ağırlık detayları sağlayın',
+      selectContainerType: 'Kargonuz için konteyner türü ve miktarını seçin',
       calculateByUnit: 'Birim türüne göre hesapla',
-      calculateByTotal: 'Toplam gönderiye göre hesapla',
+      calculateByTotal: 'Toplam kargoya göre hesapla',
       packageType: 'Paket türü',
       pallets: 'Paletler',
-      boxesCrates: 'Kutular/Sandıklar',
+      boxesCrates: 'Kutular/Kasalar',
       numberOfUnits: 'Birim sayısı',
       palletType: 'Palet türü',
       nonSpecified: 'Belirtilmemiş',
-      euroPallet: 'Europalet (120x80 cm)',
-      standardPallet: 'Standart palet (120x100 cm)',
+      euroPallet: 'Avrupa Paleti (120x80 cm)',
+      standardPallet: 'Standart Palet (120x100 cm)',
       customSize: 'Özel boyut',
-      dimensionsPerUnit: 'Boyutlar (U×G×Y birim başına)',
-      weightPerUnit: 'Ağırlık (Birim başına)',
+      dimensionsPerUnit: 'Boyutlar (birim başına U×G×Y)',
+      weightPerUnit: 'Ağırlık (birim başına)',
       required: 'Gerekli',
-      containerInfoBanner: 'Kargo hacminize en uygun konteyner türü ve miktarını seçin.',
-      unitInfoBanner: 'Doğru hesaplama için her bir öğe veya palet hakkında detay verin.',
-      totalInfoBanner: 'Toplam gönderi sayıları sağlamak daha az doğru olabilir. Yanlış veya büyük boyutlu ölçüler ek ücretlere neden olabilir.',
-      totalDescription: 'Gönderinizin toplam boyutlarını ve ağırlığını girin.',
+      containerInfoBanner: 'Mal hacminiz için en uygun konteyner türü ve miktarını seçin.',
+      unitInfoBanner: 'Doğru hesaplama için her bir öğe veya palet için kesin detaylar sağlayın.',
+      totalInfoBanner: 'Toplam gönderi numaraları sağlamak daha az kesin olabilir. Yanlış veya büyük boyutlar ek maliyetlere neden olabilir.',
+      totalDescription: 'Gönderinizin toplam boyutları ve ağırlığını girin.',
       containerType: 'Konteyner türü',
       numberOfContainers: 'Konteyner sayısı',
-      overweightContainer: 'Ağır konteyner (>25 ton)',
+      overweightContainer: 'Aşırı ağırlık konteyneri (>25 ton)',
       container20: "20' Standart (33 CBM)",
       container40: "40' Standart (67 CBM)",
       container40HC: "40' High Cube (76 CBM)",
@@ -4027,35 +5939,10 @@ const I18N_TEXT = {
       setupPending: 'Kurulum bekliyor...',
       addAnotherShipment: 'Başka Gönderi Ekle',
       items: 'Öğeler',
-      each: 'her biri',
+      each: 'her',
       totalCalculation: 'Toplam hesaplama',
-      overweight: 'Fazla ağırlık',
-    // Step 6 translations
-    selectExperience: 'Deneyim seviyenizi seçin',
-    firstTimeShipper: 'İlk gönderi',
-    upTo10Times: 'Ara sıra gönderi',
-    moreThan10Times: 'Deneyimli gönderici',
-    regularShipper: 'Düzenli gönderi',
-    contactInformation: 'İletişim Bilgileri',
-    contactInfoDescription: 'Size nasıl ulaşabiliriz?',
-    emailHelp: 'Teklifinizi ve güncellemeleri bu e-postaya göndereceğiz',
-    phonePlaceholder: 'Telefon numaranızı girin',
-    phoneHelp: 'Acil güncellemeler ve açıklamalar için',
-    additionalNotes: 'Ek Notlar',
-    additionalNotesDescription: 'Bilmemiz gereken başka bir şey var mı?',
-    remarks: 'Özel Açıklamalar',
-    remarksPlaceholder: 'Özel talimatlar, gereksinimler veya sorular...',
-    remarksHelp: 'Ek bağlamla size daha iyi hizmet vermemize yardımcı olun',
-    readyToSubmit: 'Teklifinizi almaya hazır!',
-    submitDescription: 'Talebinizi göndermek için aşağıdaki "Teklifimi Al" butonuna tıklayın. 24 saat içinde yanıt vereceğiz.',
-    securityBadge: 'Güvenli ve GDPR uyumlu',
-    // Customer type selection
-    customerTypeQuestion: 'Birey olarak mı yoksa şirket için mi gönderiyorsunuz?',
-    customerTypeDescription: 'Bu, en ilgili bilgi alanlarını sağlamamıza yardımcı olur',
-    individualCustomer: 'Birey',
-    individualDescription: 'Kişisel gönderi veya özel müşteri',
-    companyCustomer: 'Şirket',
-    companyDescription: 'Ticari gönderi veya iş kuruluşu',
+      overweight: 'Aşırı ağırlık',
+      getMyQuote: 'Teklifimi Al',
   },
   ru: {
     // Header
@@ -4089,6 +5976,8 @@ const I18N_TEXT = {
     port: 'Порт',
     airport: 'Аэропорт', 
     railTerminal: 'Железнодорожный терминал',
+    seaPort: 'Морской порт',
+    volume: 'Объём',
     businessAddress: 'Деловой адрес',
     residentialAddress: 'Жилой адрес',
     chooseLocationDescription: 'Выберите место получения груза',
@@ -4125,6 +6014,10 @@ const I18N_TEXT = {
     searchCountryDescription: 'Найдите страну, куда хотите отправить товары',
     addressTypeQuestion: 'Какой тип адреса ваше назначение?',
     selectDestinationLocationType: 'Пожалуйста, выберите тип места назначения',
+    selectDestinationPort: 'Выберите порт назначения',
+    selectDestinationPortDescription: 'Выберите конкретный порт или аэропорт для доставки',
+    searchPortsIn: 'Искать порты в',
+    searchDestinationPorts: 'Искать порты назначения',
     enterDestinationDetails: 'Введите детали назначения',
     // Сообщения валидации
     validationShippingType: 'Пожалуйста, выберите тип доставки',
@@ -4168,12 +6061,12 @@ const I18N_TEXT = {
     portTerminalDescription: 'Выберите конкретный порт, терминал или аэропорт для забора',
     pickupCity: 'Город забора',
     pickupZipCode: 'Почтовый индекс забора',
-    dontKnowPort: "Не знаю",
-    dontKnowPortDescription: "Не уверен, какой порт/терминал выбрать",
-    dontKnowPortFeedback: "Не проблема! Мы поможем вам выбрать лучший порт/терминал для вашего груза.",
-    perfectPortFeedback: "Отлично! Мы заберём из",
-    cityPickupFeedback: "Отлично! Мы организуем забор из {city}, Китай",
-    annualVolume: "Годовой объём",
+    dontKnowPort: 'Не знаю',
+    dontKnowPortDescription: 'Не уверен, какой порт/терминал выбрать',
+    dontKnowPortFeedback: 'Не проблема! Мы поможем вам выбрать лучший порт/терминал для вашего груза.',
+    perfectPortFeedback: 'Отлично! Мы заберём из',
+    cityPickupFeedback: 'Отлично! Мы организуем забор из {city}, Китай',
+    annualVolume: 'Годовой объём',
     // Port translations
     ports: {
       'SHA': 'Шанхай',
@@ -4250,10 +6143,10 @@ const I18N_TEXT = {
     otherSpecify: '📝 Другое (пожалуйста, укажите в примечаниях)',
     rateValidityNotice: 'Уведомление о Действительности Тарифов:',
     rateValidityText: 'Указанные тарифы действительны до даты истечения, указанной в каждом предложении. Если ваши товары не будут готовы к забору к этой дате, тарифы могут быть изменены в зависимости от текущих рыночных условий.',
-    unsureShipping: "Я ещё не уверен",
+    unsureShipping: 'Я ещё не уверен',
     unsureShippingDesc: 'Пусть эксперты помогут',
     unsureShippingBenefits: 'Профессиональное руководство',
-    unsureShippingFeedback: "Отличный выбор! Мы порекомендуем лучший вариант доставки для ваших конкретных потребностей",
+    unsureShippingFeedback: 'Отличный выбор! Мы порекомендуем лучший вариант доставки для ваших конкретных потребностей',
     beginnerSectionTitle: 'Для новичков',
     beginnerSectionDesc: 'Получите бесплатные советы от наших экспертов',
     separatorText: 'Или выберите сами',
@@ -4379,71 +6272,68 @@ const I18N_TEXT = {
       shipments: 'отправления',
       // Step 4 translations
       step4Title: 'Что вы отправляете?',
-      managingShipments: 'Управление {count} Отправлением{plural}',
-      configureShipments: 'Настройте каждое отправление индивидуально или добавьте несколько отправлений для сложных заказов',
+      managingShipments: 'Управление {count} Отправление{plural}',
+      configureShipments: 'Настройте каждое отправление отдельно или добавьте несколько отправлений для сложных заказов',
       addShipment: 'Добавить Отправление',
       validating: 'Проверка...',
       active: 'Активный',
       shipmentsCount: 'Отправления ({count})',
-      addNewShipment: 'Добавить Новое Отправление',
-      duplicateShipment: 'Дублировать Это Отправление',
-      removeShipment: 'Удалить Это Отправление',
-      consolidatedSummary: 'Сводный Отчёт',
+      addNewShipment: 'Добавить новое отправление',
+      duplicateShipment: 'Дублировать это отправление',
+      removeShipment: 'Удалить это отправление',
+      consolidatedSummary: 'Сводная Информация',
       totalVolume: 'Общий Объём',
       totalWeight: 'Общий Вес',
       totalShipments: 'Отправления',
       totalContainers: 'Контейнеры',
-      chooseShippingType: 'Выберите тип отправки',
+      chooseShippingType: 'Выберите тип доставки',
       shipmentXofY: 'Отправление {current} из {total}',
-      selectPackagingMethod: 'Выберите, как упакованы ваши товары для отправки',
-      forThisSpecificShipment: 'Для этого конкретного отправления',
-      looseCargo: 'Насыпной Груз',
-      looseCargoDesc: 'Поддоны, коробки или отдельные предметы',
+      selectPackagingMethod: 'Выберите способ упаковки ваших товаров для доставки',
+      forThisSpecificShipment: 'для этого конкретного отправления',
+      looseCargo: 'Сборный Груз',
+      looseCargoDesc: 'Паллеты, коробки или отдельные предметы',
       fullContainer: 'Полный Контейнер',
       fullContainerDesc: 'Полный контейнер (FCL)',
       imNotSure: 'Я не уверен',
       teamWillHelp: 'Наша команда поможет вам выбрать лучший вариант',
-      looseCargoFeedback: 'Идеально для смешанных товаров, небольших и средних количеств, или когда нужна гибкая упаковка',
-      containerFeedback: 'Отличный выбор для больших объёмов, полных продуктовых линеек, или когда у вас достаточно товаров для заполнения контейнера',
-      unsureFeedback: 'Не волнуйтесь! Наша опытная команда проведёт вас через процесс и порекомендует лучшее решение для доставки ваших конкретных потребностей. Мы позаботимся о всех технических деталях.',
+      unsureFeedback: 'Не волнуйтесь! Наша опытная команда проведёт вас через процесс и порекомендует лучшее транспортное решение для ваших конкретных потребностей. Мы позаботимся о всех технических деталях.',
       whatHappensNext: 'Что происходит дальше:',
-      expertsContact: 'Наши эксперты по доставке свяжутся с вами в течение 24 часов',
-      discussRequirements: 'Мы обсудим детали и требования вашего груза',
+      expertsContact: 'Наши транспортные эксперты свяжутся с вами в течение 24 часов',
+      discussRequirements: 'Мы обсудим детали ваших товаров и требования',
       personalizedRecommendations: 'Вы получите персонализированные рекомендации и цены',
-  
-      describeLooseCargo: 'Опишите ваш насыпной груз',
+      describeLooseCargo: 'Опишите ваш сборный груз',
       configureContainer: 'Настройте ваш контейнер',
-      provideDimensionsWeight: 'Предоставьте размеры и детали веса для точного ценообразования',
-      selectContainerType: 'Выберите тип и количество контейнеров для вашего отправления',
+      provideDimensionsWeight: 'Предоставьте детали размеров и веса для точного ценообразования',
+      selectContainerType: 'Выберите тип и количество контейнеров для вашего груза',
       calculateByUnit: 'Рассчитать по типу единицы',
-      calculateByTotal: 'Рассчитать по общему отправлению',
+      calculateByTotal: 'Рассчитать по общему грузу',
       packageType: 'Тип упаковки',
-      pallets: 'Поддоны',
+      pallets: 'Паллеты',
       boxesCrates: 'Коробки/Ящики',
       numberOfUnits: 'Количество единиц',
-      palletType: 'Тип поддона',
+      palletType: 'Тип паллеты',
       nonSpecified: 'Не указано',
-      euroPallet: 'Европоддон (120x80 см)',
-      standardPallet: 'Стандартный поддон (120x100 см)',
-      customSize: 'Нестандартный размер',
-      dimensionsPerUnit: 'Размеры (Д×Ш×В на единицу)',
-      weightPerUnit: 'Вес (На единицу)',
+      euroPallet: 'Европаллета (120x80 см)',
+      standardPallet: 'Стандартная паллета (120x100 см)',
+      customSize: 'Пользовательский размер',
+      dimensionsPerUnit: 'Размеры (на единицу Д×Ш×В)',
+      weightPerUnit: 'Вес (на единицу)',
       required: 'Обязательно',
-      containerInfoBanner: 'Выберите тип и количество контейнеров, которые лучше всего подходят для объёма вашего груза.',
-      unitInfoBanner: 'Предоставьте детали о каждом отдельном предмете или поддоне для точного расчёта.',
-      totalInfoBanner: 'Предоставление общих номеров отправления может быть менее точным. Неточные или крупногабаритные размеры могут привести к дополнительным расходам.',
+      containerInfoBanner: 'Выберите наиболее подходящий тип и количество контейнеров для объёма ваших товаров.',
+      unitInfoBanner: 'Предоставьте точные детали для каждого отдельного предмета или паллеты для точного расчёта.',
+      totalInfoBanner: 'Предоставление общих номеров отправлений может быть менее точным. Неточные или негабаритные размеры могут привести к дополнительным расходам.',
       totalDescription: 'Введите общие размеры и вес вашего отправления.',
       containerType: 'Тип контейнера',
       numberOfContainers: 'Количество контейнеров',
       overweightContainer: 'Перегруженный контейнер (>25 тонн)',
-      container20: "20' Стандартный (33 CBM)",
-      container40: "40' Стандартный (67 CBM)",
-      container40HC: "40' High Cube (76 CBM)",
-      container45HC: "45' High Cube (86 CBM)",
+      container20: "20' Стандартный (33 куб.м)",
+      container40: "40' Стандартный (67 куб.м)",
+      container40HC: "40' High Cube (76 куб.м)",
+      container45HC: "45' High Cube (86 куб.м)",
       // Additional shipment summary translations
       shipmentTitle: 'Отправление',
-      setupPending: 'Настройка в ожидании...',
-      addAnotherShipment: 'Добавить Ещё Отправление',
+      setupPending: 'Настройка ожидается...',
+      addAnotherShipment: 'Добавить Другое Отправление',
       items: 'Предметы',
       each: 'каждый',
       totalCalculation: 'Общий расчёт',
@@ -4537,11 +6427,12 @@ const QuoteForm: React.FC = () => {
   const [countrySearch, setCountrySearch] = useState('');
   const [debouncedCountrySearch, setDebouncedCountrySearch] = useState(''); // debounced value
   const [portSearch, setPortSearch] = useState('');
+  const [destPortSearch, setDestPortSearch] = useState(''); // For destination port search
   const [phonePrefixSearch, setPhonePrefixSearch] = useState(''); // New state for phone prefix search term
   const [selectedLocationType, setSelectedLocationType] = useState('');
-  const [selectedDestLocationType, setSelectedDestLocationType] = useState('');
   const [isCountryListVisible, setIsCountryListVisible] = useState(false);
   const [isPortListVisible, setIsPortListVisible] = useState(false);
+  const [isDestPortListVisible, setIsDestPortListVisible] = useState(false); // For destination port list
   const [isPhonePrefixListVisible, setIsPhonePrefixListVisible] = useState(false); // New state for phone prefix list
   
   // Step 5 custom dropdown states
@@ -4561,6 +6452,7 @@ const QuoteForm: React.FC = () => {
   
   const countryListRef = useRef<HTMLDivElement>(null);
   const portListRef = useRef<HTMLDivElement>(null);
+  const destPortListRef = useRef<HTMLDivElement>(null); // For destination port list
   const phonePrefixListRef = useRef<HTMLDivElement>(null); // New ref for phone prefix list
   const searchInputRef = useRef<HTMLInputElement>(null);
   const portSearchInputRef = useRef<HTMLInputElement>(null);
@@ -4621,6 +6513,7 @@ const QuoteForm: React.FC = () => {
     destLocationType: '',
     destCity: '',
     destZipCode: '',
+    destPort: '', // For destination port selection when destLocationType is 'port'
     firstName: '',
     lastName: '',
     companyName: '',
@@ -4646,6 +6539,7 @@ const QuoteForm: React.FC = () => {
     zipCode: null as boolean | null,
     destCity: null as boolean | null,
     destZipCode: null as boolean | null,
+    destPort: null as boolean | null, // Added for destination port validation
     firstName: null as boolean | null,
     lastName: null as boolean | null,
     companyName: null as boolean | null,
@@ -4764,6 +6658,13 @@ const QuoteForm: React.FC = () => {
         !portSearchInputRef.current.contains(event.target as Node)
       ) {
         setIsPortListVisible(false);
+      }
+
+      if (
+        destPortListRef.current && 
+        !destPortListRef.current.contains(event.target as Node)
+      ) {
+        setIsDestPortListVisible(false);
       }
 
       if (
@@ -4944,7 +6845,16 @@ const QuoteForm: React.FC = () => {
           showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationWeightPerUnit}`);
           return false;
         }
+        if (!load.numberOfUnits || load.numberOfUnits < 1) {
+          showToast(`Shipment ${loadNumber}: Please specify the number of units (minimum 1)`);
+          return false;
+        }
       } else { // calculationType === 'total'
+        // Validate numberOfUnits, totalVolume and totalWeight for total calculation mode
+        if (!load.numberOfUnits || load.numberOfUnits < 1) {
+          showToast(`Shipment ${loadNumber}: Please specify the number of units (minimum 1)`);
+          return false;
+        }
         if (!load.totalVolume) {
           showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationTotalVolume}`);
           return false;
@@ -4957,6 +6867,10 @@ const QuoteForm: React.FC = () => {
     } else { // shippingType === 'container'
       if (!load.containerType) {
         showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationContainerType}`);
+        return false;
+      }
+      if (!load.numberOfUnits || load.numberOfUnits < 1) {
+        showToast(`Shipment ${loadNumber}: Please specify the number of containers (minimum 1)`);
         return false;
       }
     }
@@ -4984,6 +6898,42 @@ const QuoteForm: React.FC = () => {
       setIsOverweight(currentLoad.isOverweight);
     }
   }, [activeLoadIndex, formData.loads]);
+
+  // Centralized function to sync current individual load states to the formData.loads array
+  const syncCurrentLoadToArray = (): LoadDetails => {
+    const currentLoadFromStates: LoadDetails = {
+      shippingType,
+      calculationType,
+      packageType,
+      numberOfUnits,
+      palletType,
+      dimensions,
+      dimensionUnit,
+      weightPerUnit,
+      weightUnit,
+      totalVolume,
+      totalVolumeUnit,
+      totalWeight,
+      totalWeightUnit,
+      containerType,
+      isOverweight,
+    };
+
+    // Update the array with current individual states
+    setFormData(prevFormData => {
+      if (activeLoadIndex < 0 || activeLoadIndex >= prevFormData.loads.length) {
+        return prevFormData;
+      }
+      
+      const updatedLoads = prevFormData.loads.map((load, idx) => 
+        idx === activeLoadIndex ? currentLoadFromStates : load
+      );
+      
+      return { ...prevFormData, loads: updatedLoads };
+    });
+
+    return currentLoadFromStates;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -5077,23 +7027,34 @@ const QuoteForm: React.FC = () => {
           return false;
         }
         if (formData.destLocationType) {
-          if (!formData.destCity) {
+          if (formData.destLocationType === 'port') {
+            // For port destinations, validate that a destination port is selected
+            if (!formData.destPort) {
+              showToast(I18N_TEXT[userLang].validationDestinationPort || 'Please select a destination port');
+              setFieldValid(prev => ({ ...prev, destPort: false }));
+              return false;
+            }
+          } else {
+            // For non-port destinations, validate city and zip code
+            if (!formData.destCity || !validateField('destCity', formData.destCity)) {
             showToast(I18N_TEXT[userLang].validationDestinationCity);
             setFieldValid(prev => ({ ...prev, destCity: false }));
             return false;
           }
-          if (!formData.destZipCode) {
+            if (!formData.destZipCode || !validateField('destZipCode', formData.destZipCode)) {
             showToast(I18N_TEXT[userLang].validationDestinationZip);
             setFieldValid(prev => ({ ...prev, destZipCode: false }));
             return false;
+            }
           }
         }
         setFieldValid(prev => ({ 
           ...prev, 
           country: true, 
           destLocationType: true, 
-          destCity: formData.destLocationType ? !!formData.destCity : null, 
-          destZipCode: formData.destLocationType ? !!formData.destZipCode : null 
+          destCity: (formData.destLocationType && formData.destLocationType !== 'port') ? !!formData.destCity : null, 
+          destZipCode: (formData.destLocationType && formData.destLocationType !== 'port') ? !!formData.destZipCode : null,
+          destPort: formData.destLocationType === 'port' ? !!formData.destPort : null
         }));
         break;
       case 2:
@@ -5142,7 +7103,11 @@ const QuoteForm: React.FC = () => {
         }));
         break;
       case 4:
-        // Validation for step 4 - Cargo Details (now iterates over formData.loads)
+        // Validation for step 4 - Cargo Details
+        // First, sync current active load to ensure latest data is in the array
+        syncCurrentLoadToArray();
+        
+        // Now validate all loads with up-to-date data
         for (let i = 0; i < formData.loads.length; i++) {
           if (!isLoadDataValid(formData.loads[i], i)) {
             setActiveLoadIndex(i); // Switch to the invalid load
@@ -5154,7 +7119,7 @@ const QuoteForm: React.FC = () => {
         // Check if all sub-steps are completed
         if (!formData.goodsValue) {
           showToast(I18N_TEXT[userLang].validationGoodsValue);
-          setFieldValid({ ...fieldValid, goodsValue: false });
+          setFieldValid(prev => ({ ...prev, goodsValue: false }));
           return false;
         }
         if (!formData.areGoodsReady) {
@@ -5162,7 +7127,7 @@ const QuoteForm: React.FC = () => {
           return false;
         }
         // Sub-step 3 is optional, so no validation needed
-        setFieldValid({ ...fieldValid, goodsValue: true });
+        setFieldValid(prev => ({ ...prev, goodsValue: true }));
         break;
       case 6: // Existing Step 5 (Contact) is now Step 6
         if (!customerType) {
@@ -5219,12 +7184,13 @@ const QuoteForm: React.FC = () => {
         }
       } else {
         // We're on the last sub-step of step 5, go to step 6
-    if (validateStep(currentStep)) {
+        if (validateStep(currentStep)) {
           setCurrentStep(prev => Math.min(prev + 1, 6));
           setStep5SubStep(1); // Reset sub-step for next time
         }
       }
     } else {
+      // For all other steps, validate and proceed normally
       if (validateStep(currentStep)) {
         setCurrentStep(prev => Math.min(prev + 1, 6));
         // Reset sub-step when entering step 5
@@ -5242,7 +7208,7 @@ const QuoteForm: React.FC = () => {
         setStep5SubStep(prev => prev - 1);
       } else {
         // We're on the first sub-step of step 5, go back to step 4
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+        setCurrentStep(prev => Math.max(prev - 1, 1));
       }
     } else {
       setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -5259,10 +7225,10 @@ const QuoteForm: React.FC = () => {
       case 1:
         if (!formData.goodsValue) {
           showToast(I18N_TEXT[userLang].validationGoodsValue);
-          setFieldValid({ ...fieldValid, goodsValue: false });
+          setFieldValid(prev => ({ ...prev, goodsValue: false }));
           return false;
         }
-        setFieldValid({ ...fieldValid, goodsValue: true });
+        setFieldValid(prev => ({ ...prev, goodsValue: true }));
         return true;
       case 2:
         if (!formData.areGoodsReady) {
@@ -5341,24 +7307,8 @@ const QuoteForm: React.FC = () => {
         ? '/api/n8n-prod'
         : 'https://n8n.srv783609.hstgr.cloud/webhook/228cb671-34ad-4e2e-95ab-95d830d875df';
 
-      // 1. Prepare the data from current active load states
-      let activeLoadSubmitData: LoadDetails = {
-        shippingType,
-        calculationType,
-        packageType,
-        numberOfUnits,
-        palletType,
-        dimensions,
-        dimensionUnit,
-        weightPerUnit,
-        weightUnit,
-        totalVolume,
-        totalVolumeUnit,
-        totalWeight,
-        totalWeightUnit,
-        containerType,
-        isOverweight,
-      };
+      // 1. Sync and prepare the data from current active load states
+      const activeLoadSubmitData = syncCurrentLoadToArray();
 
       // 2. Prepare the base formData for the payload
       let payloadBase = { ...formData };
@@ -5513,7 +7463,7 @@ const QuoteForm: React.FC = () => {
       }));
 
       // Update the countrySearch input display (for Step 1)
-      setCountrySearch(`${selectedCountryData.flag} ${selectedCountryData.name}`);
+      setCountrySearch(`${selectedCountryData.flag} ${getTranslatedCountryName(selectedCountryData.code, userLang)}`);
 
       // Update the phonePrefixSearch state (for Step 6 input) to reflect the new prefix
       if (selectedCountryData.phonePrefix) {
@@ -5602,9 +7552,24 @@ const QuoteForm: React.FC = () => {
         ...fieldValid,
         origin: true
       });
-      setPortSearch(port ? `${port.flag} ${getTranslatedPortName(port, userLang)}` : '');
+      setPortSearch(port ? `${port.flag} ${getTranslatedPortNameLocal(port, userLang)}` : '');
       setIsPortListVisible(false);
     }
+  };
+
+  const handleDestPortSelect = (portCode: string) => {
+    const countryPorts = DESTINATION_PORTS_BY_COUNTRY[formData.country] || [];
+    const port = countryPorts.find(p => p.code === portCode);
+    setFormData({
+      ...formData,
+      destPort: portCode
+    });
+    setFieldValid({
+      ...fieldValid,
+      destPort: true
+    });
+          setDestPortSearch(port ? `${port.flag} ${getTranslatedPortNameLocal(port, userLang)}` : '');
+    setIsDestPortListVisible(false);
   };
 
   // Currency dropdown options
@@ -5763,9 +7728,13 @@ const QuoteForm: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       country: '',
+      destLocationType: '', // Reset destination location type
+      destCity: '', // Reset destination city
+      destZipCode: '', // Reset destination zip code
+      destPort: '' // Reset destination port
     }));
     setCountrySearch('');
-    setSelectedDestLocationType('');
+    setDestPortSearch(''); // Reset destination port search
   };
 
   // Helper to clear the currently selected port (UX improvement)
@@ -5790,38 +7759,30 @@ const QuoteForm: React.FC = () => {
   };
 
   const handleDestLocationTypeSelect = (type: string) => {
-    setSelectedDestLocationType(type);
     setFormData({
       ...formData,
-      destLocationType: type
+      destLocationType: type,
+      destCity: '', // Reset city when changing location type
+      destZipCode: '', // Reset zip code when changing location type
+      destPort: '' // Reset port when changing location type
     });
-    setFieldValid(prev => ({ ...prev, destLocationType: true }));
+    setFieldValid(prev => ({ 
+      ...prev, 
+      destLocationType: true,
+      destCity: null, // Reset validation state
+      destZipCode: null, // Reset validation state
+      destPort: null // Reset validation state
+    }));
   };
 
   const handleAddLoad = async () => {
     setAddShipmentLoading(true);
 
     // Validate the current active load before adding a new one
-    // Construct the current load data from individual states to ensure validation uses the latest UI values
-    const currentLoadDataFromStates: LoadDetails = {
-      shippingType,
-      calculationType,
-      packageType,
-      numberOfUnits,
-      palletType,
-      dimensions,
-      dimensionUnit,
-      weightPerUnit,
-      weightUnit,
-      totalVolume,
-      totalVolumeUnit,
-      totalWeight,
-      totalWeightUnit,
-      containerType,
-      isOverweight,
-    };
+    // Use centralized sync function to ensure validation uses the latest UI values
+    const currentLoadData = syncCurrentLoadToArray();
 
-    if (!isLoadDataValid(currentLoadDataFromStates, activeLoadIndex)) {
+    if (!isLoadDataValid(currentLoadData, activeLoadIndex)) {
       // Show immediate feedback with enhanced toast
       const enhancedMessage = `⚠️ Complete current shipment first: ${toastMessage}`;
       setToastMessage(enhancedMessage);
@@ -5860,33 +7821,9 @@ const QuoteForm: React.FC = () => {
   };
 
   const handleSetActiveLoad = (index: number) => {
-    // Save the current load before switching
-    setFormData(prevFormData => {
-      if (activeLoadIndex < 0 || activeLoadIndex >= prevFormData.loads.length) return prevFormData;
-      const updatedLoads = prevFormData.loads.map((load, idx) => {
-        if (idx === activeLoadIndex) {
-          return {
-            shippingType,
-            calculationType,
-            packageType,
-            numberOfUnits,
-            palletType,
-            dimensions,
-            dimensionUnit,
-            weightPerUnit,
-            weightUnit,
-            totalVolume,
-            totalVolumeUnit,
-            totalWeight,
-            totalWeightUnit,
-            containerType,
-            isOverweight,
-          };
-        }
-        return load;
-      });
-      return { ...prevFormData, loads: updatedLoads };
-    });
+    // Save the current load before switching using centralized sync function
+    syncCurrentLoadToArray();
+    
     // Change the active load index after saving
     setActiveLoadIndex(index);
   };
@@ -5973,8 +7910,8 @@ const QuoteForm: React.FC = () => {
             const weightFactor = load.weightUnit === 'LB' ? 0.453592 : load.weightUnit === 'T' ? 1000 : 1;
             totalWeightKG += weightPerUnit * weightFactor * units;
           }
-        } else {
-          // Calculate from total values
+        } else { // calculationType === 'total'
+          // Calculate from total values - more robust calculation
           const totalVolume = parseFloat(load.totalVolume) || 0;
           if (totalVolume) {
             const volumeFactor = load.totalVolumeUnit === 'M3' ? 1 : 1; // CBM = M3
@@ -5986,6 +7923,8 @@ const QuoteForm: React.FC = () => {
             const weightFactor = load.totalWeightUnit === 'LB' ? 0.453592 : load.totalWeightUnit === 'T' ? 1000 : 1;
             totalWeightKG += totalWeight * weightFactor;
           }
+          
+          // Note: numberOfUnits is still tracked for consistency and potential future use
         }
       } else if (load.shippingType === 'container') {
         const containerCount = load.numberOfUnits || 0;
@@ -6038,8 +7977,8 @@ const QuoteForm: React.FC = () => {
         if (load.weightPerUnit) {
           details += ` • ${load.weightPerUnit}${load.weightUnit} ${I18N_TEXT[userLang].each}`;
         }
-      } else {
-        details = I18N_TEXT[userLang].totalCalculation;
+      } else { // calculationType === 'total'
+        details = `${load.numberOfUnits} units • ${I18N_TEXT[userLang].totalCalculation}`;
         if (load.totalVolume) {
           details += ` • ${load.totalVolume}${load.totalVolumeUnit}`;
         }
@@ -6057,7 +7996,13 @@ const QuoteForm: React.FC = () => {
     return { title, details: details || I18N_TEXT[userLang].setupPending };
   };
 
-  const getLocationTypes = () => {
+  // Function for destination location types (Step 1) - includes all types with special handling for ports
+  const getDestinationLocationTypes = () => {
+    return LOCATION_TYPES.map(type => ({ ...type })); // Use all types including ports
+  };
+
+  // Function for pickup location types (Step 3) - uses dynamic icons based on selected shipping mode
+  const getPickupLocationTypes = () => {
     const baseTypes = LOCATION_TYPES.map(type => ({ ...type })); // Deep copy for modification
     const portIndex = baseTypes.findIndex(t => t.id === 'port');
 
@@ -6078,6 +8023,11 @@ const QuoteForm: React.FC = () => {
     return baseTypes;
   };
 
+  // Legacy function for backward compatibility - redirects to pickup types
+  const getLocationTypes = () => {
+    return getPickupLocationTypes();
+  };
+
   // Helper: remove flag emojis (regional indicator symbols) and trim
   const sanitizeSearch = (input: string) => input
     .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '') // remove flag emojis
@@ -6093,7 +8043,9 @@ const QuoteForm: React.FC = () => {
     // First filter all countries based on search
     const searchFiltered = COUNTRIES.filter(country => {
       if (!sanitizedCountrySearch) return true; // if empty search, show all
+      const translatedName = getTranslatedCountryName(country.code, userLang);
       return (
+        translatedName.toLowerCase().includes(sanitizedCountrySearch) ||
         country.name.toLowerCase().includes(sanitizedCountrySearch) ||
         country.code.toLowerCase().includes(sanitizedCountrySearch)
       );
@@ -6101,17 +8053,29 @@ const QuoteForm: React.FC = () => {
 
     // If there's a search term, just return the filtered results sorted alphabetically
     if (sanitizedCountrySearch) {
-      return searchFiltered.sort((a, b) => a.name.localeCompare(b.name));
+      return searchFiltered.sort((a, b) => {
+        const aName = getTranslatedCountryName(a.code, userLang);
+        const bName = getTranslatedCountryName(b.code, userLang);
+        return aName.localeCompare(bName);
+      });
     }
 
     // If no search term, prioritize countries by language
     const priorityCountries = searchFiltered.filter(country => 
       priorityCountryCodes.includes(country.code)
-    ).sort((a, b) => a.name.localeCompare(b.name));
+    ).sort((a, b) => {
+      const aName = getTranslatedCountryName(a.code, userLang);
+      const bName = getTranslatedCountryName(b.code, userLang);
+      return aName.localeCompare(bName);
+    });
 
     const otherCountries = searchFiltered.filter(country => 
       !priorityCountryCodes.includes(country.code)
-    ).sort((a, b) => a.name.localeCompare(b.name));
+    ).sort((a, b) => {
+      const aName = getTranslatedCountryName(a.code, userLang);
+      const bName = getTranslatedCountryName(b.code, userLang);
+      return aName.localeCompare(bName);
+    });
 
     // Return priority countries first, then others
     return [...priorityCountries, ...otherCountries];
@@ -6129,7 +8093,7 @@ const QuoteForm: React.FC = () => {
     
     // Filter ports based on search
     const filteredPorts = ports.filter(port => {
-      const translatedName = getTranslatedPortName(port, userLang);
+      const translatedName = getTranslatedPortNameLocal(port, userLang);
       const translatedRegion = getTranslatedRegionName(port.region, userLang);
       return translatedName.toLowerCase().includes(portSearch.toLowerCase()) ||
              port.name.toLowerCase().includes(portSearch.toLowerCase()) ||
@@ -6154,6 +8118,28 @@ const QuoteForm: React.FC = () => {
     }
     
     return filteredPorts;
+  };
+
+  const getFilteredDestinationPorts = () => {
+    // Get ports for the selected country
+    const countryPorts = DESTINATION_PORTS_BY_COUNTRY[formData.country] || [];
+    
+    // Filter based on shipping mode if selected
+    let modePorts = countryPorts;
+    if (formData.mode === 'Sea') {
+      modePorts = countryPorts.filter(port => port.type === 'sea');
+    } else if (formData.mode === 'Air' || formData.mode === 'Express') {
+      modePorts = countryPorts.filter(port => port.type === 'air');
+    } else if (formData.mode === 'Rail') {
+      modePorts = countryPorts.filter(port => port.type === 'rail');
+    }
+    
+    // Filter based on search text
+    return modePorts.filter(port => {
+      const translatedName = getTranslatedPortNameLocal(port, userLang);
+      return translatedName.toLowerCase().includes(destPortSearch.toLowerCase()) ||
+             port.code.toLowerCase().includes(destPortSearch.toLowerCase());
+    });
   };
 
   // Helper to update a property of the current load
@@ -6188,7 +8174,7 @@ const QuoteForm: React.FC = () => {
     // Mise à jour des états d'affichage (country, port, etc.)
     const selectedCountry = COUNTRIES.find((c) => c.code === nextLead.country);
     if (selectedCountry) {
-      setCountrySearch(`${selectedCountry.flag} ${selectedCountry.name}`);
+      setCountrySearch(`${selectedCountry.flag} ${getTranslatedCountryName(selectedCountry.code, userLang)}`);
       setPhonePrefixSearch(`${selectedCountry.flag} ${selectedCountry.phonePrefix}`);
     } else {
       setCountrySearch('');
@@ -6197,15 +8183,27 @@ const QuoteForm: React.FC = () => {
 
     const originPort = [...SEA_PORTS, ...AIRPORTS, ...RAIL_TERMINALS].find((p) => p.code === nextLead.origin);
     if (originPort) {
-      setPortSearch(`${originPort.flag} ${getTranslatedPortName(originPort, userLang)}`);
+      setPortSearch(`${originPort.flag} ${getTranslatedPortNameLocal(originPort, userLang)}`);
     } else if (nextLead.origin === 'DONT_KNOW') {
       setPortSearch(`❓ ${I18N_TEXT[userLang].dontKnowPort}`);
     } else {
       setPortSearch('');
     }
 
+    // Handle destination port search if applicable
+    if (nextLead.destPort && nextLead.destLocationType === 'port') {
+      const countryPorts = DESTINATION_PORTS_BY_COUNTRY[nextLead.country] || [];
+      const destPort = countryPorts.find(p => p.code === nextLead.destPort);
+      if (destPort) {
+        setDestPortSearch(`${destPort.flag} ${getTranslatedPortNameLocal(destPort, userLang)}`);
+      } else {
+        setDestPortSearch('');
+      }
+    } else {
+      setDestPortSearch('');
+    }
+
     setSelectedLocationType(nextLead.locationType);
-    setSelectedDestLocationType(nextLead.destLocationType);
   };
 
   // Accessibility: highlighted index for keyboard navigation in country list
@@ -6485,7 +8483,7 @@ const QuoteForm: React.FC = () => {
                                   onClick={() => handleCountrySelect(country.code)}
                                 >
                                   <span className="country-flag">{country.flag}</span>
-                                  <span className="country-name">{country.name}</span>
+                                <span className="country-name">{getTranslatedCountryName(country.code, userLang)}</span>
                                   <span className="country-code">{country.code}</span>
                                 </div>
                               ))}
@@ -6510,7 +8508,7 @@ const QuoteForm: React.FC = () => {
                                 onClick={() => handleCountrySelect(country.code)}
                               >
                                 <span className="country-flag">{country.flag}</span>
-                                <span className="country-name">{country.name}</span>
+                                <span className="country-name">{getTranslatedCountryName(country.code, userLang)}</span>
                                 <span className="country-code">{country.code}</span>
                               </div>
                             );
@@ -6544,7 +8542,7 @@ const QuoteForm: React.FC = () => {
               >
                 <div className="phase-header">
                   <h3 className="phase-header-title">
-                    <span className={`step-indicator ${selectedDestLocationType ? 'completed' : ''}`}>2</span>
+                    <span className={`step-indicator ${formData.destLocationType ? 'completed' : ''}`}>2</span>
                     {I18N_TEXT[userLang].addressTypeQuestion}
                   </h3>
                   
@@ -6556,10 +8554,10 @@ const QuoteForm: React.FC = () => {
                 </div>
 
                 <div className="location-types">
-                  {getLocationTypes().map(type => (
+                  {getDestinationLocationTypes().map(type => (
                     <div
                       key={type.id}
-                      className={`location-type-option ${selectedDestLocationType === type.id ? 'selected' : ''}`}
+                      className={`location-type-option ${formData.destLocationType === type.id ? 'selected' : ''}`}
                       onClick={() => handleDestLocationTypeSelect(type.id)}
                       data-id={type.id}
                     >
@@ -6573,13 +8571,13 @@ const QuoteForm: React.FC = () => {
             )}
 
             {/* Phase 3: Address Details (revealed after location type selection) */}
-            {selectedDestLocationType && (
+            {formData.destLocationType && (
               <div 
                 className="address-details-phase"
                 style={{
                   marginTop: '2rem',
-                  opacity: selectedDestLocationType ? 1 : 0,
-                  transform: selectedDestLocationType ? 'translateY(0)' : 'translateY(20px)',
+                  opacity: formData.destLocationType ? 1 : 0,
+                  transform: formData.destLocationType ? 'translateY(0)' : 'translateY(20px)',
                   transition: 'all 0.4s ease 0.2s',
                   borderTop: '1px solid #e5e7eb',
                   paddingTop: '2rem'
@@ -6587,14 +8585,90 @@ const QuoteForm: React.FC = () => {
               >
                 <div className="phase-header">
                   <h3 className="phase-header-title">
-                    <span className={`step-indicator ${(formData.destCity && formData.destZipCode) ? 'completed' : ''}`}>3</span>
-                    {I18N_TEXT[userLang].enterDestinationDetails}
+                    <span className={`step-indicator ${(
+                      formData.destLocationType === 'port' 
+                        ? !!formData.destPort 
+                        : !!(formData.destCity && formData.destZipCode)
+                    ) ? 'completed' : ''}`}>3</span>
+                    {formData.destLocationType === 'port' 
+                      ? (I18N_TEXT[userLang].selectDestinationPort || 'Select destination port')
+                      : I18N_TEXT[userLang].enterDestinationDetails
+                    }
                   </h3>
                   <p className="phase-header-subtitle">
-                    {I18N_TEXT[userLang].cityPostalDescription}
+                    {formData.destLocationType === 'port' 
+                      ? (I18N_TEXT[userLang].selectDestinationPortDescription || 'Choose the specific port or airport for delivery')
+                      : I18N_TEXT[userLang].cityPostalDescription
+                    }
                   </p>
                 </div>
 
+                {formData.destLocationType === 'port' ? (
+                  // Port selection interface
+                  <div className="form-control port-select">
+                    <div className="search-input-wrapper" style={{ position: 'relative' }}>
+                      <MapPin className="search-icon" size={18} />
+                      <input
+                        type="text"
+                        placeholder={`${formData.country ? getSearchPortsText(formData.country, userLang) + ' ' + getTranslatedCountryName(formData.country, userLang) : I18N_TEXT[userLang].searchDestinationPorts}...`}
+                        value={destPortSearch}
+                        onChange={(e) => {
+                          setDestPortSearch(e.target.value);
+                          setIsDestPortListVisible(true);
+                        }}
+                        onFocus={() => setIsDestPortListVisible(true)}
+                        className="input glassmorphism search-input"
+                        style={{
+                          transition: 'all 0.3s ease',
+                          transform: formData.destPort ? 'scale(1.02)' : 'scale(1)'
+                        }}
+                      />
+                      {formData.destPort && (
+                        <XCircle
+                          size={18}
+                          className="clear-search-icon"
+                          style={{ cursor: 'pointer', position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, destPort: '' }));
+                            setDestPortSearch('');
+                            setFieldValid(prev => ({ ...prev, destPort: null }));
+                          }}
+                          aria-label="Clear selected port"
+                        />
+                      )}
+                    </div>
+                    <div 
+                      ref={destPortListRef}
+                      className={`port-list ${isDestPortListVisible ? 'show' : ''}`}
+                    >
+                      {getFilteredDestinationPorts().length > 0 ? (
+                        getFilteredDestinationPorts().map(port => (
+                          <div
+                            key={port.code}
+                            className={`port-option ${formData.destPort === port.code ? 'selected' : ''}`}
+                            onClick={() => handleDestPortSelect(port.code)}
+                          >
+                            <span className="port-icon">{port.flag}</span>
+                            <div className="port-info">
+                                                          <span className="port-name">{getTranslatedPortNameLocal(port, userLang)}</span>
+                            <span className="port-region">{getTranslatedPortType(port.type, userLang)}</span>
+                            {port.volume && <span className="port-volume">{I18N_TEXT[userLang].annualVolume} : {port.volume}</span>}
+                            </div>
+                            <span className="port-code">{port.code}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="no-results">
+                          {formData.country 
+                            ? `No ports found for ${getTranslatedCountryName(formData.country, userLang)}`
+                            : 'Please select a country first'
+                          }
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  // Standard city + zip code interface
                 <div className="address-form">
                   <div className="address-details" style={{
                     display: 'grid',
@@ -6633,6 +8707,7 @@ const QuoteForm: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                )}
               </div>
             )}
           </div>
@@ -6860,7 +8935,7 @@ const QuoteForm: React.FC = () => {
               </div>
 
               <div className="location-types">
-                {getLocationTypes().map(type => (
+                {getPickupLocationTypes().map(type => (
                   <div
                     key={type.id}
                     className={`location-type-option ${selectedLocationType === type.id ? 'selected' : ''}`}
@@ -6969,9 +9044,9 @@ const QuoteForm: React.FC = () => {
                             >
                               <span className="port-icon">{port.flag}</span>
                               <div className="port-info">
-                                <span className="port-name">{getTranslatedPortName(port, userLang)}</span>
+                                <span className="port-name">{getTranslatedPortNameLocal(port, userLang)}</span>
                                 <span className="port-region">{getTranslatedRegionName(port.region, userLang)}</span>
-                                {port.volume && <span className="port-volume">{I18N_TEXT[userLang].annualVolume}: {port.volume}</span>}
+                                {port.volume && <span className="port-volume">{I18N_TEXT[userLang].annualVolume} : {port.volume}</span>}
                               </div>
                               {port.code !== 'DONT_KNOW' && <span className="port-code">{port.code}</span>}
                             </div>
@@ -7060,7 +9135,7 @@ const QuoteForm: React.FC = () => {
                               ? I18N_TEXT[userLang].dontKnowPortFeedback
                               : `${I18N_TEXT[userLang].perfectPortFeedback} ${(() => {
                                   const selectedPort = [...SEA_PORTS, ...AIRPORTS, ...RAIL_TERMINALS].find(p => p.code === formData.origin);
-                                  return selectedPort ? getTranslatedPortName(selectedPort, userLang) : 'the selected location';
+                                  return selectedPort ? getTranslatedPortNameLocal(selectedPort, userLang) : 'the selected location';
                                 })()} `
                             : I18N_TEXT[userLang].cityPickupFeedback.replace('{city}', formData.city || '')
                           }
@@ -7632,6 +9707,37 @@ const QuoteForm: React.FC = () => {
 
                                      <div className="total-description">
                                        {I18N_TEXT[userLang].totalDescription}
+                                     </div>
+
+                                     {/* Number of units for total calculation */}
+                                     <div className="total-units-section">
+                                       <label className="label-text-compact">{I18N_TEXT[userLang].numberOfUnits}</label>
+                                       <div className="input-number-wrapper-compact">
+                                         <button 
+                                           type="button" 
+                                           className="btn-number-control-compact" 
+                                           onClick={() => updateCurrentLoad('numberOfUnits', Math.max(1, numberOfUnits - 1))}
+                                         >
+                                           <Minus size={14} />
+                                         </button>
+                                         <input 
+                                           type="number" 
+                                           value={numberOfUnits} 
+                                           onChange={(e) => updateCurrentLoad('numberOfUnits', Math.max(1, parseInt(e.target.value) || 1))}
+                                           className="input-number-compact" 
+                                           min="1"
+                                         />
+                                         <button 
+                                           type="button" 
+                                           className="btn-number-control-compact" 
+                                           onClick={() => updateCurrentLoad('numberOfUnits', numberOfUnits + 1)}
+                                         >
+                                           <Plus size={14} />
+                                         </button>
+                                       </div>
+                                       <div className="field-help">
+                                         How many logical units does this total volume/weight represent?
+                                       </div>
                                      </div>
 
                                                                             <div className="total-inputs-row">
@@ -8573,7 +10679,7 @@ const QuoteForm: React.FC = () => {
                                 <span className="port-icon">{country.flag}</span>
                                 <div className="port-info">
                                   <span className="port-name">{country.phonePrefix}</span>
-                                  <span className="port-region">{country.name}</span>
+                                  <span className="port-region">{getTranslatedCountryName(country.code, userLang)}</span>
                     </div>
                   </div>
                             ))}
@@ -9620,6 +11726,7 @@ const QuoteForm: React.FC = () => {
                           destLocationType: '',
                           destCity: '',
                           destZipCode: '',
+                          destPort: '',
                           firstName: '',
                           lastName: '',
                           companyName: '',
@@ -9646,6 +11753,7 @@ const QuoteForm: React.FC = () => {
                           zipCode: null,
                           destCity: null,
                           destZipCode: null,
+                          destPort: null,
                           firstName: null,
                           lastName: null,
                           companyName: null,
