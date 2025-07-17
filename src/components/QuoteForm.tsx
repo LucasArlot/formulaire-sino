@@ -1093,6 +1093,155 @@ const PRIORITY_COUNTRIES_BY_LANG: Record<string, string[]> = {
   'ru': ['RU', 'BY', 'KZ', 'KG', 'UA'] // Russian-speaking countries
 };
 
+// ===== TRANSIT TIMES BY COUNTRY =====
+// Structure to define transit times for each country and shipping mode
+const TRANSIT_TIMES_BY_COUNTRY: Record<string, {
+  sea: { min: number; max: number };
+  air: { min: number; max: number };
+  rail: { min: number; max: number };
+  express: { min: number; max: number };
+}> = {
+  // Europe (closer, generally faster)
+  'FR': { sea: { min: 25, max: 35 }, air: { min: 5, max: 8 }, rail: { min: 12, max: 18 }, express: { min: 2, max: 4 } },
+  'DE': { sea: { min: 28, max: 38 }, air: { min: 5, max: 8 }, rail: { min: 12, max: 18 }, express: { min: 2, max: 4 } },
+  'GB': { sea: { min: 30, max: 40 }, air: { min: 6, max: 9 }, rail: { min: 14, max: 20 }, express: { min: 3, max: 5 } },
+  'IT': { sea: { min: 26, max: 36 }, air: { min: 5, max: 8 }, rail: { min: 13, max: 19 }, express: { min: 2, max: 4 } },
+  'ES': { sea: { min: 28, max: 38 }, air: { min: 6, max: 9 }, rail: { min: 14, max: 20 }, express: { min: 3, max: 5 } },
+  'NL': { sea: { min: 26, max: 36 }, air: { min: 5, max: 8 }, rail: { min: 12, max: 18 }, express: { min: 2, max: 4 } },
+  'BE': { sea: { min: 27, max: 37 }, air: { min: 5, max: 8 }, rail: { min: 12, max: 18 }, express: { min: 2, max: 4 } },
+  'PL': { sea: { min: 32, max: 42 }, air: { min: 6, max: 9 }, rail: { min: 10, max: 16 }, express: { min: 3, max: 5 } },
+  'CH': { sea: { min: 28, max: 38 }, air: { min: 5, max: 8 }, rail: { min: 12, max: 18 }, express: { min: 2, max: 4 } },
+  'AT': { sea: { min: 30, max: 40 }, air: { min: 6, max: 9 }, rail: { min: 11, max: 17 }, express: { min: 3, max: 5 } },
+
+  // North America
+  'US': { sea: { min: 18, max: 28 }, air: { min: 7, max: 10 }, rail: { min: 999, max: 999 }, express: { min: 3, max: 5 } }, // No rail to US
+  'CA': { sea: { min: 20, max: 30 }, air: { min: 8, max: 11 }, rail: { min: 999, max: 999 }, express: { min: 4, max: 6 } }, // No rail to Canada
+
+  // Asia-Pacific (closer to China)
+  'JP': { sea: { min: 8, max: 15 }, air: { min: 3, max: 5 }, rail: { min: 999, max: 999 }, express: { min: 2, max: 3 } },
+  'KR': { sea: { min: 6, max: 12 }, air: { min: 2, max: 4 }, rail: { min: 999, max: 999 }, express: { min: 1, max: 3 } },
+  'SG': { sea: { min: 12, max: 20 }, air: { min: 4, max: 7 }, rail: { min: 999, max: 999 }, express: { min: 2, max: 4 } },
+  'AU': { sea: { min: 15, max: 25 }, air: { min: 8, max: 12 }, rail: { min: 999, max: 999 }, express: { min: 4, max: 7 } },
+  'NZ': { sea: { min: 18, max: 28 }, air: { min: 10, max: 14 }, rail: { min: 999, max: 999 }, express: { min: 5, max: 8 } },
+  'TH': { sea: { min: 10, max: 18 }, air: { min: 4, max: 7 }, rail: { min: 999, max: 999 }, express: { min: 2, max: 4 } },
+  'MY': { sea: { min: 11, max: 19 }, air: { min: 4, max: 7 }, rail: { min: 999, max: 999 }, express: { min: 2, max: 4 } },
+  'VN': { sea: { min: 8, max: 16 }, air: { min: 3, max: 6 }, rail: { min: 999, max: 999 }, express: { min: 2, max: 4 } },
+  'PH': { sea: { min: 10, max: 18 }, air: { min: 4, max: 7 }, rail: { min: 999, max: 999 }, express: { min: 2, max: 4 } },
+  'ID': { sea: { min: 12, max: 20 }, air: { min: 5, max: 8 }, rail: { min: 999, max: 999 }, express: { min: 3, max: 5 } },
+  'IN': { sea: { min: 15, max: 25 }, air: { min: 6, max: 9 }, rail: { min: 999, max: 999 }, express: { min: 3, max: 6 } },
+
+  // Middle East
+  'AE': { sea: { min: 18, max: 28 }, air: { min: 6, max: 9 }, rail: { min: 999, max: 999 }, express: { min: 3, max: 5 } },
+  'SA': { sea: { min: 20, max: 30 }, air: { min: 7, max: 10 }, rail: { min: 999, max: 999 }, express: { min: 4, max: 6 } },
+  'TR': { sea: { min: 25, max: 35 }, air: { min: 6, max: 9 }, rail: { min: 12, max: 18 }, express: { min: 3, max: 5 } },
+
+  // Eastern Europe & CIS (Rail available)
+  'RU': { sea: { min: 35, max: 45 }, air: { min: 8, max: 12 }, rail: { min: 8, max: 14 }, express: { min: 4, max: 7 } },
+  'KZ': { sea: { min: 40, max: 50 }, air: { min: 9, max: 13 }, rail: { min: 7, max: 12 }, express: { min: 5, max: 8 } },
+  'BY': { sea: { min: 32, max: 42 }, air: { min: 7, max: 10 }, rail: { min: 10, max: 16 }, express: { min: 4, max: 6 } },
+  'UA': { sea: { min: 35, max: 45 }, air: { min: 7, max: 10 }, rail: { min: 12, max: 18 }, express: { min: 4, max: 6 } },
+
+  // Africa (farther, longer transit)
+  'ZA': { sea: { min: 25, max: 35 }, air: { min: 10, max: 14 }, rail: { min: 999, max: 999 }, express: { min: 5, max: 8 } },
+  'NG': { sea: { min: 30, max: 40 }, air: { min: 8, max: 12 }, rail: { min: 999, max: 999 }, express: { min: 4, max: 7 } },
+  'EG': { sea: { min: 22, max: 32 }, air: { min: 7, max: 10 }, rail: { min: 999, max: 999 }, express: { min: 4, max: 6 } },
+  'MA': { sea: { min: 28, max: 38 }, air: { min: 8, max: 11 }, rail: { min: 999, max: 999 }, express: { min: 4, max: 7 } },
+
+  // South America (very far)
+  'BR': { sea: { min: 30, max: 45 }, air: { min: 12, max: 18 }, rail: { min: 999, max: 999 }, express: { min: 6, max: 10 } },
+  'AR': { sea: { min: 32, max: 47 }, air: { min: 13, max: 19 }, rail: { min: 999, max: 999 }, express: { min: 7, max: 11 } },
+  'CL': { sea: { min: 28, max: 43 }, air: { min: 14, max: 20 }, rail: { min: 999, max: 999 }, express: { min: 7, max: 12 } },
+  'PE': { sea: { min: 26, max: 41 }, air: { min: 13, max: 19 }, rail: { min: 999, max: 999 }, express: { min: 6, max: 11 } },
+  'CO': { sea: { min: 24, max: 39 }, air: { min: 11, max: 17 }, rail: { min: 999, max: 999 }, express: { min: 5, max: 9 } },
+  'MX': { sea: { min: 22, max: 37 }, air: { min: 10, max: 16 }, rail: { min: 999, max: 999 }, express: { min: 5, max: 9 } },
+
+  // Default/fallback times for countries not specifically listed
+  'DEFAULT': { sea: { min: 30, max: 45 }, air: { min: 7, max: 10 }, rail: { min: 15, max: 25 }, express: { min: 3, max: 5 } }
+};
+
+// Function to get transit times for a specific country and mode
+const getTransitTimes = (countryCode: string, mode: string): { min: number; max: number } => {
+  const countryTimes = TRANSIT_TIMES_BY_COUNTRY[countryCode] || TRANSIT_TIMES_BY_COUNTRY['DEFAULT'];
+  
+  switch (mode.toLowerCase()) {
+    case 'sea':
+      return countryTimes.sea;
+    case 'air':
+      return countryTimes.air;
+    case 'rail':
+      return countryTimes.rail;
+    case 'express':
+      return countryTimes.express;
+    default:
+      return { min: 0, max: 0 };
+  }
+};
+
+// Function to generate dynamic shipping mode descriptions with country-specific transit times
+const getDynamicModeDescription = (mode: string, countryCode: string, userLang: string): string => {
+  const times = getTransitTimes(countryCode, mode);
+  
+  // If no rail service (999 days indicates not available)
+  if (mode.toLowerCase() === 'rail' && times.min >= 999) {
+    const notAvailableTranslations = {
+      en: 'Not available for this destination',
+      fr: 'Non disponible pour cette destination',
+      zh: '此目的地不可用',
+      de: 'Für dieses Ziel nicht verfügbar',
+      es: 'No disponible para este destino',
+      it: 'Non disponibile per questa destinazione',
+      nl: 'Niet beschikbaar voor deze bestemming',
+      ar: 'غير متوفر لهذه الوجهة',
+      pt: 'Não disponível para este destino',
+      tr: 'Bu hedef için mevcut değil',
+      ru: 'Недоступно для этого направления'
+    };
+    return notAvailableTranslations[userLang as keyof typeof notAvailableTranslations] || notAvailableTranslations.en;
+  }
+  
+  // Translations for day/days
+  const dayTranslations = {
+    en: { singular: 'day', plural: 'days' },
+    fr: { singular: 'jour', plural: 'jours' },
+    zh: { singular: '天', plural: '天' },
+    de: { singular: 'Tag', plural: 'Tage' },
+    es: { singular: 'día', plural: 'días' },
+    it: { singular: 'giorno', plural: 'giorni' },
+    nl: { singular: 'dag', plural: 'dagen' },
+    ar: { singular: 'يوم', plural: 'أيام' },
+    pt: { singular: 'dia', plural: 'dias' },
+    tr: { singular: 'gün', plural: 'gün' },
+    ru: { singular: 'день', plural: 'дней' }
+  };
+
+  // Translations for mode descriptors
+  const modeTranslations = {
+    en: { sea: 'Economical', air: 'Fast', rail: 'Cost-effective', express: 'Fastest' },
+    fr: { sea: 'Économique', air: 'Rapide', rail: 'Rentable', express: 'Le plus rapide' },
+    zh: { sea: '经济实惠', air: '快速', rail: '性价比高', express: '最快' },
+    de: { sea: 'Wirtschaftlich', air: 'Schnell', rail: 'Kosteneffektiv', express: 'Am schnellsten' },
+    es: { sea: 'Económico', air: 'Rápido', rail: 'Rentable', express: 'Más rápido' },
+    it: { sea: 'Economico', air: 'Veloce', rail: 'Conveniente', express: 'Più veloce' },
+    nl: { sea: 'Economisch', air: 'Snel', rail: 'Kosteneffectief', express: 'Snelste' },
+    ar: { sea: 'اقتصادي', air: 'سريع', rail: 'فعال من حيث التكلفة', express: 'الأسرع' },
+    pt: { sea: 'Econômico', air: 'Rápido', rail: 'Custo-efetivo', express: 'Mais rápido' },
+    tr: { sea: 'Ekonomik', air: 'Hızlı', rail: 'Uygun maliyetli', express: 'En hızlı' },
+    ru: { sea: 'Экономичный', air: 'Быстрый', rail: 'Выгодный', express: 'Самый быстрый' }
+  };
+
+  const currentLang = userLang as keyof typeof dayTranslations;
+  const dayLang = dayTranslations[currentLang] || dayTranslations.en;
+  const modeLang = modeTranslations[currentLang] || modeTranslations.en;
+  
+  const dayWord = times.max === 1 ? dayLang.singular : dayLang.plural;
+  const timeString = `${times.min}-${times.max} ${dayWord}`;
+  
+  const modeKey = mode.toLowerCase() as keyof typeof modeLang;
+  const modeWord = modeLang[modeKey] || modeLang.sea;
+  
+  return `${modeWord}, ${timeString}`;
+};
+
 // ===== CUSTOM DROPDOWN COMPONENT =====
 interface CustomDropdownProps {
   value: string;
@@ -1565,7 +1714,11 @@ const I18N_TEXT = {
       'DZALG': 'Port of Algiers',
       'DZALG_AIR': 'Algiers Airport',
       'TNRAD': 'Port of Radès',
-      'TNTUN': 'Tunis-Carthage Airport'
+      'TNTUN': 'Tunis-Carthage Airport',
+      // Cameroon ports
+      'CMDLA': 'Port of Douala',
+      'CMDLA_AIR': 'Douala Airport',
+      'CMNSM': 'Yaoundé Airport'
     },
     // Region translations
     regions: {
@@ -2147,7 +2300,11 @@ const I18N_TEXT = {
       'DZALG': 'Port d\'Alger',
       'DZALG_AIR': 'Aéroport d\'Alger',
       'TNRAD': 'Port de Radès',
-      'TNTUN': 'Aéroport de Tunis-Carthage'
+      'TNTUN': 'Aéroport de Tunis-Carthage',
+      // Cameroon ports
+      'CMDLA': 'Port de Douala',
+      'CMDLA_AIR': 'Aéroport de Douala',
+      'CMNSM': 'Aéroport de Yaoundé'
     },
     // Region translations
     regions: {
@@ -2725,7 +2882,11 @@ const I18N_TEXT = {
       'DZALG': '阿尔及尔港',
       'DZALG_AIR': '阿尔及尔机场',
       'TNRAD': '拉德斯港',
-      'TNTUN': '突尼斯迦太基机场'
+      'TNTUN': '突尼斯迦太基机场',
+      // Cameroon ports
+      'CMDLA': '杜阿拉港',
+      'CMDLA_AIR': '杜阿拉机场',
+      'CMNSM': '雅温得机场'
     },
     // Region translations
     regions: {
@@ -3302,7 +3463,11 @@ const I18N_TEXT = {
       'DZALG': 'Hafen Algier',
       'DZALG_AIR': 'Flughafen Algier',
       'TNRAD': 'Hafen Radès',
-      'TNTUN': 'Flughafen Tunis-Karthago'
+      'TNTUN': 'Flughafen Tunis-Karthago',
+      // Cameroon ports
+      'CMDLA': 'Hafen von Douala',
+      'CMDLA_AIR': 'Flughafen Douala',
+      'CMNSM': 'Flughafen Yaoundé'
     },
     // Region translations
     regions: {
@@ -3878,7 +4043,11 @@ const I18N_TEXT = {
       'DZALG': 'Puerto de Argel',
       'DZALG_AIR': 'Aeropuerto de Argel',
       'TNRAD': 'Puerto de Radès',
-      'TNTUN': 'Aeropuerto Túnez-Cartago'
+      'TNTUN': 'Aeropuerto Túnez-Cartago',
+      // Cameroon ports
+      'CMDLA': 'Puerto de Douala',
+      'CMDLA_AIR': 'Aeropuerto de Douala',
+      'CMNSM': 'Aeropuerto de Yaoundé'
     },
     // Region translations
     regions: {
@@ -4148,6 +4317,14 @@ const I18N_TEXT = {
     airFreightDesc: 'Veloce, 7-10 giorni',
     express: 'Express',
     expressDesc: 'Più veloce, 3-5 giorni',
+    unsureShipping: 'Non sono ancora sicuro',
+    unsureShippingDesc: 'Lascia che gli esperti ti aiutino',
+    unsureShippingBenefits: 'Consulenza professionale',
+    unsureShippingFeedback: 'Ottima scelta! Raccomanderemo la migliore opzione di spedizione per le tue esigenze specifiche',
+    beginnerSectionTitle: 'Per principianti',
+    beginnerSectionDesc: 'Lascia che i nostri esperti ti consiglino gratuitamente',
+    separatorText: 'O scegli tu stesso',
+    unsureAboutChoice: 'Non sei sicuro della tua scelta?',
     // Step 2 Enhanced
     chooseShippingMethod: 'Confronta le opzioni disponibili',
     shippingMethodDescription: 'Le diverse modalità di spedizione offrono vari compromessi tra costo, velocità e affidabilità.',
@@ -4248,7 +4425,11 @@ const I18N_TEXT = {
       'ZIH': 'Terminal ferroviario di Zhengzhou',
       'CQN': 'Terminal ferroviario di Chongqing',
       'WUH': 'Terminal ferroviario di Wuhan',
-      'CDU': 'Terminal ferroviario di Chengdu'
+      'CDU': 'Terminal ferroviario di Chengdu',
+      // Cameroon ports
+      'CMDLA': 'Porto di Douala',
+      'CMDLA_AIR': 'Aeroporto di Douala',
+      'CMNSM': 'Aeroporto di Yaoundé'
     },
     // Region translations
     regions: {
@@ -4519,6 +4700,14 @@ const I18N_TEXT = {
     airFreightDesc: 'Snel, 7-10 dagen',
     express: 'Express',
     expressDesc: 'Snelste, 3-5 dagen',
+    unsureShipping: 'Ik weet het nog niet zeker',
+    unsureShippingDesc: 'Laat de experts helpen',
+    unsureShippingBenefits: 'Professionele begeleiding',
+    unsureShippingFeedback: 'Uitstekende keuze! We zullen de beste verzendoptie voor uw specifieke behoeften aanbevelen',
+    beginnerSectionTitle: 'Voor beginners',
+    beginnerSectionDesc: 'Laat onze experts u gratis adviseren',
+    separatorText: 'Of kies zelf',
+    unsureAboutChoice: 'Niet zeker van uw keuze?',
     // Step 2 Enhanced
     chooseShippingMethod: 'Vergelijk beschikbare opties',
     shippingMethodDescription: 'Verschillende verzendmodi bieden verschillende afwegingen tussen kosten, snelheid en betrouwbaarheid.',
@@ -4619,7 +4808,11 @@ const I18N_TEXT = {
       'ZIH': 'Zhengzhou Spoorwegstation',
       'CQN': 'Chongqing Spoorwegstation',
       'WUH': 'Wuhan Spoorwegstation',
-      'CDU': 'Chengdu Spoorwegstation'
+      'CDU': 'Chengdu Spoorwegstation',
+      // Cameroon ports
+      'CMDLA': 'Haven van Douala',
+      'CMDLA_AIR': 'Luchthaven Douala',
+      'CMNSM': 'Luchthaven Yaoundé'
     },
     // Region translations
     regions: {
@@ -4891,6 +5084,14 @@ const I18N_TEXT = {
     airFreightDesc: 'سريع، 7-10 أيام',
     express: 'إكسبريس',
     expressDesc: 'الأسرع، 3-5 أيام',
+    unsureShipping: 'لست متأكداً بعد',
+    unsureShippingDesc: 'دع الخبراء يساعدون',
+    unsureShippingBenefits: 'إرشاد مهني',
+    unsureShippingFeedback: 'خيار ممتاز! سنوصي بأفضل خيار شحن لاحتياجاتك المحددة',
+    beginnerSectionTitle: 'للمبتدئين',
+    beginnerSectionDesc: 'دع خبراؤنا ينصحونك مجاناً',
+    separatorText: 'أو اختر بنفسك',
+    unsureAboutChoice: 'غير متأكد من اختيارك؟',
     // Step 2 Enhanced
     chooseShippingMethod: 'قارن الخيارات المتاحة',
     shippingMethodDescription: 'تقدم أنماط الشحن المختلفة مقايضات متنوعة بين التكلفة والسرعة والموثوقية.',
@@ -4991,7 +5192,11 @@ const I18N_TEXT = {
       'ZIH': 'محطة قطار تشنغتشو',
       'CQN': 'محطة قطار تشونغتشينغ',
       'WUH': 'محطة قطار ووهان',
-      'CDU': 'محطة قطار تشنغدو'
+      'CDU': 'محطة قطار تشنغدو',
+      // Cameroon ports
+      'CMDLA': 'ميناء دوالا',
+      'CMDLA_AIR': 'مطار دوالا',
+      'CMNSM': 'مطار ياوندي'
     },
     // Region translations
     regions: {
@@ -5266,6 +5471,14 @@ const I18N_TEXT = {
     airFreightDesc: 'Rápido, 7-10 dias',
     express: 'Express',
     expressDesc: 'Mais rápido, 3-5 dias',
+    unsureShipping: 'Ainda não tenho certeza',
+    unsureShippingDesc: 'Deixe os especialistas ajudarem',
+    unsureShippingBenefits: 'Orientação profissional',
+    unsureShippingFeedback: 'Excelente escolha! Recomendaremos a melhor opção de frete para suas necessidades específicas',
+    beginnerSectionTitle: 'Para iniciantes',
+    beginnerSectionDesc: 'Deixe nossos especialistas aconselhá-lo gratuitamente',
+    separatorText: 'Ou escolha você mesmo',
+    unsureAboutChoice: 'Não tem certeza da sua escolha?',
     // Step 2 Enhanced
     chooseShippingMethod: 'Compare as opções disponíveis',
     shippingMethodDescription: 'Diferentes modos de frete oferecem várias compensações entre custo, velocidade e confiabilidade.',
@@ -5366,7 +5579,11 @@ const I18N_TEXT = {
       'ZIH': 'Terminal ferroviário de Zhengzhou',
       'CQN': 'Terminal ferroviário de Chongqing',
       'WUH': 'Terminal ferroviário de Wuhan',
-      'CDU': 'Terminal ferroviário de Chengdu'
+      'CDU': 'Terminal ferroviário de Chengdu',
+      // Cameroon ports
+      'CMDLA': 'Porto de Douala',
+      'CMDLA_AIR': 'Aeroporto de Douala',
+      'CMNSM': 'Aeroporto de Yaoundé'
     },
     // Region translations
     regions: {
@@ -5642,6 +5859,14 @@ const I18N_TEXT = {
     airFreightDesc: 'Hızlı, 7-10 gün',
           express: 'Ekspres',
       expressDesc: 'En hızlı, 3-5 gün',
+      unsureShipping: 'Henüz emin değilim',
+      unsureShippingDesc: 'Uzmanların yardım etmesine izin verin',
+      unsureShippingBenefits: 'Profesyonel rehberlik',
+      unsureShippingFeedback: 'Mükemmel seçim! Özel ihtiyaçlarınız için en iyi nakliye seçeneğini önereceğiz',
+      beginnerSectionTitle: 'Yeni başlayanlar için',
+      beginnerSectionDesc: 'Uzmanlarımızın size ücretsiz tavsiye vermesine izin verin',
+      separatorText: 'Veya kendiniz seçin',
+      unsureAboutChoice: 'Seçiminizden emin değil misiniz?',
       // Step 2 Enhanced
       chooseShippingMethod: 'Mevcut seçenekleri karşılaştır',
       shippingMethodDescription: 'Farklı nakliye modları maliyet, hız ve güvenilirlik arasında çeşitli değiş tokuşlar sunar.',
@@ -5742,7 +5967,11 @@ const I18N_TEXT = {
         'ZIH': 'Zhengzhou Demiryolu Terminali',
         'CQN': 'Chongqing Demiryolu Terminali',
         'WUH': 'Wuhan Demiryolu Terminali',
-        'CDU': 'Chengdu Demiryolu Terminali'
+        'CDU': 'Chengdu Demiryolu Terminali',
+        // Cameroon ports
+        'CMDLA': 'Douala Limanı',
+        'CMDLA_AIR': 'Douala Havalimanı',
+        'CMNSM': 'Yaoundé Havalimanı'
       },
       // Region translations
       regions: {
@@ -6090,7 +6319,11 @@ const I18N_TEXT = {
       'ZIH': 'Железнодорожный терминал Чжэнчжоу',
       'CQN': 'Железнодорожный терминал Чунцин',
       'WUH': 'Железнодорожный терминал Ухань',
-      'CDU': 'Железнодорожный терминал Чэнду'
+      'CDU': 'Железнодорожный терминал Чэнду',
+      // Cameroon ports
+      'CMDLA': 'Порт Дуала',
+      'CMDLA_AIR': 'Аэропорт Дуала',
+      'CMNSM': 'Аэропорт Яунде'
     },
     // Region translations
     regions: {
@@ -8746,7 +8979,7 @@ const QuoteForm: React.FC = () => {
                 >
                   <Ship size={24} />
                   <span>{I18N_TEXT[userLang].seaFreight}</span>
-                  <p className="mode-desc">{I18N_TEXT[userLang].seaFreightDesc}</p>
+                  <p className="mode-desc">{formData.country ? getDynamicModeDescription('sea', formData.country, userLang) : I18N_TEXT[userLang].seaFreightDesc}</p>
                   <div className="mode-additional-info">
                     {I18N_TEXT[userLang].seaFreightBenefits}
                   </div>
@@ -8761,7 +8994,7 @@ const QuoteForm: React.FC = () => {
                   >
                     <TrainFront size={24} />
                     <span>{I18N_TEXT[userLang].railFreight}</span>
-                    <p className="mode-desc">{I18N_TEXT[userLang].railFreightDesc}</p>
+                    <p className="mode-desc">{formData.country ? getDynamicModeDescription('rail', formData.country, userLang) : I18N_TEXT[userLang].railFreightDesc}</p>
                     <div className="mode-additional-info">
                       {I18N_TEXT[userLang].railFreightBenefits}
                     </div>
@@ -8775,7 +9008,7 @@ const QuoteForm: React.FC = () => {
                 >
                   <Plane size={24} />
                   <span>{I18N_TEXT[userLang].airFreight}</span>
-                  <p className="mode-desc">{I18N_TEXT[userLang].airFreightDesc}</p>
+                  <p className="mode-desc">{formData.country ? getDynamicModeDescription('air', formData.country, userLang) : I18N_TEXT[userLang].airFreightDesc}</p>
                   <div className="mode-additional-info">
                     {I18N_TEXT[userLang].airFreightBenefits}
                   </div>
@@ -8788,7 +9021,7 @@ const QuoteForm: React.FC = () => {
                 >
                   <Truck size={24} />
                   <span>{I18N_TEXT[userLang].express}</span>
-                  <p className="mode-desc">{I18N_TEXT[userLang].expressDesc}</p>
+                  <p className="mode-desc">{formData.country ? getDynamicModeDescription('express', formData.country, userLang) : I18N_TEXT[userLang].expressDesc}</p>
                   <div className="mode-additional-info">
                     {I18N_TEXT[userLang].expressBenefits}
                   </div>
