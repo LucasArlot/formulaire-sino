@@ -1,12 +1,23 @@
-import React, { useState, FormEvent, useEffect, useRef } from 'react';
-import { Truck, Ship, Plane, TrainFront, CheckCircle, Search, MapPin, Building2, Home, Warehouse, PackageCheck, Minus, Plus, Info, XCircle, PackageOpen, Container, Package, Copy, BarChart3, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import React, { useState, FormEvent, useEffect, useRef } from "react";
+import { Truck, Ship, Plane, TrainFront, CheckCircle, Search, MapPin, Building2, Home, Warehouse, Info, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import Timeline from './Timeline';
 import FormStep from './FormStep';
-import Toast from './Toast';
-import { COUNTRIES } from '../data/countries';
-import { COUNTRY_TRANSLATIONS } from '../data/countryTranslations';
-import { PORT_TRANSLATIONS, getTranslatedPortName } from '../data/portTranslations';
-import { TEST_LEADS } from '../data/testLeads';
+import Toast from '@/shared/components/Toast';
+import CustomDropdown from '@/shared/components/CustomDropdown';
+import { useQuoteForm, initialLoadDetails } from "@/features/lead/QuoteFormContext";
+import { useToast } from "@/hooks";
+import StepDestination from './steps/StepDestination';
+import StepMode from './steps/StepMode';
+import StepOrigin from './steps/StepOrigin';
+import StepContact from './steps/StepContact';
+import StepFreight from './steps/StepFreight';
+import StepGoodsDetails from './steps/StepGoodsDetails';
+import StepConfirmation from './steps/StepConfirmation';
+
+import { COUNTRIES } from '@/data/countries';
+import { COUNTRY_TRANSLATIONS } from '@/data/countryTranslations';
+import { getTranslatedPortName } from '@/data/portTranslations';
+import { TEST_LEADS } from '@/data/testLeads';
 
 const LOCATION_TYPES = [
   { id: 'factory', name: 'Factory/Warehouse', icon: Warehouse },
@@ -1242,129 +1253,12 @@ const getDynamicModeDescription = (mode: string, countryCode: string, userLang: 
   return `${modeWord}, ${timeString}`;
 };
 
-// ===== CUSTOM DROPDOWN COMPONENT =====
-interface CustomDropdownProps {
-  value: string;
-  onChange: (value: string) => void;
-  options: Array<{ value: string; label: string; }>;
-  placeholder?: string;
-  compact?: boolean;
-  unitSelector?: boolean;
-  disabled?: boolean;
-}
-
-const CustomDropdown: React.FC<CustomDropdownProps> = ({
-  value,
-  onChange,
-  options,
-  placeholder = "Select...",
-  compact = false,
-  unitSelector = false,
-  disabled = false
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
-
-  // Auto-position dropdown
-  useEffect(() => {
-    if (isOpen && listRef.current && triggerRef.current) {
-      const triggerRect = triggerRef.current.getBoundingClientRect();
-      const listElement = listRef.current;
-      const viewportHeight = window.innerHeight;
-      const spaceBelow = viewportHeight - triggerRect.bottom;
-      const spaceAbove = triggerRect.top;
-
-      // Reset classes
-      listElement.classList.remove('show-above', 'adjust-left', 'adjust-right');
-
-      // Check if should show above
-      if (spaceBelow < 200 && spaceAbove > spaceBelow) {
-        listElement.classList.add('show-above');
-      }
-
-      // Check horizontal position
-      const listWidth = 200; // approximate dropdown width
-      const triggerLeft = triggerRect.left;
-      const triggerRight = triggerRect.right;
-      const viewportWidth = window.innerWidth;
-
-      if (triggerRight + listWidth > viewportWidth) {
-        listElement.classList.add('adjust-right');
-      } else if (triggerLeft < 0) {
-        listElement.classList.add('adjust-left');
-      }
-    }
-  }, [isOpen]);
-
-  const selectedOption = options.find(opt => opt.value === value);
-  const displayText = selectedOption ? selectedOption.label : placeholder;
-
-  const handleSelect = (optionValue: string) => {
-    onChange(optionValue);
-    setIsOpen(false);
-  };
-
-  const dropdownClasses = [
-    'custom-dropdown',
-    compact ? 'compact' : '',
-    unitSelector ? 'unit-selector' : '',
-    disabled ? 'disabled' : ''
-  ].filter(Boolean).join(' ');
-
-  return (
-    <div ref={dropdownRef} className={dropdownClasses}>
-      <button
-        ref={triggerRef}
-        type="button"
-        className={`custom-dropdown-trigger ${isOpen ? 'open' : ''}`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-      >
-        <span className="custom-dropdown-text">{displayText}</span>
-        <ChevronDown size={16} className="custom-dropdown-icon" />
-      </button>
-      
-      <div
-        ref={listRef}
-        className={`custom-dropdown-list ${isOpen ? 'show' : ''}`}
-        role="listbox"
-      >
-        {options.map((option) => (
-          <div
-            key={option.value}
-            className={`custom-dropdown-option ${value === option.value ? 'selected' : ''}`}
-            onClick={() => handleSelect(option.value)}
-            role="option"
-            aria-selected={value === option.value}
-          >
-            <span className="custom-dropdown-option-text">{option.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+// CustomDropdown component moved to shared/components/CustomDropdown.tsx
+// Legacy CustomDropdown implementation removed (unused)
 
 // Simple text dictionary for i18n (extend as needed)
-const I18N_TEXT = {
+// Casting to any to allow flexible dynamic keys without TypeScript errors
+const I18N_TEXT: any = {
   en: {
     // Header
     mainTitle: 'Shipping Quote from China',
@@ -1458,6 +1352,7 @@ const I18N_TEXT = {
     validationWeightPerUnit: 'Please enter the weight per unit',
     validationTotalVolume: 'Please enter the total volume',
     validationTotalWeight: 'Please enter the total weight',
+    validationAtLeastOneOfVolumeOrWeight: 'Please provide total volume or total weight',
     validationContainerType: 'Please select a container type',
     validationDestinationCountry: 'Please select a destination country',
     validationDestinationLocationType: 'Please select a destination location type',
@@ -1792,6 +1687,7 @@ const I18N_TEXT = {
     regularShipper: 'Regular shipper',
       contactInformation: 'Contact Information',
       contactInfoDescription: 'How can we reach you?',
+      emailAddress: 'Email Address',
       emailPlaceholder: 'Enter your email address',
       emailHelp: 'We\'ll send your quote and updates to this email',
       phoneNumber: 'Phone Number',
@@ -1871,7 +1767,7 @@ const I18N_TEXT = {
 
       cfsFacilities: 'M² CFS Facilities',
     // Contact information
-    whatsappLine: 'WhatsApp line',
+      community: 'Our community',
     contactEmail: 'Email',
     businessHours: '9am-6pm (China Time)',
       // Additional confirmation page items
@@ -2044,6 +1940,7 @@ const I18N_TEXT = {
     validationWeightPerUnit: 'Veuillez entrer le poids par unité',
     validationTotalVolume: 'Veuillez entrer le volume total',
     validationTotalWeight: 'Veuillez entrer le poids total',
+    validationAtLeastOneOfVolumeOrWeight: 'Veuillez fournir le volume total ou le poids total',
     validationContainerType: 'Veuillez sélectionner un type de conteneur',
     validationDestinationCountry: 'Veuillez sélectionner un pays de destination',
     validationDestinationLocationType: 'Veuillez sélectionner un type de lieu de destination',
@@ -2375,6 +2272,7 @@ const I18N_TEXT = {
     regularShipper: 'Expéditeur régulier',
     contactInformation: 'Informations de Contact',
     contactInfoDescription: 'Comment pouvons-nous vous joindre ?',
+    emailAddress: 'Adresse e-mail',
     emailPlaceholder: 'Entrez votre adresse email',
     emailHelp: 'Nous enverrons votre devis et les mises à jour à cette adresse',
     phoneNumber: 'Numéro de Téléphone',
@@ -2452,7 +2350,7 @@ const I18N_TEXT = {
     noTestLeads: 'Aucun lead de test chargé pour le moment.',
     pleaseSpecifyInRemarks: 'veuillez spécifier dans les remarques',
     // Contact information
-    whatsappLine: 'Ligne WhatsApp',
+    community: 'Notre communauté',
     contactEmail: 'Email',
     businessHours: '9h-18h (Heure de Chine)',
     cfsFacilities: 'M² Installations CFS',
@@ -2993,7 +2891,7 @@ const I18N_TEXT = {
       cfsFacilities: 'CFS设施平方米',
     // Contact information
     needHelp: '需要帮助?',
-    whatsappLine: 'WhatsApp 联系方式',
+    community: '我们的社区',
     contactEmail: '邮箱',
     available: '可联系时间',
     businessHours: '上午9点-下午6点 (中国时间)',
@@ -3574,7 +3472,7 @@ const I18N_TEXT = {
       cfsFacilities: 'M² CFS-Anlagen',
     // Contact information
     needHelp: 'Benötigen Sie Hilfe?',
-    whatsappLine: 'WhatsApp-Leitung',
+    community: 'Unsere Community',
     contactEmail: 'E-Mail',
     businessHours: '9-18 Uhr (China-Zeit)',
     // Additional system messages
@@ -4256,7 +4154,7 @@ const I18N_TEXT = {
       chinaOffices: 'China: Shanghai, Shenzhen, Guangzhou, Ningbo, Tianjin, Qingdao, Xiamen',
       hkOffice: 'Hong Kong: Piso 1, Bloque C, Sea View Estate, 8 Watson Road, North Point',
       needHelp: '¿Necesita Ayuda?',
-      whatsappLine: 'Línea WhatsApp',
+    community: 'Nuestra comunidad',
       contactEmail: 'Correo electrónico',
       businessHours: '9am-6pm (Hora de China)',
       actions: 'Acciones Rápidas',
@@ -4515,6 +4413,7 @@ const I18N_TEXT = {
     regularShipper: 'Spedizioni regolari',
     contactInformation: 'Informazioni di Contatto',
     contactInfoDescription: 'Come possiamo contattarti?',
+    emailAddress: 'Indirizzo email',
     emailPlaceholder: 'Inserisci il tuo indirizzo email',
     emailHelp: 'Invieremo il tuo preventivo e gli aggiornamenti a questa email',
     phoneNumber: 'Numero di Telefono',
@@ -4575,7 +4474,7 @@ const I18N_TEXT = {
       chinaOffices: 'Cina: Shanghai, Shenzhen, Guangzhou, Ningbo, Tianjin, Qingdao, Xiamen',
       hkOffice: 'Hong Kong: 1° Piano, Blocco C, Sea View Estate, 8 Watson Road, North Point',
       needHelp: 'Serve Aiuto?',
-      whatsappLine: 'Linea WhatsApp',
+    community: 'La nostra community',
       contactEmail: 'Email',
       available: 'Disponibile',
       businessHours: '9-18 (Ora Cinese)',
@@ -4899,6 +4798,7 @@ const I18N_TEXT = {
     regularShipper: 'Regelmatige verzender',
     contactInformation: 'Contactinformatie',
     contactInfoDescription: 'Hoe kunnen we u bereiken?',
+    emailAddress: 'E-mailadres',
     emailPlaceholder: 'Voer uw e-mailadres in',
     emailHelp: 'We sturen uw offerte en updates naar deze e-mail',
     phoneNumber: 'Telefoonnummer',
@@ -4960,7 +4860,7 @@ const I18N_TEXT = {
       chinaOffices: 'China Kantoren: Shenzhen, Shanghai, Qingdao, Ningbo',
       hkOffice: 'Hong Kong Hoofdkantoor: Tsim Sha Tsui',
       needHelp: 'Hulp Nodig?',
-      whatsappLine: 'WhatsApp lijn',
+    community: 'Onze community',
       contactEmail: 'E-mail',
       available: 'Beschikbaar',
       businessHours: '9-18 uur (Chinese tijd)',
@@ -5038,6 +4938,7 @@ const I18N_TEXT = {
       container45HC: "45' High Cube (86 CBM)",
   },
   ar: {
+    emailHelp: 'سنرسل عرض السعر والتحديثات إلى هذا البريد الإلكتروني',
     // Header
     mainTitle: 'عرض أسعار الشحن من الصين',
     mainSubtitle: 'احصل على عرض أسعار سريع وموثوق لشحنتك من الصين',
@@ -5283,6 +5184,7 @@ const I18N_TEXT = {
     regularShipper: 'شحنات منتظمة',
     contactInformation: 'معلومات الاتصال',
     contactInfoDescription: 'كيف يمكننا الوصول إليك؟',
+    emailAddress: 'عنوان البريد الإلكتروني',
     emailPlaceholder: 'أدخل عنوان بريدك الإلكتروني',
     phoneNumber: 'رقم الهاتف',
     phonePlaceholder: 'أدخل رقم هاتفك',
@@ -5343,7 +5245,7 @@ const I18N_TEXT = {
       chinaOffices: 'مكاتب الصين: شنتشن، شنغهاي، تشينغداو، نينغبو',
       hkOffice: 'المكتب الرئيسي في هونغ كونغ: تسيم شا تسوي',
       needHelp: 'تحتاجون مساعدة؟',
-      whatsappLine: 'خط الواتساب',
+    community: 'مجتمعنا',
       contactEmail: 'البريد الإلكتروني',
       businessHours: '9 صباحاً - 6 مساءً (توقيت الصين)',
       actions: 'إجراءات سريعة',
@@ -5670,6 +5572,7 @@ const I18N_TEXT = {
     regularShipper: 'Remessas regulares',
     contactInformation: 'Informações de Contato',
     contactInfoDescription: 'Como podemos entrar em contato com você?',
+    emailAddress: 'Endereço de e-mail',
     emailPlaceholder: 'Digite seu endereço de email',
     emailHelp: 'Enviaremos sua cotação e atualizações para este email',
     phoneNumber: 'Número de Telefone',
@@ -5730,7 +5633,7 @@ const I18N_TEXT = {
       chinaOffices: 'Escritórios na China: Shenzhen, Shanghai, Qingdao, Ningbo',
       hkOffice: 'Sede em Hong Kong: Tsim Sha Tsui',
       needHelp: 'Precisa de Ajuda?',
-      whatsappLine: 'Linha WhatsApp',
+    community: 'Nossa comunidade',
       contactEmail: 'E-mail',
       businessHours: '9h-18h (Horário da China)',
       actions: 'Ações Rápidas',
@@ -5823,6 +5726,46 @@ const I18N_TEXT = {
     timelineCargo: 'Kargo',
     timelineGoodsDetails: 'Mal Detayları',
     timelineContact: 'İletişim',
+    // Step 6 translations
+    step6Title: 'İletişim bilgileri',
+    customerTypeQuestion: 'Bireysel olarak mı yoksa bir şirket için mi gönderim yapıyorsunuz?',
+    customerTypeDescription: 'Bu, en uygun bilgi alanlarını sunmamıza yardımcı olur',
+    individualCustomer: 'Bireysel',
+    individualDescription: 'Kişisel gönderi veya bireysel müşteri',
+    companyCustomer: 'Şirket',
+    companyDescription: 'Ticari gönderi veya kurumsal işletme',
+    personalInformation: 'Kişisel Bilgiler',
+    personalInfoDescription: 'Bize kim olduğunuzu söyleyin',
+    firstName: 'Ad',
+    firstNamePlaceholder: 'Adınızı girin',
+    lastName: 'Soyad',
+    lastNamePlaceholder: 'Soyadınızı girin',
+    shippingExperience: 'Gönderim Deneyimi',
+    selectExperience: 'Deneyim seviyenizi seçin',
+    firstTimeShipper: 'İlk uluslararası gönderi',
+    upTo10Times: 'Ara sıra gönderici',
+    moreThan10Times: 'Deneyimli gönderici',
+    regularShipper: 'Düzenli gönderici',
+    businessInformation: 'Şirket Bilgileri',
+    businessInfoDescription: 'Şirketiniz hakkında bilgi verin',
+    companyName: 'Şirket Adı',
+    companyNamePlaceholder: 'Şirket adınızı girin',
+    contactInformation: 'İletişim Bilgileri',
+    contactInfoDescription: 'Size nasıl ulaşabiliriz?',
+    emailAddress: 'E-posta Adresi',
+    emailPlaceholder: 'your.email@company.com',
+    emailHelp: 'Teklifinizi ve güncellemeleri bu adrese göndereceğiz',
+    phoneNumber: 'Telefon Numarası',
+    phonePlaceholder: 'Telefon numaranız',
+    phoneHelp: 'Acil güncellemeler ve netleştirmeler için',
+    additionalNotes: 'Ek Notlar',
+    additionalNotesDescription: 'Bilmemiz gereken başka bir şey var mı?',
+    remarks: 'Özel Notlar',
+    remarksPlaceholder: 'Herhangi bir özel talimat, gereksinim veya soru...',
+    remarksHelp: 'Ek bağlam, size daha iyi yardımcı olmamıza yardımcı olur',
+    readyToSubmit: 'Teklifinizi almaya hazırsınız!',
+    submitDescription: 'Talebinizi göndermek için aşağıdaki "Teklifimi Al" düğmesine tıklayın. 24 saat içinde yanıt vereceğiz.',
+    securityBadge: 'Güvenli ve GDPR uyumlu',
     // Navigation
     stepCounter: 'Adım',
     next: 'Sonraki',
@@ -6653,10 +6596,22 @@ const EXPERIENCE_OPTIONS = [
 ];
 
 const QuoteForm: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState(1);
   const [submissionId, setSubmissionId] = useState('');
-  const [step5SubStep, setStep5SubStep] = useState(1); // Sub-steps for step 5 (1, 2, 3)
-  const [toastMessage, setToastMessage] = useState('');
+  const { message: toastMessage, showToast } = useToast(3000);
+  const { 
+    currentStep, 
+    setCurrentStep, 
+    userLang, 
+    setUserLang,
+    formData,
+    setFormData,
+    fieldValid,
+    setFieldValid,
+    nextStep,
+    prevStep,
+    activeLoadIndex,
+    setActiveLoadIndex
+  } = useQuoteForm();
   const [countrySearch, setCountrySearch] = useState('');
   const [debouncedCountrySearch, setDebouncedCountrySearch] = useState(''); // debounced value
   const [portSearch, setPortSearch] = useState('');
@@ -6668,17 +6623,13 @@ const QuoteForm: React.FC = () => {
   const [isDestPortListVisible, setIsDestPortListVisible] = useState(false); // For destination port list
   const [isPhonePrefixListVisible, setIsPhonePrefixListVisible] = useState(false); // New state for phone prefix list
   
-  // Step 5 custom dropdown states
-  const [currencySearch, setCurrencySearch] = useState('🇺🇸 USD');
-  const [isCurrencyListVisible, setIsCurrencyListVisible] = useState(false);
-  const [timingSearch, setTimingSearch] = useState('');
-  const [isTimingListVisible, setIsTimingListVisible] = useState(false);
-  const [requirementsSearch, setRequirementsSearch] = useState('');
-  const [isRequirementsListVisible, setIsRequirementsListVisible] = useState(false);
+  // Step 5 custom dropdown states moved into StepGoodsDetails
   
   // Step 6 custom dropdown states
   const [experienceSearch, setExperienceSearch] = useState('');
   const [isExperienceListVisible, setIsExperienceListVisible] = useState(false);
+  // Step 4 simple/advanced toggle
+  // removed: advanced cargo UI now handled in StepFreight
 
   // Customer type state
   const [customerType, setCustomerType] = useState<'individual' | 'company' | ''>('');
@@ -6692,9 +6643,7 @@ const QuoteForm: React.FC = () => {
   const phonePrefixSearchInputRef = useRef<HTMLInputElement>(null); // New ref for phone prefix search input
   
   // Refs for custom dropdowns
-  const currencyListRef = useRef<HTMLDivElement>(null);
-  const timingListRef = useRef<HTMLDivElement>(null);
-  const requirementsListRef = useRef<HTMLDivElement>(null);
+  // Step 5 refs moved into StepGoodsDetails
   const experienceListRef = useRef<HTMLDivElement>(null);
   
   interface LoadDetails {
@@ -6715,74 +6664,37 @@ const QuoteForm: React.FC = () => {
     isOverweight: boolean;
   }
 
-  const initialLoadDetails: LoadDetails = {
-    shippingType: '',
-    calculationType: 'unit',
-    packageType: 'pallets',
-    numberOfUnits: 1,
-    palletType: 'non_specified',
-    dimensions: { length: '', width: '', height: '' },
-    dimensionUnit: 'CM',
-    weightPerUnit: '',
-    weightUnit: 'KG',
-    totalVolume: '',
-    totalVolumeUnit: 'CBM',
-    totalWeight: '',
-    totalWeightUnit: 'KG',
-    containerType: "20'",
-    isOverweight: false,
-  };
 
-  const [formData, setFormData] = useState({
-    country: '',
-    origin: '',
-    mode: '',
-    email: '',
-    phone: '',
-    phoneCountryCode: '+234', // Default to Nigeria's prefix or choose another default
-    locationType: '',
-    city: '',
-    zipCode: '',
-    destLocationType: '',
-    destCity: '',
-    destZipCode: '',
-    destPort: '', // For destination port selection when destLocationType is 'port'
-    firstName: '',
-    lastName: '',
-    companyName: '',
-    shipperType: '',
-    loads: [JSON.parse(JSON.stringify(initialLoadDetails))],
-    goodsValue: '',
-    goodsCurrency: 'USD',
-    isPersonalOrHazardous: false,
-    areGoodsReady: 'yes',
-    goodsDescription: '',
-    specialRequirements: '',
-    remarks: '',
-  });
+
+  // Using formData and fieldValid from context - no local state needed
   
-  const [fieldValid, setFieldValid] = useState({
-    country: null as boolean | null,
-    origin: null as boolean | null,
-    mode: null as boolean | null,
-    email: null as boolean | null,
-    phone: null as boolean | null, // Added for phone number validation
-    phoneCountryCode: null as boolean | null, // Added for phone country code
-    city: null as boolean | null,
-    zipCode: null as boolean | null,
-    destCity: null as boolean | null,
-    destZipCode: null as boolean | null,
-    destPort: null as boolean | null, // Added for destination port validation
-    firstName: null as boolean | null,
-    lastName: null as boolean | null,
-    companyName: null as boolean | null,
-    shipperType: null as boolean | null,
-    goodsValue: null as boolean | null,
-    destLocationType: null as boolean | null,
-  });
+  // removed: populateTestData (debug-only function)
 
   // Cargo Step States - these will now reflect the active load
   const [shippingType, setShippingType] = useState<LoadDetails['shippingType']>('');
+  
+  // Dropdown states
+  const [isPalletTypeOpen, setIsPalletTypeOpen] = useState(false);
+  const [isDimensionUnitOpen, setIsDimensionUnitOpen] = useState(false);
+  const [isWeightUnitOpen, setIsWeightUnitOpen] = useState(false);
+  const [isTotalVolumeUnitOpen, setIsTotalVolumeUnitOpen] = useState(false);
+  const [isTotalWeightUnitOpen, setIsTotalWeightUnitOpen] = useState(false);
+  
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setIsPalletTypeOpen(false);
+      setIsDimensionUnitOpen(false);
+      setIsWeightUnitOpen(false);
+      setIsTotalVolumeUnitOpen(false);
+      setIsTotalWeightUnitOpen(false);
+    };
+    
+    if (isPalletTypeOpen || isDimensionUnitOpen || isWeightUnitOpen || isTotalVolumeUnitOpen || isTotalWeightUnitOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [isPalletTypeOpen, isDimensionUnitOpen, isWeightUnitOpen, isTotalVolumeUnitOpen, isTotalWeightUnitOpen]);
   const [calculationType, setCalculationType] = useState<LoadDetails['calculationType']>(initialLoadDetails.calculationType);
   const [packageType, setPackageType] = useState<LoadDetails['packageType']>(initialLoadDetails.packageType);
   const [numberOfUnits, setNumberOfUnits] = useState<LoadDetails['numberOfUnits']>(initialLoadDetails.numberOfUnits);
@@ -6798,64 +6710,14 @@ const QuoteForm: React.FC = () => {
   const [containerType, setContainerType] = useState<LoadDetails['containerType']>(initialLoadDetails.containerType);
   const [isOverweight, setIsOverweight] = useState<LoadDetails['isOverweight']>(initialLoadDetails.isOverweight);
 
-  const [activeLoadIndex, setActiveLoadIndex] = useState(0);
-  const [addShipmentLoading, setAddShipmentLoading] = useState(false);
 
-  // Language state - detect from browser language or default to English
-  const [userLang, setUserLang] = useState<'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'>(() => {
-    const lang = navigator.language || 'en';
-    if (lang.startsWith('fr')) return 'fr';
-    if (lang.startsWith('zh')) return 'zh';
-    if (lang.startsWith('de')) return 'de';
-    if (lang.startsWith('es')) return 'es';
-    if (lang.startsWith('it')) return 'it';
-    if (lang.startsWith('nl')) return 'nl';
-    if (lang.startsWith('ar')) return 'ar';
-    if (lang.startsWith('pt')) return 'pt';
-    if (lang.startsWith('tr')) return 'tr';
-    if (lang.startsWith('ru')) return 'ru';
-    return 'en';
-  });
+
+
+  // Language state is now managed in QuoteFormContext.tsx
 
   const standardPalletTypes = ['EUR1', 'EUR2', 'US_STANDARD'];
 
-  // Dropdown options for Step 4
-  const dimensionUnitOptions = [
-    { value: 'CM', label: 'CM' },
-    { value: 'M', label: 'M' },
-    { value: 'IN', label: 'IN' }
-  ];
 
-  const weightUnitOptions = [
-    { value: 'KG', label: 'KG' },
-    { value: 'LB', label: 'LB' },
-    { value: 'T', label: 'T' }
-  ];
-
-  const totalVolumeUnitOptions = [
-    { value: 'CBM', label: 'CBM (m³)' },
-    { value: 'CFT', label: 'CFT (ft³)' }
-  ];
-
-  const totalWeightUnitOptions = [
-    { value: 'KG', label: 'KG' },
-    { value: 'LB', label: 'LB' },
-    { value: 'T', label: 'T' }
-  ];
-
-  const containerTypeOptions = [
-    { value: "20'", label: I18N_TEXT[userLang].container20 },
-    { value: "40'", label: I18N_TEXT[userLang].container40 },
-    { value: "40'HC", label: I18N_TEXT[userLang].container40HC },
-    { value: "45'HC", label: I18N_TEXT[userLang].container45HC }
-  ];
-
-  const palletTypeOptions = [
-    { value: 'non_specified', label: I18N_TEXT[userLang].nonSpecified },
-    { value: 'euro', label: I18N_TEXT[userLang].euroPallet },
-    { value: 'standard', label: I18N_TEXT[userLang].standardPallet },
-    { value: 'custom', label: I18N_TEXT[userLang].customSize }
-  ];
 
   const languageOptions = [
     { value: 'en', label: '🇺🇸 English' },
@@ -6909,16 +6771,7 @@ const QuoteForm: React.FC = () => {
         setIsPhonePrefixListVisible(false);
       }
 
-      // Step 5 custom dropdowns
-      if (currencyListRef.current && !currencyListRef.current.contains(event.target as Node)) {
-        setIsCurrencyListVisible(false);
-      }
-      if (timingListRef.current && !timingListRef.current.contains(event.target as Node)) {
-        setIsTimingListVisible(false);
-      }
-      if (requirementsListRef.current && !requirementsListRef.current.contains(event.target as Node)) {
-        setIsRequirementsListVisible(false);
-      }
+      // Step 5 custom dropdowns moved inside StepGoodsDetails
       
       // Step 6 custom dropdowns
       if (experienceListRef.current && !experienceListRef.current.contains(event.target as Node)) {
@@ -6978,20 +6831,7 @@ const QuoteForm: React.FC = () => {
       adjustDropdownPosition(phonePrefixListRef.current, phonePrefixSearchInputRef.current);
     }
 
-    if (isCurrencyListVisible && currencyListRef.current) {
-      const currencyInput = currencyListRef.current.previousElementSibling as HTMLElement;
-      adjustDropdownPosition(currencyListRef.current, currencyInput);
-    }
-
-    if (isTimingListVisible && timingListRef.current) {
-      const timingInput = timingListRef.current.previousElementSibling as HTMLElement;
-      adjustDropdownPosition(timingListRef.current, timingInput);
-    }
-
-    if (isRequirementsListVisible && requirementsListRef.current) {
-      const requirementsInput = requirementsListRef.current.previousElementSibling as HTMLElement;
-      adjustDropdownPosition(requirementsListRef.current, requirementsInput);
-    }
+    // Step 5 dropdown positioning handled within StepGoodsDetails
 
     if (isExperienceListVisible && experienceListRef.current) {
       const experienceInput = experienceListRef.current.previousElementSibling as HTMLElement;
@@ -7009,18 +6849,7 @@ const QuoteForm: React.FC = () => {
       if (isPhonePrefixListVisible && phonePrefixListRef.current && phonePrefixSearchInputRef.current) {
         adjustDropdownPosition(phonePrefixListRef.current, phonePrefixSearchInputRef.current);
       }
-      if (isCurrencyListVisible && currencyListRef.current) {
-        const currencyInput = currencyListRef.current.previousElementSibling as HTMLElement;
-        adjustDropdownPosition(currencyListRef.current, currencyInput);
-      }
-      if (isTimingListVisible && timingListRef.current) {
-        const timingInput = timingListRef.current.previousElementSibling as HTMLElement;
-        adjustDropdownPosition(timingListRef.current, timingInput);
-      }
-      if (isRequirementsListVisible && requirementsListRef.current) {
-        const requirementsInput = requirementsListRef.current.previousElementSibling as HTMLElement;
-        adjustDropdownPosition(requirementsListRef.current, requirementsInput);
-      }
+      // Step 5 dropdown positioning handled within StepGoodsDetails
       if (isExperienceListVisible && experienceListRef.current) {
         const experienceInput = experienceListRef.current.previousElementSibling as HTMLElement;
         adjustDropdownPosition(experienceListRef.current, experienceInput);
@@ -7034,7 +6863,7 @@ const QuoteForm: React.FC = () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleResize);
     };
-  }, [isCountryListVisible, isPortListVisible, isPhonePrefixListVisible, isCurrencyListVisible, isTimingListVisible, isRequirementsListVisible, isExperienceListVisible]);
+  }, [isCountryListVisible, isPortListVisible, isPhonePrefixListVisible, isExperienceListVisible]);
 
   const isLoadDataValid = (load: LoadDetails, loadIndex: number): boolean => {
     const loadNumber = loadIndex + 1;
@@ -7083,27 +6912,16 @@ const QuoteForm: React.FC = () => {
           return false;
         }
       } else { // calculationType === 'total'
-        // Validate numberOfUnits, totalVolume and totalWeight for total calculation mode
-        if (!load.numberOfUnits || load.numberOfUnits < 1) {
-          showToast(`Shipment ${loadNumber}: Please specify the number of units (minimum 1)`);
-          return false;
-        }
-        if (!load.totalVolume) {
-          showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationTotalVolume}`);
-          return false;
-        }
-        if (!load.totalWeight) {
-          showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationTotalWeight}`);
+        // New rule: at least one of totalVolume or totalWeight must be provided
+        if (!load.totalVolume && !load.totalWeight) {
+          const msg = (I18N_TEXT as any)[userLang]?.validationAtLeastOneOfVolumeOrWeight || 'Please provide total volume or total weight';
+          showToast(`Shipment ${loadNumber}: ${msg}`);
           return false;
         }
       }
     } else { // shippingType === 'container'
       if (!load.containerType) {
         showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationContainerType}`);
-        return false;
-      }
-      if (!load.numberOfUnits || load.numberOfUnits < 1) {
-        showToast(`Shipment ${loadNumber}: Please specify the number of containers (minimum 1)`);
         return false;
       }
     }
@@ -7362,8 +7180,8 @@ const QuoteForm: React.FC = () => {
         // Sub-step 3 is optional, so no validation needed
         setFieldValid(prev => ({ ...prev, goodsValue: true }));
         break;
-      case 6: // Existing Step 5 (Contact) is now Step 6
-        if (!customerType) {
+      case 6: // Step 6: Contact
+        if (!formData.customerType) {
           showToast(I18N_TEXT[userLang].validationShipperType);
           return false;
         }
@@ -7378,7 +7196,7 @@ const QuoteForm: React.FC = () => {
           return false;
         }
         // Only require company name if customer type is 'company'
-        if (customerType === 'company' && !formData.companyName) {
+        if (formData.customerType === 'company' && !formData.companyName) {
           showToast(I18N_TEXT[userLang].validationCompanyName);
           setFieldValid(prev => ({ ...prev, companyName: false }));
           return false;
@@ -7398,7 +7216,7 @@ const QuoteForm: React.FC = () => {
           ...prev,
           firstName: true,
           lastName: true,
-          companyName: customerType === 'company' ? !!formData.companyName : true,
+          companyName: formData.customerType === 'company' ? !!formData.companyName : true,
           shipperType: true,
           email: true
         }));
@@ -7407,79 +7225,10 @@ const QuoteForm: React.FC = () => {
     return true;
   };
 
-  const nextStep = () => {
-    // If we're on step 5, handle sub-steps
-    if (currentStep === 5) {
-      if (step5SubStep < 3) {
-        // Check if current sub-step is valid before proceeding
-        if (validateStep5SubStep(step5SubStep)) {
-          setStep5SubStep(prev => prev + 1);
-        }
-      } else {
-        // We're on the last sub-step of step 5, go to step 6
-        if (validateStep(currentStep)) {
-          setCurrentStep(prev => Math.min(prev + 1, 6));
-          setStep5SubStep(1); // Reset sub-step for next time
-        }
-      }
-    } else {
-      // For all other steps, validate and proceed normally
-      if (validateStep(currentStep)) {
-        setCurrentStep(prev => Math.min(prev + 1, 6));
-        // Reset sub-step when entering step 5
-        if (currentStep === 4) {
-          setStep5SubStep(1);
-        }
-      }
-    }
-  };
+  // Using nextStep and prevStep from context
 
-  const prevStep = () => {
-    // If we're on step 5, handle sub-steps
-    if (currentStep === 5) {
-      if (step5SubStep > 1) {
-        setStep5SubStep(prev => prev - 1);
-      } else {
-        // We're on the first sub-step of step 5, go back to step 4
-        setCurrentStep(prev => Math.max(prev - 1, 1));
-      }
-    } else {
-      setCurrentStep(prev => Math.max(prev - 1, 1));
-      // If coming back to step 5 from step 6, go to last sub-step
-      if (currentStep === 6) {
-        setStep5SubStep(3);
-      }
-    }
-  };
 
-  // Validation function for step 5 sub-steps
-  const validateStep5SubStep = (subStep: number): boolean => {
-    switch (subStep) {
-      case 1:
-        if (!formData.goodsValue) {
-          showToast(I18N_TEXT[userLang].validationGoodsValue);
-          setFieldValid(prev => ({ ...prev, goodsValue: false }));
-          return false;
-        }
-        setFieldValid(prev => ({ ...prev, goodsValue: true }));
-        return true;
-      case 2:
-        if (!formData.areGoodsReady) {
-          showToast(I18N_TEXT[userLang].validationReadyDate);
-          return false;
-        }
-        return true;
-      case 3:
-        return true; // Optional fields, always valid
-      default:
-        return false;
-    }
-  };
 
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(''), 3000);
-  };
 
   // Handle Enter key to proceed to next step
   useEffect(() => {
@@ -7492,7 +7241,6 @@ const QuoteForm: React.FC = () => {
       const isInTextarea = target.tagName === 'TEXTAREA';
       const isInInput = target.tagName === 'INPUT';
       const anyDropdownOpen = isCountryListVisible || isPortListVisible || isPhonePrefixListVisible || 
-                             isCurrencyListVisible || isTimingListVisible || isRequirementsListVisible || 
                              isExperienceListVisible;
       
       // Don't trigger if any dropdown is open or if user is typing in textarea
@@ -7523,11 +7271,12 @@ const QuoteForm: React.FC = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, nextStep, isCountryListVisible, isPortListVisible, isPhonePrefixListVisible, 
-      isCurrencyListVisible, isTimingListVisible, isRequirementsListVisible, isExperienceListVisible]);
+  }, [currentStep, nextStep, isCountryListVisible, isPortListVisible, isPhonePrefixListVisible, isExperienceListVisible]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Allow any immediately preceding state updates (e.g., customer type click) to flush before validation
+    await Promise.resolve();
     if (validateStep(currentStep)) {
       const makeWebhookUrl = 'https://hook.eu1.make.com/8afhony6fmk7pgxavn969atkmq0xrm1s';
       
@@ -7805,126 +7554,11 @@ const QuoteForm: React.FC = () => {
     setIsDestPortListVisible(false);
   };
 
-  // Currency dropdown options
-  const CURRENCY_OPTIONS = [
-    { code: 'USD', name: 'US Dollar', flag: '🇺🇸' },
-    { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
-    { code: 'GBP', name: 'British Pound', flag: '🇬🇧' },
-    { code: 'CNY', name: 'Chinese Yuan', flag: '🇨🇳' },
-    { code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦' },
-    { code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺' },
-    { code: 'JPY', name: 'Japanese Yen', flag: '🇯🇵' }
-  ];
-
-  // Timing dropdown options  
-  const TIMING_OPTIONS = [
-    { code: 'yes', name: 'Ready now', description: 'goods are available for immediate pickup', icon: '🟢' },
-    { code: 'no_in_1_week', name: 'Within 1 week', description: 'currently preparing', icon: '🗓️' },
-    { code: 'no_in_2_weeks', name: 'Within 2 weeks', description: 'production in progress', icon: '🗓️' },
-    { code: 'no_in_1_month', name: 'Within 1 month', description: 'planning ahead', icon: '🗓️' },
-    { code: 'no_date_set', name: 'Date not determined yet', description: '', icon: '❔' }
-  ];
-
-  // Special requirements dropdown options
-  const REQUIREMENTS_OPTIONS = [
-    { code: '', name: 'No special requirements', description: '', icon: '🟢' },
-    { code: 'fragile', name: 'Fragile goods', description: 'handle with care', icon: '📦' },
-    { code: 'temperature', name: 'Temperature controlled', description: '', icon: '🧊' },
-    { code: 'urgent', name: 'Urgent/time-sensitive', description: '', icon: '🚀' },
-    { code: 'insurance', name: 'High-value insurance required', description: '', icon: '💎' },
-    { code: 'other', name: 'Other', description: I18N_TEXT[userLang].pleaseSpecifyInRemarks, icon: '➕' }
-  ];
+  // Step 5 dropdown options are defined within StepGoodsDetails
 
   // Use the globally defined EXPERIENCE_OPTIONS with full translations
 
-  const handleCurrencySelect = (currencyCode: string) => {
-    const currency = CURRENCY_OPTIONS.find(c => c.code === currencyCode);
-    setFormData({
-      ...formData,
-      goodsCurrency: currencyCode
-    });
-    setCurrencySearch(currency ? `${currency.flag} ${currency.code}` : currencyCode);
-    setIsCurrencyListVisible(false);
-  };
-
-  const handleTimingSelect = (timingCode: string) => {
-    const timing = TIMING_OPTIONS.find(t => t.code === timingCode);
-    setFormData({
-      ...formData,
-      areGoodsReady: timingCode
-    });
-    
-    // Get the proper translated text and clean emojis
-    let translatedName = '';
-    switch(timingCode) {
-      case 'yes':
-        translatedName = cleanEmojiFromText(I18N_TEXT[userLang].readyNow);
-        break;
-      case 'no_in_1_week':
-        translatedName = cleanEmojiFromText(I18N_TEXT[userLang].readyIn1Week);
-        break;
-      case 'no_in_2_weeks':
-        translatedName = cleanEmojiFromText(I18N_TEXT[userLang].readyIn2Weeks);
-        break;
-      case 'no_in_1_month':
-        translatedName = cleanEmojiFromText(I18N_TEXT[userLang].readyIn1Month);
-        break;
-      case 'no_date_set':
-        translatedName = cleanEmojiFromText(I18N_TEXT[userLang].dateNotSet);
-        break;
-    }
-    
-    setTimingSearch(timing ? `${timing.icon}  ${translatedName}` : timingCode);
-    setIsTimingListVisible(false);
-  };
-
-  // Helper function to clean emoji from text
-  const cleanEmojiFromText = (text: string): string => {
-    // More comprehensive emoji removal - covers all common emoji ranges and symbols
-    return text
-      .replace(/^[\u{1F300}-\u{1F9FF}][\u{FE00}-\u{FE0F}]?\s*/u, '') // Main emoji block
-      .replace(/^[\u{2600}-\u{26FF}][\u{FE00}-\u{FE0F}]?\s*/u, '') // Miscellaneous symbols  
-      .replace(/^[\u{2700}-\u{27BF}][\u{FE00}-\u{FE0F}]?\s*/u, '') // Dingbats
-      .replace(/^[\u{1F600}-\u{1F64F}][\u{FE00}-\u{FE0F}]?\s*/u, '') // Emoticons
-      .replace(/^[\u{1F680}-\u{1F6FF}][\u{FE00}-\u{FE0F}]?\s*/u, '') // Transport symbols
-      .replace(/^[\u{1F1E0}-\u{1F1FF}][\u{FE00}-\u{FE0F}]?\s*/u, '') // Flags
-      .replace(/^[✅❓⚡🔸🌡️🛡️📝📅]\s*/g, '') // Specific emojis used in the app
-      .trim();
-  };
-
-  const handleRequirementsSelect = (requirementCode: string) => {
-    const requirement = REQUIREMENTS_OPTIONS.find(r => r.code === requirementCode);
-    setFormData({
-      ...formData,
-      specialRequirements: requirementCode
-    });
-    
-    // Get the proper translated text and clean emojis
-    let translatedName = '';
-    switch(requirementCode) {
-      case '':
-        translatedName = I18N_TEXT[userLang].noSpecialRequirements;
-        break;
-      case 'fragile':
-        translatedName = cleanEmojiFromText(I18N_TEXT[userLang].fragileGoods);
-        break;
-      case 'temperature':
-        translatedName = cleanEmojiFromText(I18N_TEXT[userLang].temperatureControlled);
-        break;
-      case 'urgent':
-        translatedName = cleanEmojiFromText(I18N_TEXT[userLang].urgentTimeSensitive);
-        break;
-      case 'insurance':
-        translatedName = cleanEmojiFromText(I18N_TEXT[userLang].highValueInsurance);
-        break;
-      case 'other':
-        translatedName = cleanEmojiFromText(I18N_TEXT[userLang].otherSpecify);
-        break;
-    }
-    
-    setRequirementsSearch(requirement ? `${requirement.icon}  ${translatedName}` : I18N_TEXT[userLang].noSpecialRequirements);
-    setIsRequirementsListVisible(false);
-  };
+  // Step 5 handlers and helpers moved into StepGoodsDetails
 
   const handleExperienceSelect = (experienceCode: string) => {
     const experience = EXPERIENCE_OPTIONS.find(e => e.code === experienceCode);
@@ -8008,226 +7642,20 @@ const QuoteForm: React.FC = () => {
     }));
   };
 
-  const handleAddLoad = async () => {
-    setAddShipmentLoading(true);
+  // handleAddLoad removed (unused)
 
-    // Validate the current active load before adding a new one
-    // Use centralized sync function to ensure validation uses the latest UI values
-    const currentLoadData = syncCurrentLoadToArray();
 
-    if (!isLoadDataValid(currentLoadData, activeLoadIndex)) {
-      // Show immediate feedback with enhanced toast
-      const enhancedMessage = `⚠️ Complete current shipment first: ${toastMessage}`;
-      setToastMessage(enhancedMessage);
-      
-      // Scroll to the validation error area
-      setTimeout(() => {
-        const errorElement = document.querySelector('.cargo-details-form-section, .loose-cargo-section, .container-details');
-        if (errorElement) {
-          errorElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          });
-        }
-      }, 100);
-      
-      setAddShipmentLoading(false);
-      return; // Stop if current load is invalid
-    }
 
-    // Small delay to show loading state
-    await new Promise(resolve => setTimeout(resolve, 300));
 
-    const newLoad = JSON.parse(JSON.stringify(initialLoadDetails));
-    setFormData(prevFormData => {
-      const updatedLoads = [...prevFormData.loads, newLoad];
-      // Set the new load as active
-      setActiveLoadIndex(updatedLoads.length - 1);
-      return {
-        ...prevFormData,
-        loads: updatedLoads
-      };
-    });
-
-    setAddShipmentLoading(false);
-    showToast(`✅ Shipment ${formData.loads.length + 1} added successfully!`);
-  };
-
-  const handleSetActiveLoad = (index: number) => {
-    // Save the current load before switching using centralized sync function
-    syncCurrentLoadToArray();
-    
-    // Change the active load index after saving
-    setActiveLoadIndex(index);
-  };
-
-  const handleDeleteLoad = (indexToDelete: number) => {
-    if (formData.loads.length <= 1) {
-      showToast("You must have at least one shipment.");
-      return;
-    }
-
-    setFormData(prevFormData => {
-      const newLoads = prevFormData.loads.filter((_, i) => i !== indexToDelete);
-      let newActiveLoadIndex = activeLoadIndex;
-
-      if (activeLoadIndex === indexToDelete) {
-        newActiveLoadIndex = Math.max(0, indexToDelete - 1);
-      } else if (activeLoadIndex > indexToDelete) {
-        newActiveLoadIndex = activeLoadIndex - 1;
-      }
-      // Ensure newActiveLoadIndex is within bounds of newLoads
-      newActiveLoadIndex = Math.min(newLoads.length - 1, newActiveLoadIndex);
-      
-      // Important: Set activeLoadIndex *after* formData is updated or in the same setState call if possible
-      // For simplicity here, we'll update it separately, but it might be better to chain this
-      // However, the useEffect that syncs form fields to activeLoadIndex should handle this update.
-      setActiveLoadIndex(newActiveLoadIndex);
-      return { ...prevFormData, loads: newLoads };
-    });
-  };
 
   // Fonction de duplication d'un load
-  const handleDuplicateLoad = (indexToDuplicate: number) => {
-    if (indexToDuplicate < 0 || indexToDuplicate >= formData.loads.length) return;
-    
-    const loadToDuplicate = formData.loads[indexToDuplicate];
-    const duplicatedLoad = JSON.parse(JSON.stringify(loadToDuplicate));
-    
-    setFormData(prevFormData => {
-      const newLoads = [...prevFormData.loads, duplicatedLoad];
-      setActiveLoadIndex(newLoads.length - 1); // Switch to the duplicated load
-      return { ...prevFormData, loads: newLoads };
-    });
-    
-    showToast(`Shipment ${indexToDuplicate + 1} duplicated successfully!`);
-  };
 
-  // Fonction de consolidation des volumes et poids totaux
-  const getConsolidatedTotals = () => {
-    let totalVolumeCBM = 0;
-    let totalWeightKG = 0;
-    let totalContainers = 0;
-    let mixedShippingTypes = false;
-    const shippingTypes = new Set();
 
-    // Capacités standard des containers en CBM
-    const containerCapacities: Record<LoadDetails['containerType'], number> = {
-      "20'": 33,
-      "40'": 67,
-      "40'HC": 76,
-      "45'HC": 86
-    };
 
-    formData.loads.forEach(load => {
-      shippingTypes.add(load.shippingType);
-      
-      if (load.shippingType === 'loose') {
-        if (load.calculationType === 'unit') {
-          // Calculate from unit details
-          const length = parseFloat(load.dimensions.length) || 0;
-          const width = parseFloat(load.dimensions.width) || 0;
-          const height = parseFloat(load.dimensions.height) || 0;
-          const units = load.numberOfUnits || 0;
-          
-          if (length && width && height && units) {
-            // Convert dimensions to meters
-            const factor = load.dimensionUnit === 'CM' ? 0.01 : load.dimensionUnit === 'IN' ? 0.0254 : 1;
-            const volumePerUnitCBM = length * width * height * Math.pow(factor, 3);
-            totalVolumeCBM += volumePerUnitCBM * units;
-          }
-          
-          // Weight calculation
-          const weightPerUnit = parseFloat(load.weightPerUnit) || 0;
-          if (weightPerUnit && units) {
-            const weightFactor = load.weightUnit === 'LB' ? 0.453592 : load.weightUnit === 'T' ? 1000 : 1;
-            totalWeightKG += weightPerUnit * weightFactor * units;
-          }
-        } else { // calculationType === 'total'
-          // Calculate from total values - more robust calculation
-          const totalVolume = parseFloat(load.totalVolume) || 0;
-          if (totalVolume) {
-            const volumeFactor = load.totalVolumeUnit === 'M3' ? 1 : 1; // CBM = M3
-            totalVolumeCBM += totalVolume * volumeFactor;
-          }
-          
-          const totalWeight = parseFloat(load.totalWeight) || 0;
-          if (totalWeight) {
-            const weightFactor = load.totalWeightUnit === 'LB' ? 0.453592 : load.totalWeightUnit === 'T' ? 1000 : 1;
-            totalWeightKG += totalWeight * weightFactor;
-          }
-          
-          // Note: numberOfUnits is still tracked for consistency and potential future use
-        }
-      } else if (load.shippingType === 'container') {
-        const containerCount = load.numberOfUnits || 0;
-        totalContainers += containerCount;
-        
-        // Add container volume to total
-        const containerCapacity = containerCapacities[load.containerType as keyof typeof containerCapacities] || 0;
-        totalVolumeCBM += containerCapacity * containerCount;
-      }
-    });
 
-    mixedShippingTypes = shippingTypes.size > 1;
 
-    return {
-      totalVolumeCBM: Math.round(totalVolumeCBM * 100) / 100,
-      totalWeightKG: Math.round(totalWeightKG * 100) / 100,
-      totalContainers,
-      mixedShippingTypes,
-      looseCargoLoads: formData.loads.filter(load => load.shippingType === 'loose').length,
-      containerLoads: formData.loads.filter(load => load.shippingType === 'container').length,
-    };
-  };
 
-  // Fonction pour obtenir l'icône du type de cargo
-  const getLoadIcon = (load: LoadDetails) => {
-    if (load.shippingType === 'unsure') {
-      return '🤝';
-    } else if (load.shippingType === 'container') {
-      return '🚢';
-    } else if (load.packageType === 'pallets') {
-      return '📦';
-    } else if (load.packageType === 'boxes') {
-      return '📋';
-    }
-    return '📦';
-  };
 
-  // Fonction pour obtenir le résumé intelligent d'un load
-  const getEnhancedLoadSummary = (load: LoadDetails, index: number): { title: string; details: string } => {
-    const title = `${I18N_TEXT[userLang].shipmentTitle} ${index + 1}`;
-    let details = '';
-
-    if (load.shippingType === 'loose') {
-      if (load.calculationType === 'unit') {
-        const packageDesc = load.packageType === 'pallets' ? I18N_TEXT[userLang].pallets : 
-                           load.packageType === 'boxes' ? I18N_TEXT[userLang].boxesCrates : I18N_TEXT[userLang].items;
-        details = `${load.numberOfUnits} ${packageDesc}`;
-        
-        // Add weight if available
-        if (load.weightPerUnit) {
-          details += ` • ${load.weightPerUnit}${load.weightUnit} ${I18N_TEXT[userLang].each}`;
-        }
-      } else { // calculationType === 'total'
-        details = `${load.numberOfUnits} units • ${I18N_TEXT[userLang].totalCalculation}`;
-        if (load.totalVolume) {
-          details += ` • ${load.totalVolume}${load.totalVolumeUnit}`;
-        }
-        if (load.totalWeight) {
-          details += ` • ${load.totalWeight}${load.totalWeightUnit}`;
-        }
-      }
-    } else if (load.shippingType === 'container') {
-      details = `${load.numberOfUnits} × ${load.containerType}`;
-      if (load.isOverweight) {
-        details += ` • ${I18N_TEXT[userLang].overweight}`;
-      }
-    }
-
-    return { title, details: details || I18N_TEXT[userLang].setupPending };
-  };
 
   // Function for destination location types (Step 1) - includes all types with special handling for ports
   const getDestinationLocationTypes = () => {
@@ -8256,10 +7684,7 @@ const QuoteForm: React.FC = () => {
     return baseTypes;
   };
 
-  // Legacy function for backward compatibility - redirects to pickup types
-  const getLocationTypes = () => {
-    return getPickupLocationTypes();
-  };
+
 
   // Helper: remove flag emojis (regional indicator symbols) and trim
   const sanitizeSearch = (input: string) => input
@@ -8375,18 +7800,7 @@ const QuoteForm: React.FC = () => {
     });
   };
 
-  // Helper to update a property of the current load
-  const updateCurrentLoad = (field: keyof LoadDetails, value: any) => {
-    setFormData(prevFormData => {
-      const updatedLoads = prevFormData.loads.map((load, idx) => {
-        if (idx === activeLoadIndex) {
-          return { ...load, [field]: value };
-        }
-        return load;
-      });
-      return { ...prevFormData, loads: updatedLoads };
-    });
-  };
+
 
 
 
@@ -8454,71 +7868,7 @@ const QuoteForm: React.FC = () => {
     }
   }, [isCountryListVisible, sanitizedCountrySearch, filteredCountries.length]);
 
-  // Initialize step 5 dropdown displays
-  useEffect(() => {
-    // Initialize currency display
-    if (formData.goodsCurrency) {
-      const currency = CURRENCY_OPTIONS.find(c => c.code === formData.goodsCurrency);
-      if (currency) {
-        setCurrencySearch(`${currency.flag} ${currency.code}`);
-      }
-    }
-
-    // Initialize timing display
-    if (formData.areGoodsReady) {
-      const timing = TIMING_OPTIONS.find(t => t.code === formData.areGoodsReady);
-      if (timing) {
-        let translatedName = '';
-        switch(formData.areGoodsReady) {
-          case 'yes':
-            translatedName = cleanEmojiFromText(I18N_TEXT[userLang].readyNow);
-            break;
-          case 'no_in_1_week':
-            translatedName = cleanEmojiFromText(I18N_TEXT[userLang].readyIn1Week);
-            break;
-          case 'no_in_2_weeks':
-            translatedName = cleanEmojiFromText(I18N_TEXT[userLang].readyIn2Weeks);
-            break;
-          case 'no_in_1_month':
-            translatedName = cleanEmojiFromText(I18N_TEXT[userLang].readyIn1Month);
-            break;
-          case 'no_date_set':
-            translatedName = cleanEmojiFromText(I18N_TEXT[userLang].dateNotSet);
-            break;
-        }
-        setTimingSearch(`${timing.icon}  ${translatedName}`);
-      }
-    }
-
-    // Initialize requirements display
-    if (formData.specialRequirements !== undefined) {
-      const requirement = REQUIREMENTS_OPTIONS.find(r => r.code === formData.specialRequirements);
-      if (requirement) {
-        let translatedName = '';
-        switch(formData.specialRequirements) {
-          case '':
-            translatedName = I18N_TEXT[userLang].noSpecialRequirements;
-            break;
-          case 'fragile':
-            translatedName = cleanEmojiFromText(I18N_TEXT[userLang].fragileGoods);
-            break;
-          case 'temperature':
-            translatedName = cleanEmojiFromText(I18N_TEXT[userLang].temperatureControlled);
-            break;
-          case 'urgent':
-            translatedName = cleanEmojiFromText(I18N_TEXT[userLang].urgentTimeSensitive);
-            break;
-          case 'insurance':
-            translatedName = cleanEmojiFromText(I18N_TEXT[userLang].highValueInsurance);
-            break;
-          case 'other':
-            translatedName = cleanEmojiFromText(I18N_TEXT[userLang].otherSpecify);
-            break;
-        }
-        setRequirementsSearch(`${requirement.icon}  ${translatedName}`);
-      }
-    }
-  }, [formData.goodsCurrency, formData.areGoodsReady, formData.specialRequirements, userLang]);
+  // Step 5 dropdown display initialization handled within StepGoodsDetails
 
   // Keyboard navigation for country search
   const handleCountrySearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -8623,7 +7973,11 @@ const QuoteForm: React.FC = () => {
       )}
       
       <form onSubmit={handleSubmit} className="quote-form">
-        <FormStep isVisible={currentStep === 1} stepNumber={1} title={I18N_TEXT[userLang].step1Title} emoji="🌍">
+        <StepDestination />
+        <StepMode />
+        <StepOrigin />
+        {/* Step 6 is rendered inline below with the new progressive UI */}
+        <FormStep isVisible={false} stepNumber={1} title={I18N_TEXT[userLang].step1Title} emoji="🌍">
           {/* Country Selection with Progressive Disclosure */}
           <div className="step-1-container">
             
@@ -8946,7 +8300,7 @@ const QuoteForm: React.FC = () => {
           </div>
         </FormStep>
 
-        <FormStep isVisible={currentStep === 2} stepNumber={2} title={I18N_TEXT[userLang].step2Title} emoji="🚢">
+        <FormStep isVisible={false} stepNumber={2} title={I18N_TEXT[userLang].step2Title} emoji="🚢">
           {/* Step 2 Container with Progressive Disclosure */}
           <div className="step-2-container">
             
@@ -9127,7 +8481,7 @@ const QuoteForm: React.FC = () => {
           </div>
         </FormStep>
 
-        <FormStep isVisible={currentStep === 3} stepNumber={3} title={I18N_TEXT[userLang].step3Title} emoji="🇨🇳">
+        <FormStep isVisible={false} stepNumber={3} title={I18N_TEXT[userLang].step3Title} emoji="🇨🇳">
           {/* Step 3 Container with Progressive Disclosure */}
           <div className="step-3-container">
             
@@ -9381,1077 +8735,16 @@ const QuoteForm: React.FC = () => {
           </div>
         </FormStep>
 
-        <FormStep isVisible={currentStep === 4} stepNumber={4} title={I18N_TEXT[userLang].step4Title} emoji="📦">
-          {/* Step 4 Container with Progressive Disclosure */}
-          <div className="step-4-container">
-            
-            {/* Shipment Management Overview - Always visible */}
-            <div className="shipment-overview-section">
-              <div className="shipment-overview-header">
-                <div className="shipment-overview-content">
-                  <div className="shipment-overview-main">
-                    <div className="shipment-overview-icon">
-                      <Package size={20} />
-                    </div>
-                    <div className="shipment-overview-text">
-                      <h4>{(() => {
-                        const count = formData.loads.length;
-                        let text = I18N_TEXT[userLang].managingShipments.replace('{count}', count.toString());
-                        
-                        // Handle pluralization by language
-                        if (userLang === 'en' || userLang === 'fr') {
-                          text = text.replace('{plural}', count > 1 ? 's' : '');
-                        } else if (userLang === 'de') {
-                          text = text.replace('Sendung{plural}', count > 1 ? 'Sendungen' : 'Sendung');
-                        } else if (userLang === 'es') {
-                          text = text.replace('Envío{plural}', count > 1 ? 'Envíos' : 'Envío');
-                        } else if (userLang === 'it') {
-                          text = text.replace('Spedizione{plural}', count > 1 ? 'Spedizioni' : 'Spedizione');
-                        } else if (userLang === 'nl') {
-                          text = text.replace('Zending{plural}', count > 1 ? 'Zendingen' : 'Zending');
-                        } else if (userLang === 'pt') {
-                          text = text.replace('Remessa{plural}', count > 1 ? 'Remessas' : 'Remessa');
-                        } else if (userLang === 'tr') {
-                          text = text.replace('Gönderi{plural}', count > 1 ? 'Gönderiler' : 'Gönderi');
-                        } else if (userLang === 'ru') {
-                          text = text.replace('Отправлением{plural}', 
-                            count === 1 ? 'Отправлением' : 
-                            count >= 2 && count <= 4 ? 'Отправлениями' : 'Отправлениями');
-                        } else {
-                          // For languages without pluralization (zh, ar), remove {plural}
-                          text = text.replace('{plural}', '');
-                        }
-                        
-                        return text;
-                      })()}</h4>
-                      <p>{I18N_TEXT[userLang].configureShipments}</p>
-                    </div>
-                  </div>
-                  <div className="shipment-overview-actions">
-                    {formData.loads.length === 1 && (
-                      <button
-                        onClick={handleAddLoad}
-                        className={`shipment-preview-btn ${addShipmentLoading ? 'loading' : ''}`}
-                        title={I18N_TEXT[userLang].addNewShipment}
-                        disabled={addShipmentLoading}
-                      >
-                        {addShipmentLoading ? (
-                          <>
-                            <div className="loading-spinner" />
-                            <span>{I18N_TEXT[userLang].validating}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Plus size={16} />
-                            <span>{I18N_TEXT[userLang].addShipment}</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                    {formData.loads.length > 1 && (
-                      <div className="shipment-counter">
-                        <BarChart3 size={16} />
-                        <span>{formData.loads.length} {I18N_TEXT[userLang].active}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Enhanced Load Management Interface - Show for multiple loads */}
-            {formData.loads.length > 1 && (
-              <div className="enhanced-load-tabs-container">
-                <div className="load-tabs-header">
-                  <div className="load-tabs-title">
-                    <Package size={18} />
-                    {I18N_TEXT[userLang].shipmentsCount.replace('{count}', formData.loads.length.toString())}
-                  </div>
-                  <div className="load-quick-actions">
-                    <button
-                      onClick={handleAddLoad}
-                      className={`load-quick-add-btn ${addShipmentLoading ? 'loading' : ''}`}
-                      title={I18N_TEXT[userLang].addNewShipment}
-                      disabled={addShipmentLoading}
-                    >
-                      {addShipmentLoading ? (
-                        <div className="loading-spinner-small" />
-                      ) : (
-                        <Plus size={16} />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="load-tabs-navigation">
-                  {formData.loads.map((load, index) => {
-                    const summary = getEnhancedLoadSummary(load, index);
-                    const isActive = index === activeLoadIndex;
-                    
-                    return (
-                      <div
-                        key={`enhanced-load-tab-${index}`}
-                        className={`enhanced-load-tab ${isActive ? 'active' : ''}`}
-                        onClick={() => handleSetActiveLoad(index)}
-                      >
-                        <div className="load-tab-icon">
-                          <span>{getLoadIcon(load)}</span>
-                        </div>
-                        <div className="load-tab-content">
-                          <div className="load-tab-title">{summary.title}</div>
-                          <div className="load-tab-summary">{summary.details}</div>
-                        </div>
-                        <div className="load-tab-actions">
-                          <button
-                            className="load-tab-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDuplicateLoad(index);
-                            }}
-                            title={I18N_TEXT[userLang].duplicateShipment}
-                          >
-                            <Copy size={14} />
-                          </button>
-                          <button
-                            className="load-tab-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteLoad(index);
-                            }}
-                            title={I18N_TEXT[userLang].removeShipment}
-                          >
-                            <XCircle size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Consolidated Summary */}
-                {(() => {
-                  const totals = getConsolidatedTotals();
-                  return (
-                    <div className="load-total-summary">
-                      <div className="load-total-summary-header">
-                        <BarChart3 size={18} />
-                        <span className="load-total-summary-title">{I18N_TEXT[userLang].consolidatedSummary}</span>
-                      </div>
-                      <div className="load-total-summary-content">
-                        <div className="load-total-summary-item">
-                          <div className="load-total-summary-label">{I18N_TEXT[userLang].totalVolume}</div>
-                          <div className="load-total-summary-value">{totals.totalVolumeCBM} CBM</div>
-                        </div>
-                        <div className="load-total-summary-item">
-                          <div className="load-total-summary-label">{I18N_TEXT[userLang].totalWeight}</div>
-                          <div className="load-total-summary-value">{totals.totalWeightKG} KG</div>
-                        </div>
-                        <div className="load-total-summary-item">
-                          <div className="load-total-summary-label">{I18N_TEXT[userLang].totalShipments}</div>
-                          <div className="load-total-summary-value">{formData.loads.length}</div>
-                        </div>
-                        {totals.totalContainers > 0 && (
-                          <div className="load-total-summary-item">
-                            <div className="load-total-summary-label">{I18N_TEXT[userLang].totalContainers}</div>
-                            <div className="load-total-summary-value">{totals.totalContainers}</div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-            
-            {/* Phase 1: Understanding Cargo Types */}
-            <div className="cargo-type-guidance-phase">
-              <div className="phase-header">
-                <h3 style={{ 
-                  fontSize: '1.1rem', 
-                  fontWeight: '600', 
-                  color: '#1f2937', 
-                  marginBottom: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <span style={{ 
-                    backgroundColor: shippingType ? '#10b981' : '#6b7280',
-                    color: 'white',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.8rem',
-                    fontWeight: '600',
-                    transition: 'background-color 0.3s ease'
-                  }}>1</span>
-                  {I18N_TEXT[userLang].chooseShippingType}
-                  {formData.loads.length > 1 && (
-                    <span style={{ 
-                      fontSize: '0.8rem', 
-                      color: '#6b7280',
-                      fontWeight: '500'
-                    }}>
-                      ({I18N_TEXT[userLang].shipmentXofY.replace('{current}', (activeLoadIndex + 1).toString()).replace('{total}', formData.loads.length.toString())})
-                    </span>
-                  )}
-                </h3>
-                <p style={{ 
-                  fontSize: '0.9rem', 
-                  color: '#6b7280', 
-                  margin: '0 0 1.5rem 0' 
-                }}>
-                  {I18N_TEXT[userLang].selectPackagingMethod}
-                  {formData.loads.length > 1 && ` ${I18N_TEXT[userLang].forThisSpecificShipment}`}
-                </p>
-              </div>
-
-              {/* Shipping Type Selection */}
-              <div className="step4-choice-option-group-extended shipping-type-selector mx-auto my-6">
-                <div 
-                  className={`step4-choice-option ${shippingType === 'loose' ? 'selected' : ''}`}
-                  onClick={() => updateCurrentLoad('shippingType', 'loose')}
-                  data-choice-theme="loose-cargo"
-                >
-                  <PackageOpen size={32} />
-                  <span>{I18N_TEXT[userLang].looseCargo}</span>
-                  <div className="location-desc">{I18N_TEXT[userLang].looseCargoDesc}</div>
-                </div>
-                <div 
-                  className={`step4-choice-option ${shippingType === 'container' ? 'selected' : ''}`}
-                  onClick={() => updateCurrentLoad('shippingType', 'container')}
-                  data-choice-theme="container"
-                >
-                  <Container size={32} />
-                  <span>{I18N_TEXT[userLang].fullContainer}</span>
-                  <div className="location-desc">{I18N_TEXT[userLang].fullContainerDesc}</div>
-                </div>
-                <div 
-                  className={`step4-choice-option ${shippingType === 'unsure' ? 'selected' : ''}`}
-                  onClick={() => updateCurrentLoad('shippingType', 'unsure')}
-                  data-choice-theme="unsure"
-                >
-                  <Package size={32} />
-                  <span>{I18N_TEXT[userLang].imNotSure}</span>
-                  <div className="location-desc">{I18N_TEXT[userLang].teamWillHelp}</div>
-                </div>
-              </div>
-
-              {/* Feedback for selection */}
-              {shippingType && (
-                <div 
-                  className="selection-feedback" 
-                  style={{
-                    marginTop: '1.5rem',
-                    padding: '1rem',
-                    background: shippingType === 'loose' ? 'rgba(16, 185, 129, 0.15)' : 
-                              shippingType === 'container' ? 'rgba(139, 92, 246, 0.15)' : 
-                              'rgba(59, 130, 246, 0.15)',
-                    borderRadius: '12px',
-                    border: shippingType === 'loose' ? '2px solid rgba(16, 185, 129, 0.3)' : 
-                           shippingType === 'container' ? '2px solid rgba(139, 92, 246, 0.3)' : 
-                           '2px solid rgba(59, 130, 246, 0.3)',
-                    display: 'block',
-                    visibility: 'visible',
-                    opacity: '1'
-                  }}
-                >
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.5rem',
-                    visibility: 'visible'
-                  }}>
-                    <CheckCircle size={20} style={{ 
-                      color: shippingType === 'loose' ? '#10b981' : 
-                             shippingType === 'container' ? '#8b5cf6' : 
-                             '#3b82f6', 
-                      flexShrink: 0 
-                    }} />
-                    <span style={{ 
-                      fontSize: '0.9rem', 
-                      color: shippingType === 'loose' ? '#047857' : 
-                             shippingType === 'container' ? '#581c87' : 
-                             '#1e40af', 
-                      fontWeight: '600',
-                      lineHeight: '1.4',
-                      display: 'block'
-                    }}>
-                      {shippingType === 'loose' 
-                        ? I18N_TEXT[userLang].looseCargoFeedback
-                        : shippingType === 'container'
-                        ? I18N_TEXT[userLang].containerFeedback
-                        : I18N_TEXT[userLang].unsureFeedback
-                      }
-                    </span>
-                  </div>
-                  {shippingType === 'unsure' && (
-                    <div style={{
-                      marginTop: '1rem',
-                      padding: '0.75rem',
-                      background: 'rgba(255, 255, 255, 0.8)',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <div style={{ 
-                        fontSize: '0.85rem',
-                        color: '#374151',
-                        lineHeight: '1.5'
-                      }}>
-                        📞 <strong>{I18N_TEXT[userLang].whatHappensNext}</strong><br/>
-                        • {I18N_TEXT[userLang].expertsContact}<br/>
-                        • {I18N_TEXT[userLang].discussRequirements}<br/>
-                        • {I18N_TEXT[userLang].personalizedRecommendations}<br/>
-                        • {I18N_TEXT[userLang].noCommitmentRequired}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Phase 2: Cargo Details (only show when shipping type is selected and not unsure) */}
-            {shippingType && shippingType !== 'unsure' && (
-              <div className="cargo-details-phase" style={{ marginTop: '2rem' }}>
-                <div className="phase-header">
-                  <h3 style={{ 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    color: '#1f2937', 
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{ 
-                      backgroundColor: '#6b7280', // Will be updated based on completion
-                      color: 'white',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      transition: 'background-color 0.3s ease'
-                    }}>2</span>
-                    {shippingType === 'loose' ? I18N_TEXT[userLang].describeLooseCargo : I18N_TEXT[userLang].configureContainer}
-                  </h3>
-                  <p style={{ 
-                    fontSize: '0.9rem', 
-                    color: '#6b7280', 
-                    margin: '0 0 1.5rem 0' 
-                  }}>
-                    {shippingType === 'loose' 
-                      ? I18N_TEXT[userLang].provideDimensionsWeight
-                      : I18N_TEXT[userLang].selectContainerType
-                    }
-                  </p>
-                </div>
 
 
+        {/* Step 4: Freight Details */}
+        <StepFreight />
 
-                {/* Container for all loads/shipments */}
-                <div className="shipments-container space-y-4">
-                  {formData.loads.map((_, index) => {
-                    const isActive = index === activeLoadIndex;
-                    const showFormForThisLoad = isActive;
+        <StepGoodsDetails />
+        <StepContact />
 
-                    return (
-                      <div key={`shipment-panel-${index}`} className={`shipment-panel ${formData.loads.length === 1 ? '' : 'border rounded-lg overflow-hidden'} transition-all duration-300 ease-in-out ${isActive && formData.loads.length > 1 ? 'border-accent shadow-lg' : formData.loads.length > 1 ? 'border-gray-200' : ''}`}>
-                        
-                        {/* Show form content */}
-                        {(formData.loads.length === 1 || showFormForThisLoad) && (
-                          <div className={`cargo-details-form-section p-4 md:p-6 ${isActive && formData.loads.length > 1 ? 'active-cargo-details' : ''} ${formData.loads.length === 1 ? 'pt-0' : '' }`}>
-                            
-                            {/* Loose Cargo Details */}
-                            {shippingType === 'loose' && (
-                              <div className={`loose-cargo-section rounded-xl ${isActive && formData.loads.length > 1 ? '' : 'bg-white/20 shadow-lg' } p-4 md:p-6`}>
-                                <div className="calculation-type-selector flex space-x-4 my-6">
-                                  <label className={`radio-label ${calculationType === 'unit' ? 'selected' : ''}`}>
-                                    <input 
-                                      type="radio" 
-                                      name={`calculationType-${index}`}
-                                      value="unit" 
-                                      checked={calculationType === 'unit'} 
-                                      onChange={() => updateCurrentLoad('calculationType', 'unit')} 
-                                    /> {I18N_TEXT[userLang].calculateByUnit}
-                                  </label>
-                                  <label className={`radio-label ${calculationType === 'total' ? 'selected' : ''}`}>
-                                    <input 
-                                      type="radio" 
-                                      name={`calculationType-${index}`}
-                                      value="total" 
-                                      checked={calculationType === 'total'} 
-                                      onChange={() => updateCurrentLoad('calculationType', 'total')} 
-                                    /> {I18N_TEXT[userLang].calculateByTotal}
-                                  </label>
-                                </div>
-
-                                {/* Unit-based calculation */}
-                                {calculationType === 'unit' && (
-                                  <div className="unit-details sub-section-card">
-                                    {/* Info Banner */}
-                                    <div className="info-banner">
-                                      <Info size={20} />
-                                      <span>{I18N_TEXT[userLang].unitInfoBanner}</span>
-                                    </div>
-
-                                                                         {/* Package Type and Number of Units - Horizontal Layout */}
-                                     <div className="package-selection-row">
-                                       <div className="package-type-section">
-                                         <label className="label-text">{I18N_TEXT[userLang].packageType}</label>
-                                         <div className="button-group-horizontal">
-                                           <button 
-                                             type="button"
-                                             className={`btn-tab-compact ${packageType === 'pallets' ? 'active' : ''}`}
-                                             onClick={() => updateCurrentLoad('packageType', 'pallets')}
-                                           >
-                                             {I18N_TEXT[userLang].pallets}
-                                           </button>
-                                           <button 
-                                             type="button"
-                                             className={`btn-tab-compact ${packageType === 'boxes' ? 'active' : ''}`}
-                                             onClick={() => updateCurrentLoad('packageType', 'boxes')}
-                                           >
-                                             {I18N_TEXT[userLang].boxesCrates}
-                                           </button>
-                                         </div>
-                                       </div>
-
-                                       <div className="units-counter-section">
-                                         <label className="label-text">{I18N_TEXT[userLang].numberOfUnits}</label>
-                                         <div className="input-number-wrapper-compact">
-                                           <button 
-                                             type="button" 
-                                             className="btn-number-control-compact" 
-                                             onClick={() => updateCurrentLoad('numberOfUnits', Math.max(1, numberOfUnits - 1))}
-                                           >
-                                             <Minus size={14} />
-                                           </button>
-                                           <input 
-                                             type="number" 
-                                             value={numberOfUnits} 
-                                             onChange={(e) => updateCurrentLoad('numberOfUnits', Math.max(1, parseInt(e.target.value) || 1))}
-                                             className="input-number-compact" 
-                                             min="1"
-                                           />
-                                           <button 
-                                             type="button" 
-                                             className="btn-number-control-compact" 
-                                             onClick={() => updateCurrentLoad('numberOfUnits', numberOfUnits + 1)}
-                                           >
-                                             <Plus size={14} />
-                                           </button>
-                                         </div>
-                                       </div>
-                                     </div>
-
-                                    {/* Pallet Type (only for pallets) */}
-                                    {packageType === 'pallets' && (
-                                      <div className="form-control">
-                                        <label className="label-text">{I18N_TEXT[userLang].palletType}</label>
-                                        <CustomDropdown
-                                          value={palletType}
-                                          onChange={(value) => updateCurrentLoad('palletType', value)}
-                                          options={palletTypeOptions}
-                                        />
-                                      </div>
-                                    )}
-
-                                                                         {/* Dimensions and Weight - Compact Layout */}
-                                     <div className="dimensions-weight-compact">
-                                       <div className="dimensions-section-compact">
-                                         <label className="label-text-compact">{I18N_TEXT[userLang].dimensionsPerUnit}</label>
-                                         <div className="dimensions-input-row">
-                                           <input 
-                                             type="number" 
-                                             placeholder="L" 
-                                             value={dimensions.length} 
-                                             onChange={(e) => updateCurrentLoad('dimensions', { ...dimensions, length: e.target.value })}
-                                             className="dimension-input-compact" 
-                                           />
-                                           <span className="dimension-separator">×</span>
-                                           <input 
-                                             type="number" 
-                                             placeholder="W" 
-                                             value={dimensions.width} 
-                                             onChange={(e) => updateCurrentLoad('dimensions', { ...dimensions, width: e.target.value })}
-                                             className="dimension-input-compact" 
-                                           />
-                                           <span className="dimension-separator">×</span>
-                                           <input 
-                                             type="number" 
-                                             placeholder="H" 
-                                             value={dimensions.height} 
-                                             onChange={(e) => updateCurrentLoad('dimensions', { ...dimensions, height: e.target.value })}
-                                             className="dimension-input-compact" 
-                                           />
-                                           <CustomDropdown
-                                             value={dimensionUnit}
-                                             onChange={(value) => updateCurrentLoad('dimensionUnit', value)}
-                                             options={dimensionUnitOptions}
-                                             compact={true}
-                                             unitSelector={true}
-                                           />
-                                         </div>
-                                         {(!dimensions.length || !dimensions.width || !dimensions.height) && (
-                                           <div className="validation-message">{I18N_TEXT[userLang].required}</div>
-                                         )}
-                                       </div>
-
-                                       <div className="weight-section-compact">
-                                         <label className="label-text-compact">{I18N_TEXT[userLang].weightPerUnit}</label>
-                                         <div className="weight-input-row">
-                                           <input 
-                                             type="number" 
-                                             placeholder="Weight" 
-                                             value={weightPerUnit} 
-                                             onChange={(e) => updateCurrentLoad('weightPerUnit', e.target.value)}
-                                             className="weight-input-compact" 
-                                           />
-                                           <CustomDropdown
-                                             value={weightUnit}
-                                             onChange={(value) => updateCurrentLoad('weightUnit', value)}
-                                             options={weightUnitOptions}
-                                             compact={true}
-                                             unitSelector={true}
-                                           />
-                                         </div>
-                                         {!weightPerUnit && (
-                                           <div className="validation-message">{I18N_TEXT[userLang].required}</div>
-                                         )}
-                                       </div>
-                                     </div>
-                                  </div>
-                                )}
-
-                                                                 {/* Total shipment calculation */}
-                                 {calculationType === 'total' && (
-                                   <div className="total-shipment-details">
-                                     <div className="info-banner-total">
-                                       <Info size={20} />
-                                       <span>{I18N_TEXT[userLang].totalInfoBanner}</span>
-                                     </div>
-
-                                     <div className="total-description">
-                                       {I18N_TEXT[userLang].totalDescription}
-                                     </div>
-
-                                     {/* Number of units for total calculation */}
-                                     <div className="total-units-section">
-                                       <label className="label-text-compact">{I18N_TEXT[userLang].numberOfUnits}</label>
-                                       <div className="input-number-wrapper-compact">
-                                         <button 
-                                           type="button" 
-                                           className="btn-number-control-compact" 
-                                           onClick={() => updateCurrentLoad('numberOfUnits', Math.max(1, numberOfUnits - 1))}
-                                         >
-                                           <Minus size={14} />
-                                         </button>
-                                         <input 
-                                           type="number" 
-                                           value={numberOfUnits} 
-                                           onChange={(e) => updateCurrentLoad('numberOfUnits', Math.max(1, parseInt(e.target.value) || 1))}
-                                           className="input-number-compact" 
-                                           min="1"
-                                         />
-                                         <button 
-                                           type="button" 
-                                           className="btn-number-control-compact" 
-                                           onClick={() => updateCurrentLoad('numberOfUnits', numberOfUnits + 1)}
-                                         >
-                                           <Plus size={14} />
-                                         </button>
-                                       </div>
-                                       <div className="field-help">
-                                         How many logical units does this total volume/weight represent?
-                                       </div>
-                                     </div>
-
-                                                                            <div className="total-inputs-row">
-                                         <div className="total-volume-section">
-                                           <label className="label-text-compact">{I18N_TEXT[userLang].totalVolume}</label>
-                                         <div className="total-input-group">
-                                           <input 
-                                             type="number" 
-                                             placeholder="" 
-                                             value={totalVolume} 
-                                             onChange={(e) => updateCurrentLoad('totalVolume', e.target.value)}
-                                             className="total-input-compact" 
-                                           />
-                                           <CustomDropdown
-                                             value={totalVolumeUnit}
-                                             onChange={(value) => updateCurrentLoad('totalVolumeUnit', value)}
-                                             options={totalVolumeUnitOptions}
-                                             compact={true}
-                                             unitSelector={true}
-                                           />
-                                         </div>
-                                         {!totalVolume && (
-                                           <div className="validation-message">{I18N_TEXT[userLang].required}</div>
-                                         )}
-                                       </div>
-
-                                       <div className="total-weight-section">
-                                         <label className="label-text-compact">{I18N_TEXT[userLang].totalWeight}</label>
-                                         <div className="total-input-group">
-                                           <input 
-                                             type="number" 
-                                             placeholder="" 
-                                             value={totalWeight} 
-                                             onChange={(e) => updateCurrentLoad('totalWeight', e.target.value)}
-                                             className="total-input-compact" 
-                                           />
-                                           <CustomDropdown
-                                             value={totalWeightUnit}
-                                             onChange={(value) => updateCurrentLoad('totalWeightUnit', value)}
-                                             options={totalWeightUnitOptions}
-                                             compact={true}
-                                             unitSelector={true}
-                                           />
-                                         </div>
-                                         {!totalWeight && (
-                                           <div className="validation-message">{I18N_TEXT[userLang].required}</div>
-                                         )}
-                                       </div>
-                                     </div>
-                                   </div>
-                                 )}
-                              </div>
-                            )}
-
-                            {/* Container Details */}
-                            {shippingType === 'container' && (
-                              <div className={`container-details rounded-xl ${isActive && formData.loads.length > 1 ? '' : 'bg-white/20 shadow-lg' } p-4 md:p-6`}>
-                                <div className="info-banner">
-                                  <Info size={20} />
-                                  <span>{I18N_TEXT[userLang].containerInfoBanner}</span>
-                                </div>
-
-                                <div className="flex flex-col md:flex-row md:items-baseline md:gap-x-6 mb-6">
-                                  <div className="form-control items-center flex-grow mb-6 md:mb-0 md:flex-1">
-                                    <label htmlFor={`containerType-${index}`} className="label-text mb-2">{I18N_TEXT[userLang].containerType}</label>
-                                    <CustomDropdown
-                                      value={containerType}
-                                      onChange={(value) => updateCurrentLoad('containerType', value as LoadDetails['containerType'])}
-                                      options={containerTypeOptions}
-                                    />
-                                  </div>
-
-                                  <div className="form-control items-center">
-                                    <label className="label-text mb-2">{I18N_TEXT[userLang].numberOfContainers}</label>
-                                    <div className="input-number-wrapper">
-                                      <button 
-                                        type="button" 
-                                        className="btn-number-control" 
-                                        onClick={() => updateCurrentLoad('numberOfUnits', Math.max(1, numberOfUnits - 1))}
-                                      >
-                                        <Minus size={16} />
-                                      </button>
-                                      <input 
-                                        type="number" 
-                                        value={numberOfUnits} 
-                                        onChange={(e) => updateCurrentLoad('numberOfUnits', Math.max(1, parseInt(e.target.value) || 1))}
-                                        className="input glassmorphism" 
-                                        min="1"
-                                      />
-                                      <button 
-                                        type="button" 
-                                        className="btn-number-control" 
-                                        onClick={() => updateCurrentLoad('numberOfUnits', numberOfUnits + 1)}
-                                      >
-                                        <Plus size={16} />
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="form-control">
-                                  <label className="checkbox-label">
-                                    <input
-                                      type="checkbox"
-                                      checked={isOverweight}
-                                      onChange={(e) => updateCurrentLoad('isOverweight', e.target.checked)}
-                                    />
-                                                                         <span>{I18N_TEXT[userLang].overweightContainer}</span>
-                                  </label>
-                                </div>
-                              </div>
-                            )}
-
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </FormStep>
-
-        <FormStep isVisible={currentStep === 5} stepNumber={5} title={I18N_TEXT[userLang].step5Title} emoji="📝">
-          {/* Sub-step indicator */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            marginBottom: '3rem',
-            gap: '0.75rem',
-            padding: '1.5rem 0'
-          }}>
-            {[1, 2, 3].map((step, index) => (
-              <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  background: step5SubStep >= step 
-                    ? 'linear-gradient(135deg, #10b981, #059669)' 
-                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7))',
-                  color: step5SubStep >= step ? 'white' : '#6b7280',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.1rem',
-                  fontWeight: '700',
-                  backdropFilter: 'blur(16px)',
-                  border: step5SubStep >= step ? '2px solid rgba(16, 185, 129, 0.3)' : '2px solid rgba(107, 114, 128, 0.2)',
-                  boxShadow: step5SubStep >= step 
-                    ? '0 8px 32px rgba(16, 185, 129, 0.3), 0 4px 16px rgba(16, 185, 129, 0.2)' 
-                    : '0 4px 16px rgba(0, 0, 0, 0.1)',
-                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                  transform: step5SubStep === step ? 'scale(1.1)' : 'scale(1)',
-                  position: 'relative'
-                }}>
-                  {step5SubStep > step ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  ) : step}
-                  {step5SubStep === step && (
-                    <div style={{
-                      position: 'absolute',
-                      inset: '-2px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(45deg, #10b981, #3b82f6, #10b981)',
-                      backgroundSize: '400% 400%',
-                      animation: 'gradient 2s ease infinite',
-                      zIndex: -1
-                    }} />
-                  )}
-                </div>
-                {index < 2 && (
-                  <div style={{
-                    width: '60px',
-                    height: '4px',
-                    borderRadius: '2px',
-                    background: step5SubStep > step + 1 
-                      ? 'linear-gradient(90deg, #10b981, #059669)' 
-                      : 'linear-gradient(90deg, rgba(229, 231, 235, 0.8), rgba(229, 231, 235, 0.4))',
-                    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}>
-                    {step5SubStep === step + 1 && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        height: '100%',
-                        width: '100%',
-                        background: 'linear-gradient(90deg, transparent, #10b981, transparent)',
-                        animation: 'slide 1.5s ease-in-out infinite'
-                      }} />
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Sub-step 1: Goods Value and Declaration */}
-          {step5SubStep === 1 && (
-            <div className="goods-value-phase animate-slide-in">
-              <div className="phase-header">
-                <h3 style={{ 
-                  fontSize: '1.2rem', 
-                  fontWeight: '600', 
-                  color: '#1f2937', 
-                  marginBottom: '0.5rem',
-                  textAlign: 'center'
-                }}>
-                  {I18N_TEXT[userLang].goodsValueDeclaration}
-                </h3>
-                <p style={{ 
-                  fontSize: '0.9rem', 
-                  color: '#6b7280', 
-                  margin: '0 0 2rem 0',
-                  textAlign: 'center'
-                }}>
-                  {I18N_TEXT[userLang].goodsValueDescription}
-                </p>
-              </div>
-
-          <div className="form-control">
-                <label htmlFor="goodsValue" className="label-text">{I18N_TEXT[userLang].commercialValue}</label>
-                <div className="flex items-center gap-2">
-              <input
-                type="number"
-                name="goodsValue"
-                id="goodsValue"
-                placeholder="1000"
-                value={formData.goodsValue}
-                onChange={handleInputChange}
-                    className={`input glassmorphism ${fieldValid.goodsValue === false ? 'input-error' : ''} flex-grow`}
-                    style={{ 
-                      minWidth: '0',
-                      background: 'rgba(255, 255, 255, 0.95)',
-                      backdropFilter: 'blur(16px)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '12px',
-                      fontSize: '0.9rem',
-                      padding: '0.75rem 1rem',
-                      transition: 'all 0.3s ease'
-                    }}
-                  />
-                  <div className="currency-select" style={{ minWidth: '120px', margin: 0, position: 'relative' }}>
-                    <div className="search-input-wrapper" style={{ position: 'relative' }}>
-                      <input
-                        type="text"
-                        value={currencySearch}
-                        readOnly
-                        onClick={() => setIsCurrencyListVisible(true)}
-                        onFocus={() => setIsCurrencyListVisible(true)}
-                        className="input glassmorphism search-input"
-                        style={{ cursor: 'pointer' }}
-                      />
-                    </div>
-                    <div 
-                      ref={currencyListRef}
-                      className={`port-list ${isCurrencyListVisible ? 'show' : ''}`}
-                      style={{ zIndex: 1000 }}
-                    >
-                      {CURRENCY_OPTIONS.map(currency => (
-                        <div
-                          key={currency.code}
-                          className={`port-option ${formData.goodsCurrency === currency.code ? 'selected' : ''}`}
-                          onClick={() => handleCurrencySelect(currency.code)}
-                        >
-                          <span className="port-icon">{currency.flag}</span>
-                          <div className="port-info">
-                            <span className="port-name">{currency.code}</span>
-                            <span className="port-region">{currency.name}</span>
-            </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                {fieldValid.goodsValue === true && <CheckCircle className="check-icon" />}
-                <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                  💡 {I18N_TEXT[userLang].goodsValueHelp}
-                </div>
-          </div>
-
-              {/* Goods Classification */}
-          <div className="form-control">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                name="isPersonalOrHazardous"
-                checked={formData.isPersonalOrHazardous}
-                onChange={(e) => setFormData({ ...formData, isPersonalOrHazardous: e.target.checked })}
-              />
-                  <span>{I18N_TEXT[userLang].personalOrHazardous}</span>
-            </label>
-                <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                  ⚠️ {I18N_TEXT[userLang].personalHazardousHelp}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Sub-step 2: Shipment Timing */}
-          {step5SubStep === 2 && (
-            <div className="shipment-timing-phase animate-slide-in">
-              <div className="phase-header">
-                <h3 style={{ 
-                  fontSize: '1.2rem', 
-                  fontWeight: '600', 
-                  color: '#1f2937', 
-                  marginBottom: '0.5rem',
-                  textAlign: 'center'
-                }}>
-                  {I18N_TEXT[userLang].shipmentReadiness}
-                </h3>
-                <p style={{ 
-                  fontSize: '0.9rem', 
-                  color: '#6b7280', 
-                  margin: '0 0 2rem 0',
-                  textAlign: 'center'
-                }}>
-                  {I18N_TEXT[userLang].shipmentTimingDescription}
-                </p>
-          </div>
-          
-          <div className="form-control">
-                <label htmlFor="areGoodsReady" className="label-text">{I18N_TEXT[userLang].goodsReadyQuestion}</label>
-                <div className="timing-select" style={{ position: 'relative' }}>
-                  <div className="search-input-wrapper" style={{ position: 'relative' }}>
-                    <input
-                      type="text"
-                      value={timingSearch || ((I18N_TEXT[userLang] as any).selectOption || 'Select an option...')}
-                      readOnly
-                      onClick={() => setIsTimingListVisible(true)}
-                      onFocus={() => setIsTimingListVisible(true)}
-                      className={`input glassmorphism search-input ${!formData.areGoodsReady ? 'input-pending' : ''}`}
-                      style={{ cursor: 'pointer' }}
-                    />
-                  </div>
-                  <div 
-                    ref={timingListRef}
-                    className={`port-list ${isTimingListVisible ? 'show' : ''}`}
-                    style={{ zIndex: 1000 }}
-                  >
-                    {TIMING_OPTIONS.map(timing => (
-                      <div
-                        key={timing.code}
-                        className={`port-option ${formData.areGoodsReady === timing.code ? 'selected' : ''}`}
-                        onClick={() => handleTimingSelect(timing.code)}
-                      >
-                        <span className="port-icon">{timing.icon}</span>
-                        <div className="port-info">
-                          <span className="port-name">
-                            {timing.code === 'yes' && cleanEmojiFromText(I18N_TEXT[userLang].readyNow)}
-                            {timing.code === 'no_in_1_week' && cleanEmojiFromText(I18N_TEXT[userLang].readyIn1Week)}
-                            {timing.code === 'no_in_2_weeks' && cleanEmojiFromText(I18N_TEXT[userLang].readyIn2Weeks)}
-                            {timing.code === 'no_in_1_month' && cleanEmojiFromText(I18N_TEXT[userLang].readyIn1Month)}
-                            {timing.code === 'no_date_set' && cleanEmojiFromText(I18N_TEXT[userLang].dateNotSet)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {formData.areGoodsReady && <CheckCircle className="check-icon" />}
-                <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                  ⏰ {I18N_TEXT[userLang].timingHelp}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Sub-step 3: Additional Information */}
-          {step5SubStep === 3 && (
-            <div className="additional-info-phase animate-slide-in">
-              <div className="phase-header">
-                <h3 style={{ 
-                  fontSize: '1.2rem', 
-                  fontWeight: '600', 
-                  color: '#1f2937', 
-                  marginBottom: '0.5rem',
-                  textAlign: 'center'
-                }}>
-                  {I18N_TEXT[userLang].additionalDetails}
-                </h3>
-                <p style={{ 
-                  fontSize: '0.9rem', 
-                  color: '#6b7280', 
-                  margin: '0 0 2rem 0',
-                  textAlign: 'center'
-                }}>
-                  {I18N_TEXT[userLang].additionalDetailsDescription}
-                </p>
-              </div>
-
-              {/* Goods Description */}
-              <div className="form-control">
-                <label htmlFor="goodsDescription" className="label-text">{I18N_TEXT[userLang].goodsDescription}</label>
-                <input
-                  type="text"
-                  name="goodsDescription"
-                  id="goodsDescription"
-                  placeholder={I18N_TEXT[userLang].goodsDescriptionPlaceholder}
-                  value={formData.goodsDescription || ''}
-              onChange={handleInputChange}
-              className="input glassmorphism"
-                />
-                <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                  💡 {I18N_TEXT[userLang].goodsDescriptionHelp}
-                </div>
-              </div>
-
-              {/* Special Requirements */}
-              <div className="form-control">
-                <label htmlFor="specialRequirements" className="label-text">{I18N_TEXT[userLang].specialRequirements}</label>
-                <div className="requirements-select" style={{ position: 'relative' }}>
-                  <div className="search-input-wrapper" style={{ position: 'relative' }}>
-                    <input
-                      type="text"
-                      value={requirementsSearch || I18N_TEXT[userLang].noSpecialRequirements}
-                      readOnly
-                      onClick={() => setIsRequirementsListVisible(true)}
-                      onFocus={() => setIsRequirementsListVisible(true)}
-                      className="input glassmorphism search-input"
-                      style={{ cursor: 'pointer' }}
-                    />
-                  </div>
-                  <div 
-                    ref={requirementsListRef}
-                    className={`port-list ${isRequirementsListVisible ? 'show' : ''}`}
-                    style={{ zIndex: 1000 }}
-                  >
-                    {REQUIREMENTS_OPTIONS.map(requirement => (
-                      <div
-                        key={requirement.code}
-                        className={`port-option ${formData.specialRequirements === requirement.code ? 'selected' : ''}`}
-                        onClick={() => handleRequirementsSelect(requirement.code)}
-                      >
-                        <span className="port-icon">{requirement.icon}</span>
-                        <div className="port-info">
-                          <span className="port-name">
-                            {requirement.code === '' && I18N_TEXT[userLang].noSpecialRequirements}
-                            {requirement.code === 'fragile' && cleanEmojiFromText(I18N_TEXT[userLang].fragileGoods)}
-                            {requirement.code === 'temperature' && cleanEmojiFromText(I18N_TEXT[userLang].temperatureControlled)}
-                            {requirement.code === 'urgent' && cleanEmojiFromText(I18N_TEXT[userLang].urgentTimeSensitive)}
-                            {requirement.code === 'insurance' && cleanEmojiFromText(I18N_TEXT[userLang].highValueInsurance)}
-                            {requirement.code === 'other' && cleanEmojiFromText(I18N_TEXT[userLang].otherSpecify)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-          </div>
-
-              {/* Important Information Banner */}
-              <div className="info-banner" style={{ 
-                marginTop: '2rem',
-                padding: '1rem',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.2)',
-                borderRadius: '0.5rem',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.75rem'
-              }}>
-                <Info size={20} style={{ color: '#3b82f6', marginTop: '0.1rem', flexShrink: 0 }} />
-                <div style={{ fontSize: '0.9rem', color: '#1f2937' }}>
-                  <strong style={{ color: '#3b82f6' }}>{I18N_TEXT[userLang].rateValidityNotice}</strong>
-                  <br />
-                  {I18N_TEXT[userLang].rateValidityText}
-            </div>
-          </div>
-            </div>
-          )}
-        </FormStep>
-
+        {/* Removed legacy inline Step 6 block; using StepContact component instead */}
+        {false && (
         <FormStep isVisible={currentStep === 6} stepNumber={6} title={(I18N_TEXT[userLang] as any).step6Title || 'Contact details'} emoji="📱">
           {/* Step 6 Container with Progressive Disclosure */}
           <div className="step-6-container">
@@ -10733,77 +9026,8 @@ const QuoteForm: React.FC = () => {
               </div>
             )}
 
-            {/* Phase 3: Business Information - Only show for companies */}
-            {(formData.firstName && formData.lastName && formData.shipperType && customerType === 'company') && (
-              <div className="business-info-phase animate-slide-in">
-                <div className="phase-header">
-                  <h3 style={{ 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    color: '#1f2937', 
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{ 
-                      backgroundColor: formData.companyName ? '#10b981' : '#6b7280',
-                      color: 'white',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      transition: 'background-color 0.3s ease'
-                    }}>4</span>
-                    {getText('businessInformation', userLang)}
-                  </h3>
-                  <p style={{ 
-                    fontSize: '0.9rem', 
-                    color: '#6b7280', 
-                    margin: '0 0 1.5rem 0' 
-                  }}>
-                    {getText('businessInfoDescription', userLang)}
-                  </p>
-                </div>
-
-                <div className="business-details" style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                  gap: '1rem',
-                  marginBottom: '2rem'
-                }}>
-                  <div className="form-control">
-                    <label htmlFor="companyName" className="label-text">{getText('companyName', userLang)}</label>
-                    <div className="input-wrapper">
-            <input 
-              type="text"
-              name="companyName"
-                      id="companyName"
-                      placeholder={getText('companyNamePlaceholder', userLang)}
-              value={formData.companyName}
-              onChange={handleInputChange}
-              className={`input glassmorphism ${fieldValid.companyName === false ? 'input-error' : ''}`}
-                      style={{
-                        transition: 'all 0.3s ease',
-                        transform: formData.companyName ? 'scale(1.02)' : 'scale(1)'
-                      }}
-            />
-            {fieldValid.companyName === true && <CheckCircle className="check-icon" />}
-          </div>
-          </div>
-
-
-          </div>
-              </div>
-            )}
-
             {/* Phase 4: Contact Information */}
-            {((customerType === 'individual' && formData.firstName && formData.lastName && formData.shipperType) || 
-              (customerType === 'company' && formData.companyName)) && (
+            {(formData.firstName && formData.lastName && formData.shipperType) && (
               <div className="contact-info-phase animate-slide-in">
                 <div className="phase-header">
                   <h3 style={{ 
@@ -10827,7 +9051,7 @@ const QuoteForm: React.FC = () => {
                       fontSize: '0.8rem',
                       fontWeight: '600',
                       transition: 'background-color 0.3s ease'
-                    }}>5</span>
+                    }}>4</span>
                     {getText('contactInformation', userLang)}
                   </h3>
                   <p style={{ 
@@ -10939,6 +9163,74 @@ const QuoteForm: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Phase 5: Business Information - Only show for companies */}
+            {(formData.firstName && formData.lastName && formData.shipperType && customerType === 'company') && (
+              <div className="business-info-phase animate-slide-in">
+                <div className="phase-header">
+                  <h3 style={{ 
+                    fontSize: '1.1rem', 
+                    fontWeight: '600', 
+                    color: '#1f2937', 
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ 
+                      backgroundColor: formData.companyName ? '#10b981' : '#6b7280',
+                      color: 'white',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.8rem',
+                      fontWeight: '600',
+                      transition: 'background-color 0.3s ease'
+                    }}>5</span>
+                    {getText('businessInformation', userLang)}
+                  </h3>
+                  <p style={{ 
+                    fontSize: '0.9rem', 
+                    color: '#6b7280', 
+                    margin: '0 0 1.5rem 0' 
+                  }}>
+                    {getText('businessInfoDescription', userLang)}
+                  </p>
+                </div>
+
+                <div className="business-details" style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                  gap: '1rem',
+                  marginBottom: '2rem'
+                }}>
+                  <div className="form-control">
+                    <label htmlFor="companyName" className="label-text">{getText('companyName', userLang)}</label>
+                    <div className="input-wrapper">
+            <input 
+              type="text"
+              name="companyName"
+                      id="companyName"
+                      placeholder={getText('companyNamePlaceholder', userLang)}
+              value={formData.companyName}
+              onChange={handleInputChange}
+              className={`input glassmorphism ${fieldValid.companyName === false ? 'input-error' : ''}`}
+                      style={{
+                        transition: 'all 0.3s ease',
+                        transform: formData.companyName ? 'scale(1.02)' : 'scale(1)'
+                      }}
+            />
+            {fieldValid.companyName === true && <CheckCircle className="check-icon" />}
+          </div>
+          </div>
+
+
+          </div>
               </div>
             )}
 
@@ -11058,9 +9350,11 @@ const QuoteForm: React.FC = () => {
             <span style={{ fontWeight: '500' }}>{getText('securityBadge', userLang)}</span>
           </div>
         </FormStep>
+        )}
 
         {/* Step 7: Confirmation Page */}
-        <FormStep isVisible={currentStep === 7} stepNumber={7} title={getText('confirmationTitle', userLang)} emoji="✅" hideStepNumber={true}>
+        <StepConfirmation submissionId={submissionId} setSubmissionId={setSubmissionId} showToast={showToast} />
+        <FormStep isVisible={false} stepNumber={7} title={getText('confirmationTitle', userLang)} emoji="✅" hideStepNumber={true}>
           <div className="confirmation-container" style={{
             background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%)',
             borderRadius: '2rem',
@@ -11900,13 +10194,30 @@ const QuoteForm: React.FC = () => {
                 padding: '1.5rem',
                 backgroundColor: 'rgba(255, 255, 255, 0.9)',
                 borderRadius: '1rem',
-                border: '1px solid #e5e7eb'
+                border: '1px solid #e5e7eb',
+                position: 'relative',
+                zIndex: 1
               }}>
-                <h4 style={{ color: '#1f2937', marginBottom: '1rem' }}>❓ {getText('needHelp', userLang)}</h4>
-                <div style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.8' }}>
-                  <p>📱 {getText('whatsappLine', userLang)}: <strong>À DÉFINIR</strong></p>
-                  <p>📧 {getText('contactEmail', userLang)}: <strong>info@sino-shipping.com</strong></p>
-                  <p>⏰ {getText('available', userLang)}: {getText('businessHours', userLang)}</p>
+                <h4 style={{ color: '#1f2937', marginBottom: '1rem', fontSize: '1rem' }}>❓ {getText('needHelp', userLang)}</h4>
+                <div style={{ fontSize: '0.9rem', color: '#374151' }}>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
+                    <span>👥</span>
+                    <span>{getText('community', userLang)}:</span>
+                    <strong>
+                      <a href="https://chat.whatsapp.com/EcOPbD18vFxHTVjECQVsRE" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px' }}>WhatsApp</a>
+                    </strong>
+                  </p>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
+                    <span>📧</span>
+                    <span>{getText('contactEmail', userLang)}:</span>
+                    <strong>
+                      <a href="mailto:info@sino-shipping.com" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px' }}>info@sino-shipping.com</a>
+                    </strong>
+                  </p>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0', color: '#6b7280', fontSize: '0.9rem' }}>
+                    <span>⏰</span>
+                    <span>{getText('available', userLang)}: {getText('businessHours', userLang)}</span>
+                  </p>
                 </div>
               </div>
 
@@ -11914,13 +10225,47 @@ const QuoteForm: React.FC = () => {
                 padding: '1.5rem',
                 backgroundColor: 'rgba(255, 255, 255, 0.9)',
                 borderRadius: '1rem',
-                border: '1px solid #e5e7eb'
+                border: '1px solid #e5e7eb',
+                position: 'relative',
+                zIndex: 1
               }}>
-                <h4 style={{ color: '#1f2937', marginBottom: '1rem' }}>🔗 {getText('websites', userLang)}</h4>
-                <div style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.8' }}>
-                  <p>🌐 <strong>sino-shipping.com</strong></p>
-                  <p>🌐 <strong>fschina.com</strong></p>
-                  <p>🇪🇸 <strong>es.sino-shipping.com</strong></p>
+                <h4 style={{ color: '#1f2937', marginBottom: '1rem', fontSize: '1rem' }}>🔗 {getText('websites', userLang)}</h4>
+                <div style={{ fontSize: '0.9rem', color: '#374151' }}>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
+                    <span>🌐</span>
+                    <strong><a href="https://sino-shipping.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>sino-shipping.com</a></strong>
+                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– Global freight forwarder</span>
+                  </p>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
+                    <span>🇭🇰</span>
+                    <strong><a href="https://fschina.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>fschina.com</a></strong>
+                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– FS International (HK)</span>
+                  </p>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
+                    <span>🇪🇸</span>
+                    <strong><a href="https://es.sino-shipping.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>es.sino-shipping.com</a></strong>
+                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– SINO Shipping (ES)</span>
+                  </p>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
+                    <span>🧩</span>
+                    <strong><a href="https://moreplusfsi.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>moreplusfsi.com</a></strong>
+                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– MorePlus (Sourcing)</span>
+                  </p>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
+                    <span>🧭</span>
+                    <strong><a href="https://eaanetwork.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>eaanetwork.com</a></strong>
+                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– EAA Network</span>
+                  </p>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
+                    <span>🤝</span>
+                    <strong><a href="https://can-qianhai.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>can-qianhai.com</a></strong>
+                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– CAN Alliance</span>
+                  </p>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
+                    <span>🚢</span>
+                    <strong><a href="https://mcc-qianhai.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>mcc-qianhai.com</a></strong>
+                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– Export to China</span>
+                  </p>
                 </div>
                 <h4 style={{ color: '#1f2937', marginTop: '1.5rem', marginBottom: '1rem' }}>⚡ {getText('actions', userLang)}</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -12077,17 +10422,7 @@ const QuoteForm: React.FC = () => {
             </button>
           )}
           
-          {currentStep === 4 && (
-            <button
-              type="button"
-              onClick={handleAddLoad}
-              className="btn btn-ghost glassmorphism"
-              style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
-            >
-              <PackageCheck size={18} />
-              <span className="btn-text-mobile">{I18N_TEXT[userLang].addAnotherShipment}</span>
-            </button>
-          )}
+          {/* Removed: Add another shipment button for step 4 */}
           
           {currentStep < 6 ? (
             <button 

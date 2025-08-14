@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
-import '../styles/timeline.css';
+import '@/styles/timeline.css';
 
 interface TimelineProps {
   currentStep: number;

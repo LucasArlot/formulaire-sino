@@ -11,6 +11,7 @@ export interface TestLead {
   destLocationType: string;
   destCity: string;
   destZipCode: string;
+  destPort?: string;
   firstName: string;
   lastName: string;
   companyName: string;

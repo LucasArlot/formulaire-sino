@@ -1,0 +1,748 @@
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { COUNTRIES } from '@/data/countries';
+import { COUNTRY_TRANSLATIONS } from '@/data/countryTranslations';
+
+// === Domain models moved from QuoteForm.tsx ===
+
+export interface LoadDetails {
+  shippingType: 'loose' | 'container' | 'unsure' | '';
+  calculationType: 'unit' | 'total';
+  packageType: 'pallets' | 'boxes' | '';
+  numberOfUnits: number;
+  palletType: string;
+  dimensions: { length: string; width: string; height: string };
+  dimensionUnit: string;
+  weightPerUnit: string;
+  weightUnit: string;
+  totalVolume: string;
+  totalVolumeUnit: string;
+  totalWeight: string;
+  totalWeightUnit: string;
+  containerType: "20'" | "40'" | "40'HC" | "45'HC";
+  isOverweight: boolean;
+}
+
+const initialLoadDetails: LoadDetails = {
+  shippingType: '',
+  calculationType: 'unit',
+  packageType: 'pallets',
+  numberOfUnits: 1,
+  palletType: 'non_specified',
+  dimensions: { length: '', width: '', height: '' },
+  dimensionUnit: 'CM',
+  weightPerUnit: '',
+  weightUnit: 'KG',
+  totalVolume: '',
+  totalVolumeUnit: 'CBM',
+  totalWeight: '',
+  totalWeightUnit: 'KG',
+  containerType: "20'",
+  isOverweight: false,
+};
+
+export interface FormData {
+  country: string;
+  origin: string;
+  mode: string;
+  email: string;
+  phone: string;
+  phoneCountryCode: string;
+  locationType: string;
+  city: string;
+  zipCode: string;
+  destLocationType: string;
+  destCity: string;
+  destZipCode: string;
+  destPort: string;
+  firstName: string;
+  lastName: string;
+  companyName: string;
+  shipperType: string;
+  loads: LoadDetails[];
+  goodsValue: string;
+  goodsCurrency: string;
+  isPersonalOrHazardous: boolean;
+  areGoodsReady: string;
+  goodsDescription: string;
+  specialRequirements: string;
+  remarks: string;
+}
+// === End models ===
+
+const initialFormData: FormData = {
+  country: '',
+  origin: '',
+  mode: '',
+  email: '',
+  phone: '',
+  phoneCountryCode: '+234',
+  locationType: '',
+  city: '',
+  zipCode: '',
+  destLocationType: '',
+  destCity: '',
+  destZipCode: '',
+  destPort: '',
+  firstName: '',
+  lastName: '',
+  companyName: '',
+  shipperType: '',
+  loads: [JSON.parse(JSON.stringify(initialLoadDetails))],
+  goodsValue: '',
+  goodsCurrency: 'USD',
+  isPersonalOrHazardous: false,
+  areGoodsReady: 'yes',
+  goodsDescription: '',
+  specialRequirements: '',
+  remarks: '',
+};
+
+// === Field validation state ===
+export interface FieldValid {
+  country: boolean | null;
+  origin: boolean | null;
+  mode: boolean | null;
+  email: boolean | null;
+  phone: boolean | null; // phone number validation
+  phoneCountryCode: boolean | null; // phone country code validation
+  city: boolean | null;
+  zipCode: boolean | null;
+  destCity: boolean | null;
+  destZipCode: boolean | null;
+  destPort: boolean | null;
+  firstName: boolean | null;
+  lastName: boolean | null;
+  companyName: boolean | null;
+  shipperType: boolean | null;
+  goodsValue: boolean | null;
+  destLocationType: boolean | null;
+}
+
+const initialFieldValid: FieldValid = {
+  country: null,
+  origin: null,
+  mode: null,
+  email: null,
+  phone: null,
+  phoneCountryCode: null,
+  city: null,
+  zipCode: null,
+  destCity: null,
+  destZipCode: null,
+  destPort: null,
+  firstName: null,
+  lastName: null,
+  companyName: null,
+  shipperType: null,
+  goodsValue: null,
+  destLocationType: null,
+};
+// === End field validation state ===
+
+// I18N_TEXT (simplified but complete enough for StepDestination)
+const I18N_TEXT = {
+  en: {
+    step1Title: 'Destination',
+    step2Title: 'Shipping Mode',
+    step6Title: 'Contact Information',
+    selectDestinationCountry: 'Select destination country',
+    selectShippingMode: 'Select your shipping mode',
+    enterContactDetails: 'Enter your contact details',
+    searchCountryDescription: 'Start typing to find your destination country',
+    modeDescription: 'Choose the best transport method for your needs',
+    contactDescription: 'We need your information to send you the quote',
+    searchCountry: 'Search country...',
+    popular: 'Popular',
+    otherCountries: 'Other Countries',
+    noCountryResults: 'No countries found',
+    clearCountry: 'Clear country',
+    addressTypeQuestion: 'What kind of delivery location?',
+    helpChooseLocation: 'Not sure? Most beginners choose Business/Office',
+    selectDestinationPort: 'Select destination port',
+    enterDestinationDetails: 'Enter destination details',
+    selectDestinationPortDescription: 'Choose the specific port or airport for delivery',
+    cityPostalDescription: 'Enter the city and postal code for delivery',
+    destinationCity: 'Destination City',
+    destinationZipCode: 'Postal Code',
+    searchDestinationPorts: 'Search destination ports',
+    searchPortsIn: 'Search ports in',
+    annualVolume: 'Annual Volume',
+    
+    // Contact form
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    email: 'Email',
+    phone: 'Phone',
+    companyName: 'Company Name',
+    firstNamePlaceholder: 'Enter your first name',
+    lastNamePlaceholder: 'Enter your last name',
+    emailPlaceholder: 'your.email@company.com',
+    phonePlaceholder: 'Your phone number',
+    companyNamePlaceholder: 'Your company name (optional)'
+  },
+  fr: {
+    step1Title: 'Destination',
+    step2Title: 'Mode d\'expédition',
+    step6Title: 'Informations de contact',
+    selectDestinationCountry: 'Sélectionner le pays de destination',
+    selectShippingMode: 'Sélectionnez votre mode d\'expédition',
+    enterContactDetails: 'Entrez vos coordonnées',
+    searchCountryDescription: 'Commencez à taper pour trouver votre pays de destination',
+    modeDescription: 'Choisissez la meilleure méthode de transport pour vos besoins',
+    contactDescription: 'Nous avons besoin de vos informations pour vous envoyer le devis',
+    searchCountry: 'Rechercher un pays...',
+    popular: 'Populaires',
+    otherCountries: 'Autres pays',
+    noCountryResults: 'Aucun pays trouvé',
+    clearCountry: 'Effacer le pays',
+    addressTypeQuestion: 'Quel type de lieu de livraison ?',
+    helpChooseLocation: 'Pas sûr ? La plupart des débutants choisissent Bureau/Entreprise',
+    selectDestinationPort: 'Sélectionner le port de destination',
+    enterDestinationDetails: 'Entrer les détails de destination',
+    selectDestinationPortDescription: 'Choisissez le port ou aéroport spécifique pour la livraison',
+    cityPostalDescription: 'Entrez la ville et le code postal pour la livraison',
+    destinationCity: 'Ville de destination',
+    destinationZipCode: 'Code postal',
+    searchDestinationPorts: 'Rechercher les ports de destination',
+    searchPortsIn: 'Rechercher les ports en',
+    annualVolume: 'Volume annuel',
+    
+    // Contact form
+    firstName: 'Prénom',
+    lastName: 'Nom',
+    email: 'Email',
+    phone: 'Téléphone',
+    companyName: 'Nom de l\'entreprise',
+    firstNamePlaceholder: 'Entrez votre prénom',
+    lastNamePlaceholder: 'Entrez votre nom',
+    emailPlaceholder: 'votre.email@entreprise.com',
+    phonePlaceholder: 'Votre numéro de téléphone',
+    companyNamePlaceholder: 'Nom de votre entreprise (optionnel)'
+  }
+};
+
+// Destination ports by country (subset from QuoteForm)
+const DESTINATION_PORTS_BY_COUNTRY: Record<string, Array<{code: string, name: string, type: 'sea' | 'air' | 'rail', flag: string, volume?: string}>> = {
+  'FR': [
+    { code: 'FRMRS', name: 'Port de Marseille-Fos', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'FRLEH', name: 'Port du Havre', type: 'sea', flag: '🚢', volume: '2.9M TEU' },
+    { code: 'FRCDG', name: 'Aéroport Charles de Gaulle', type: 'air', flag: '✈️', volume: '2.1M tons' },
+    { code: 'FRORY', name: 'Aéroport Paris-Orly', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+  'DE': [
+    { code: 'DEHAM', name: 'Port de Hambourg', type: 'sea', flag: '🚢', volume: '8.5M TEU' },
+    { code: 'DEBRE', name: 'Port de Brême', type: 'sea', flag: '🚢', volume: '4.6M TEU' },
+    { code: 'DEFRA', name: 'Aéroport de Francfort', type: 'air', flag: '✈️', volume: '2.0M tons' },
+    { code: 'DEMUC', name: 'Aéroport de Munich', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'GB': [
+    { code: 'GBFXT', name: 'Port de Felixstowe', type: 'sea', flag: '🚢', volume: '4.0M TEU' },
+    { code: 'GBSOU', name: 'Port de Southampton', type: 'sea', flag: '🚢', volume: '1.9M TEU' },
+    { code: 'GBLHR', name: 'Aéroport de Londres Heathrow', type: 'air', flag: '✈️', volume: '1.8M tons' },
+    { code: 'GBLGW', name: 'Aéroport de Londres Gatwick', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'US': [
+    { code: 'USLAX', name: 'Port de Los Angeles', type: 'sea', flag: '🚢', volume: '10.7M TEU' },
+    { code: 'USLGB', name: 'Port de Long Beach', type: 'sea', flag: '🚢', volume: '8.1M TEU' },
+    { code: 'USLAX_AIR', name: 'Aéroport de Los Angeles LAX', type: 'air', flag: '✈️', volume: '2.2M tons' },
+    { code: 'USJFK', name: 'Aéroport JFK New York', type: 'air', flag: '✈️', volume: '1.3M tons' }
+  ]
+};
+
+export interface QuoteFormContextValue {
+  // Main navigation
+  currentStep: number;
+  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
+  nextStep: () => void;
+  prevStep: () => void;
+
+  // Form data
+  formData: FormData;
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+
+  // Field validation state
+  fieldValid: FieldValid;
+  setFieldValid: React.Dispatch<React.SetStateAction<FieldValid>>;
+
+  // Country search states
+  countrySearch: string;
+  setCountrySearch: React.Dispatch<React.SetStateAction<string>>;
+  isCountryListVisible: boolean;
+  setIsCountryListVisible: React.Dispatch<React.SetStateAction<boolean>>;
+  highlightedCountryIndex: number;
+  setHighlightedCountryIndex: React.Dispatch<React.SetStateAction<number>>;
+
+  // Language & phone prefix for later steps
+  userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru';
+  setUserLang: React.Dispatch<React.SetStateAction<'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'>>;
+  phonePrefixSearch: string;
+  setPhonePrefixSearch: React.Dispatch<React.SetStateAction<string>>;
+
+  // Additional states for Step 1 
+  debouncedCountrySearch: string;
+  setDebouncedCountrySearch: React.Dispatch<React.SetStateAction<string>>;
+  destPortSearch: string;
+  setDestPortSearch: React.Dispatch<React.SetStateAction<string>>;
+  isDestPortListVisible: boolean;
+  setIsDestPortListVisible: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Step 5 substep navigation
+  step5SubStep: number;
+  setStep5SubStep: React.Dispatch<React.SetStateAction<number>>;
+  
+  // Cargo/Load management
+  activeLoadIndex: number;
+  setActiveLoadIndex: React.Dispatch<React.SetStateAction<number>>;
+  shippingType: 'container' | 'pallets' | 'loose';
+  setShippingType: React.Dispatch<React.SetStateAction<'container' | 'pallets' | 'loose'>>;
+  
+  // Currency selection for Step 5
+  currencySearch: string;
+  setCurrencySearch: React.Dispatch<React.SetStateAction<string>>;
+  isCurrencyListVisible: boolean;
+  setIsCurrencyListVisible: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Handlers
+  handleCountrySelect: (countryCode: string) => void;
+  handleCountrySearchKeyDown: (e: React.KeyboardEvent) => void;
+  clearCountrySelection: () => void;
+  handleDestLocationTypeSelect: (typeId: string) => void;
+  handleDestPortSelect: (portCode: string) => void;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleCurrencySelect: (currencyCode: string) => void;
+
+  // Helper functions
+  getDestinationLocationTypes: () => Array<{id: string, name: string, icon: any}>;
+  getFilteredDestinationPorts: () => Array<{code: string, name: string, type: string, flag: string, volume?: string}>;
+  filteredCountries: Array<{code: string, name: string, flag: string}>;
+  sanitizedCountrySearch: string;
+  
+  // I18N and helpers
+  I18N_TEXT: typeof I18N_TEXT;
+  getLocationTypeName: (typeId: string, userLang: string) => string;
+  getLocationTypeDescription: (typeId: string, userLang: string) => string;
+  getTranslatedPortNameLocal: (port: any, userLang: string) => string;
+  getTranslatedPortType: (portType: string, userLang: string) => string;
+  getSearchPortsText: (countryCode: string, userLang: string) => string;
+}
+
+const QuoteFormContext = createContext<QuoteFormContextValue | undefined>(undefined);
+
+// Helper to translate country names (copied from QuoteForm.tsx)
+export const getTranslatedCountryName = (
+  countryCode: string,
+  userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'
+): string => {
+  const translations = (COUNTRY_TRANSLATIONS as any)[countryCode];
+  if (translations && translations[userLang]) return translations[userLang];
+  if (translations && translations.en) return translations.en;
+  const country = COUNTRIES.find((c) => c.code === countryCode);
+  return country ? country.name : countryCode;
+};
+
+const PRIORITY_COUNTRIES_BY_LANG: Record<string, string[]> = {
+  fr: ['FR', 'BE', 'CH', 'CA', 'LU', 'MC'],
+  en: ['US', 'GB', 'CA', 'AU', 'NZ', 'IE'],
+  de: ['DE', 'AT', 'CH', 'LI'],
+  es: ['ES', 'MX', 'AR', 'CO', 'PE', 'CL'],
+  it: ['IT', 'SM', 'VA', 'CH'],
+  nl: ['NL', 'BE'],
+  pt: ['PT', 'BR', 'AO', 'MZ'],
+  zh: ['CN', 'TW', 'HK', 'MO', 'SG'],
+  ar: ['SA', 'AE', 'EG', 'JO', 'LB', 'MA'],
+  tr: ['TR', 'CY'],
+  ru: ['RU', 'BY', 'KZ', 'KG', 'UA'],
+};
+
+export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [fieldValid, setFieldValid] = useState<FieldValid>(initialFieldValid);
+
+  // Step 1 UI list states
+  const [countrySearch, setCountrySearch] = useState('');
+  const [isCountryListVisible, setIsCountryListVisible] = useState(false);
+  const [highlightedCountryIndex, setHighlightedCountryIndex] = useState(-1);
+
+  // Language state (copied from QuoteForm.tsx)
+  const [userLang, setUserLang] = useState<'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'>(() => {
+    const lang = navigator.language || 'en';
+    if (lang.startsWith('fr')) return 'fr';
+    if (lang.startsWith('zh')) return 'zh';
+    if (lang.startsWith('de')) return 'de';
+    if (lang.startsWith('es')) return 'es';
+    if (lang.startsWith('it')) return 'it';
+    if (lang.startsWith('nl')) return 'nl';
+    if (lang.startsWith('ar')) return 'ar';
+    if (lang.startsWith('pt')) return 'pt';
+    if (lang.startsWith('tr')) return 'tr';
+    if (lang.startsWith('ru')) return 'ru';
+    return 'en';
+  });
+
+  const [phonePrefixSearch, setPhonePrefixSearch] = useState('');
+
+  // Additional Step 1 states
+  const [debouncedCountrySearch, setDebouncedCountrySearch] = useState('');
+  const [destPortSearch, setDestPortSearch] = useState('');
+  const [isDestPortListVisible, setIsDestPortListVisible] = useState(false);
+
+  // Step 5 and cargo-related states
+  const [step5SubStep, setStep5SubStep] = useState(1);
+  const [activeLoadIndex, setActiveLoadIndex] = useState(0);
+  const [shippingType, setShippingType] = useState<'container' | 'pallets' | 'loose'>('container');
+  
+  // Currency selection states
+  const [currencySearch, setCurrencySearch] = useState('USD 💵');
+  const [isCurrencyListVisible, setIsCurrencyListVisible] = useState(false);
+
+  // Handler migrated from QuoteForm.tsx (simplified)
+  // Handler migrated from QuoteForm.tsx (COMPLETE VERSION)
+  const handleCountrySelect = useCallback(
+    (countryCode: string) => {
+      const selectedCountryData = COUNTRIES.find(c => c.code === countryCode);
+      
+      if (selectedCountryData) {
+        setFormData(prevFormData => ({
+          ...prevFormData,
+          country: selectedCountryData.code,
+          phoneCountryCode: selectedCountryData.phonePrefix || prevFormData.phoneCountryCode 
+        }));
+
+        setFieldValid(prevFieldValid => ({
+          ...prevFieldValid,
+          country: true
+        }));
+
+        // Update the countrySearch input display
+        setCountrySearch(`${selectedCountryData.flag} ${getTranslatedCountryName(selectedCountryData.code, userLang)}`);
+
+        // Update the phonePrefixSearch state
+        if (selectedCountryData.phonePrefix) {
+          setPhonePrefixSearch(`${selectedCountryData.flag} ${selectedCountryData.phonePrefix}`);
+        } else {
+          const currentPhoneCountry = COUNTRIES.find(c => c.phonePrefix === formData.phoneCountryCode);
+          if (currentPhoneCountry) {
+            setPhonePrefixSearch(`${currentPhoneCountry.flag} ${formData.phoneCountryCode}`);
+          } else {
+            setPhonePrefixSearch(formData.phoneCountryCode);
+          }
+        }
+      } else {
+        // Fallback if countryCode didnt match any country
+        setFormData(prevFormData => ({
+          ...prevFormData,
+          country: countryCode
+        }));
+        setFieldValid(prevFieldValid => ({
+          ...prevFieldValid,
+          country: true
+        }));
+        setCountrySearch("");
+        const fallbackCountry = COUNTRIES.find(c => c.phonePrefix === formData.phoneCountryCode);
+        if (fallbackCountry) {
+          setPhonePrefixSearch(`${fallbackCountry.flag} ${formData.phoneCountryCode}`);
+        } else {
+          setPhonePrefixSearch(formData.phoneCountryCode);
+        }
+      }
+      setIsCountryListVisible(false);
+      
+      // If newly selected country does not support rail freight and Rail was selected, reset mode
+      const RAIL_FREIGHT_COUNTRIES = [
+        "AT","BE","BG","CH","CZ","DE","DK","EE","ES","FI","FR","GB","HU","IT","LT","LV","NL","NO","PL","PT","RO","SE","SI","SK","UA","RU","BY","KZ","MN"
+      ];
+      if (!RAIL_FREIGHT_COUNTRIES.includes(countryCode) && formData.mode === "Rail") {
+        setFormData(prev => ({ ...prev, mode: "" }));
+        setFieldValid(prev => ({ ...prev, mode: null }));
+      }
+      
+      // Usage tracking
+      try {
+        const key = "countryUsage";
+        const usageRaw = localStorage.getItem(key);
+        const usageObj: Record<string, number> = usageRaw ? JSON.parse(usageRaw) : {};
+        usageObj[countryCode] = (usageObj[countryCode] || 0) + 1;
+        localStorage.setItem(key, JSON.stringify(usageObj));
+      } catch (err) { /* ignore quota errors */ }
+    },
+    [userLang, formData.phoneCountryCode, formData.mode, setFormData, setFieldValid, setCountrySearch, setPhonePrefixSearch, setIsCountryListVisible]
+  );
+
+  // Helper functions  
+  const getDestinationLocationTypes = useCallback(() => {
+    // Based on shipping mode, return appropriate location types
+    return [
+      { id: 'factory', name: 'Factory/Warehouse', icon: () => null },
+      { id: 'port', name: 'Port/Airport', icon: () => null },
+      { id: 'business', name: 'Business address', icon: () => null },
+      { id: 'residential', name: 'Residential address', icon: () => null },
+    ];
+  }, []);
+
+  const getFilteredDestinationPorts = useCallback(() => {
+    if (!formData.country) return [];
+    
+    const countryPorts = DESTINATION_PORTS_BY_COUNTRY[formData.country] || [];
+    if (!destPortSearch.trim()) return countryPorts;
+    
+    const searchTerm = destPortSearch.toLowerCase();
+    return countryPorts.filter(port => 
+      port.name.toLowerCase().includes(searchTerm) ||
+      port.code.toLowerCase().includes(searchTerm) ||
+      port.type.toLowerCase().includes(searchTerm)
+    );
+  }, [formData.country, destPortSearch]);
+
+  // Helper functions for location types and names
+  const getLocationTypeName = useCallback((typeId: string, userLang: string) => {
+    const types = {
+      factory: 'Factory/Warehouse', 
+      port: 'Port/Airport',
+      business: 'Business address',
+      residential: 'Residential address'
+    };
+    return types[typeId as keyof typeof types] || typeId;
+  }, []);
+  
+  const getLocationTypeDescription = useCallback((typeId: string, userLang: string) => {
+    const descriptions = {
+      factory: 'Factory, distribution center, warehouse',
+      port: 'Direct to port/airport pickup', 
+      business: 'Company address, office building',
+      residential: 'House, apartment, personal address'
+    };
+    return descriptions[typeId as keyof typeof descriptions] || '';
+  }, []);
+  
+  const getTranslatedPortNameLocal = useCallback((port: any, userLang: string) => {
+    return port.name;
+  }, []);
+  
+  const getTranslatedPortType = useCallback((portType: string, userLang: string) => {
+    const types = { sea: 'Sea Port', air: 'Airport', rail: 'Rail Terminal' };
+    return types[portType as keyof typeof types] || portType;
+  }, []);
+  
+  const getSearchPortsText = useCallback((countryCode: string, userLang: string) => {
+    const baseText = (I18N_TEXT as any)[userLang]?.searchPortsIn || 'Search ports in';
+    
+    // French preposition rules
+    if (userLang === 'fr') {
+      const countriesWithA = ['MC', 'AD', 'LI', 'VA', 'SM'];
+      if (countriesWithA.includes(countryCode)) {
+        return baseText.replace('en', 'à');
+      }
+      
+      const countriesWithAux = ['US', 'AE', 'NL', 'PH', 'MV'];
+      if (countriesWithAux.includes(countryCode)) {
+        return baseText.replace('en', 'aux');
+      }
+    }
+    
+    return baseText;
+  }, [userLang]);
+
+  // Helper to sanitize search
+  const sanitizeSearch = (input: string) => input.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim().toLowerCase();
+  const sanitizedCountrySearch = sanitizeSearch(debouncedCountrySearch || '');
+
+  // Filtered countries with priority logic
+  const filteredCountries = (() => {
+    const priorityCountryCodes = PRIORITY_COUNTRIES_BY_LANG[userLang] || [];
+    const searchFiltered = COUNTRIES.filter(country => {
+      if (!sanitizedCountrySearch) return true;
+      const translatedName = getTranslatedCountryName(country.code, userLang);
+      return (
+        translatedName.toLowerCase().includes(sanitizedCountrySearch) ||
+        country.name.toLowerCase().includes(sanitizedCountrySearch) ||
+        country.code.toLowerCase().includes(sanitizedCountrySearch)
+      );
+    });
+
+    if (sanitizedCountrySearch) {
+      return searchFiltered.sort((a, b) => {
+        const aName = getTranslatedCountryName(a.code, userLang);
+        const bName = getTranslatedCountryName(b.code, userLang);
+        return aName.localeCompare(bName);
+      });
+    }
+
+  const clearCountrySelection = useCallback(() => {
+    // Reset the destination country related fields (COMPLETE VERSION)
+    setFormData(prev => ({
+      ...prev,
+      country: "",
+      destLocationType: "", // Reset destination location type
+      destCity: "", // Reset destination city
+      destZipCode: "", // Reset destination zip code
+      destPort: "" // Reset destination port
+    }));
+    setCountrySearch("");
+    setDestPortSearch(""); // Reset destination port search
+    setFieldValid(prev => ({ 
+      ...prev, 
+      country: null,
+      destLocationType: null,
+      destCity: null,
+      destZipCode: null,
+      destPort: null
+    }));
+  }, [setFormData, setCountrySearch, setDestPortSearch, setFieldValid]);
+      return aName.localeCompare(bName);
+    });
+
+    const otherCountries = searchFiltered.filter(country => 
+      !priorityCountryCodes.includes(country.code)
+    ).sort((a, b) => {
+      const aName = getTranslatedCountryName(a.code, userLang);
+      const bName = getTranslatedCountryName(b.code, userLang);
+      return aName.localeCompare(bName);
+    });
+
+    return [...priorityCountries, ...otherCountries];
+  })();
+
+  // Additional handlers (moved after filteredCountries)
+  const handleCountrySearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!isCountryListVisible && ['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
+      setIsCountryListVisible(true);
+      return;
+    }
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedCountryIndex(prev => (prev + 1) % filteredCountries.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedCountryIndex(prev => (prev - 1 + filteredCountries.length) % filteredCountries.length);
+    } else if (e.key === 'Enter') {
+      if (highlightedCountryIndex >= 0 && highlightedCountryIndex < filteredCountries.length) {
+        e.preventDefault();
+        handleCountrySelect(filteredCountries[highlightedCountryIndex].code);
+      }
+    } else if (e.key === 'Escape') {
+      setIsCountryListVisible(false);
+      setHighlightedCountryIndex(-1);
+    }
+  }, [isCountryListVisible, highlightedCountryIndex, filteredCountries, handleCountrySelect, setIsCountryListVisible, setHighlightedCountryIndex]);
+
+  const clearCountrySelection = useCallback(() => {
+    setFormData(prev => ({ ...prev, country: '' }));
+    setCountrySearch('');
+    setFieldValid(prev => ({ ...prev, country: null }));
+  }, [setFormData, setCountrySearch, setFieldValid]);
+
+  const handleDestLocationTypeSelect = useCallback((typeId: string) => {
+    setFormData(prev => ({ ...prev, destLocationType: typeId }));
+    setFieldValid(prev => ({ ...prev, destLocationType: true }));
+  }, [setFormData, setFieldValid]);
+
+  const handleDestPortSelect = useCallback((portCode: string) => {
+    setFormData(prev => ({ ...prev, destPort: portCode }));
+    setFieldValid(prev => ({ ...prev, destPort: true }));
+    setDestPortSearch(''); // TODO: set proper display value
+    setIsDestPortListVisible(false);
+  }, [setFormData, setFieldValid, setDestPortSearch, setIsDestPortListVisible]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setFieldValid(prev => ({ ...prev, [name]: value.trim() ? true : null }));
+  }, [setFormData, setFieldValid]);
+
+  const handleCurrencySelect = useCallback((currencyCode: string) => {
+    const currencies = [
+      { code: 'USD', flag: '💵', name: 'US Dollar' },
+      { code: 'EUR', flag: '💶', name: 'Euro' },
+      { code: 'GBP', flag: '💷', name: 'British Pound' },
+      { code: 'CNY', flag: '💴', name: 'Chinese Yuan' },
+      { code: 'JPY', flag: '💴', name: 'Japanese Yen' }
+    ];
+    
+    const selectedCurrency = currencies.find(c => c.code === currencyCode);
+    if (selectedCurrency) {
+      setFormData(prev => ({ ...prev, goodsCurrency: currencyCode }));
+      setCurrencySearch(`${currencyCode} ${selectedCurrency.flag}`);
+      setIsCurrencyListVisible(false);
+    }
+  }, [setFormData, setCurrencySearch, setIsCurrencyListVisible]);
+
+  const nextStep = useCallback(() => {
+    setCurrentStep((s) => Math.min(s + 1, 7));
+  }, []);
+
+  const prevStep = useCallback(() => {
+    setCurrentStep((s) => Math.max(s - 1, 1));
+  }, []);
+
+  const value: QuoteFormContextValue = {
+    currentStep,
+    setCurrentStep,
+    nextStep,
+    prevStep,
+    formData,
+    setFormData,
+    fieldValid,
+    setFieldValid,
+
+    // Step 1 UI list states values
+    countrySearch,
+    setCountrySearch,
+    isCountryListVisible,
+    setIsCountryListVisible,
+    highlightedCountryIndex,
+    setHighlightedCountryIndex,
+
+    userLang,
+    setUserLang,
+    phonePrefixSearch,
+    setPhonePrefixSearch,
+
+    debouncedCountrySearch,
+    setDebouncedCountrySearch,
+    destPortSearch,
+    setDestPortSearch,
+    isDestPortListVisible,
+    setIsDestPortListVisible,
+
+    step5SubStep,
+    setStep5SubStep,
+    activeLoadIndex, 
+    setActiveLoadIndex,
+    shippingType,
+    setShippingType,
+    currencySearch,
+    setCurrencySearch,
+    isCurrencyListVisible,
+    setIsCurrencyListVisible,
+    
+    handleCurrencySelect,
+
+    handleCountrySelect,
+    handleCountrySearchKeyDown,
+    clearCountrySelection,
+    handleDestLocationTypeSelect,
+    handleDestPortSelect,
+    handleInputChange,
+
+    getDestinationLocationTypes,
+    getFilteredDestinationPorts,
+    filteredCountries,
+    sanitizedCountrySearch,
+    
+    I18N_TEXT,
+    getLocationTypeName,
+    getLocationTypeDescription,
+    getTranslatedPortNameLocal,
+    getTranslatedPortType,
+    getSearchPortsText,
+  };
+  return <QuoteFormContext.Provider value={value}>{children}</QuoteFormContext.Provider>;
+};
+
+export function useQuoteForm() {
+  const ctx = useContext(QuoteFormContext);
+  if (!ctx) throw new Error('useQuoteForm must be used inside <QuoteFormProvider>');
+  return ctx;
+} 

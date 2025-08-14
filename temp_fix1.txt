@@ -1,0 +1,70 @@
+  const handleCountrySelect = useCallback(
+    (countryCode: string) => {
+      const selectedCountryData = COUNTRIES.find(c => c.code === countryCode);
+      
+      if (selectedCountryData) {
+        setFormData(prevFormData => ({
+          ...prevFormData,
+          country: selectedCountryData.code,
+          phoneCountryCode: selectedCountryData.phonePrefix || prevFormData.phoneCountryCode 
+        }));
+
+        setFieldValid(prevFieldValid => ({
+          ...prevFieldValid,
+          country: true
+        }));
+
+        // Update the countrySearch input display
+        setCountrySearch(`${selectedCountryData.flag} ${getTranslatedCountryName(selectedCountryData.code, userLang)}`);
+
+        // Update the phonePrefixSearch state
+        if (selectedCountryData.phonePrefix) {
+          setPhonePrefixSearch(`${selectedCountryData.flag} ${selectedCountryData.phonePrefix}`);
+        } else {
+          const currentPhoneCountry = COUNTRIES.find(c => c.phonePrefix === formData.phoneCountryCode);
+          if (currentPhoneCountry) {
+            setPhonePrefixSearch(`${currentPhoneCountry.flag} ${formData.phoneCountryCode}`);
+          } else {
+            setPhonePrefixSearch(formData.phoneCountryCode);
+          }
+        }
+      } else {
+        // Fallback if countryCode didn't match any country
+        setFormData(prevFormData => ({
+          ...prevFormData,
+          country: countryCode
+        }));
+        setFieldValid(prevFieldValid => ({
+          ...prevFieldValid,
+          country: true
+        }));
+        setCountrySearch('');
+        const fallbackCountry = COUNTRIES.find(c => c.phonePrefix === formData.phoneCountryCode);
+        if (fallbackCountry) {
+          setPhonePrefixSearch(`${fallbackCountry.flag} ${formData.phoneCountryCode}`);
+        } else {
+          setPhonePrefixSearch(formData.phoneCountryCode);
+        }
+      }
+      setIsCountryListVisible(false);
+      
+      // If newly selected country does not support rail freight and Rail was selected, reset mode
+      const RAIL_FREIGHT_COUNTRIES = [
+        'AT','BE','BG','CH','CZ','DE','DK','EE','ES','FI','FR','GB','HU','IT','LT','LV','NL','NO','PL','PT','RO','SE','SI','SK','UA','RU','BY','KZ','MN'
+      ];
+      if (!RAIL_FREIGHT_COUNTRIES.includes(countryCode) && formData.mode === 'Rail') {
+        setFormData(prev => ({ ...prev, mode: '' }));
+        setFieldValid(prev => ({ ...prev, mode: null }));
+      }
+      
+      // Usage tracking
+      try {
+        const key = 'countryUsage';
+        const usageRaw = localStorage.getItem(key);
+        const usageObj: Record<string, number> = usageRaw ? JSON.parse(usageRaw) : {};
+        usageObj[countryCode] = (usageObj[countryCode] || 0) + 1;
+        localStorage.setItem(key, JSON.stringify(usageObj));
+      } catch (err) { /* ignore quota errors */ }
+    },
+    [userLang, formData.phoneCountryCode, formData.mode, setFormData, setFieldValid, setCountrySearch, setPhonePrefixSearch, setIsCountryListVisible]
+  );

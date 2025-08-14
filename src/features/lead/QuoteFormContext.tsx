@@ -1,0 +1,4465 @@
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { COUNTRIES } from '@/data/countries';
+import { COUNTRY_TRANSLATIONS } from '@/data/countryTranslations';
+import { Warehouse, Ship, Building2, Home } from 'lucide-react';
+
+// === Domain models moved from QuoteForm.tsx ===
+
+export interface LoadDetails {
+  shippingType: 'loose' | 'container' | 'unsure' | '';
+  calculationType: 'unit' | 'total';
+  packageType: 'pallets' | 'boxes' | '';
+  numberOfUnits: number;
+  palletType: string;
+  dimensions: { length: string; width: string; height: string };
+  dimensionUnit: string;
+  weightPerUnit: string;
+  weightUnit: string;
+  totalVolume: string;
+  totalVolumeUnit: string;
+  totalWeight: string;
+  totalWeightUnit: string;
+  containerType: "20'" | "40'" | "40'HC" | "45'HC";
+  isOverweight: boolean;
+  specialRequirements?: string[];
+  goodsDescription?: string;
+  urgency?: string;
+}
+
+export const initialLoadDetails: LoadDetails = {
+  shippingType: '',
+  calculationType: 'total',
+  packageType: 'pallets',
+  numberOfUnits: 1,
+  palletType: 'non_specified',
+  dimensions: { length: '', width: '', height: '' },
+  dimensionUnit: 'CM',
+  weightPerUnit: '',
+  weightUnit: 'KG',
+  totalVolume: '',
+  totalVolumeUnit: 'CBM',
+  totalWeight: '',
+  totalWeightUnit: 'KG',
+  containerType: "20'",
+  isOverweight: false,
+  specialRequirements: [],
+  goodsDescription: '',
+  urgency: '',
+};
+
+export interface FormData {
+  country: string;
+  origin: string;
+  mode: string;
+  email: string;
+  phone: string;
+  phoneCountryCode: string;
+  customerType?: 'individual' | 'company' | '';
+  locationType: string;
+  city: string;
+  zipCode: string;
+  destLocationType: string;
+  destCity: string;
+  destZipCode: string;
+  destPort: string;
+  firstName: string;
+  lastName: string;
+  companyName: string;
+  shipperType: string;
+  loads: LoadDetails[];
+  goodsValue: string;
+  goodsCurrency: string;
+  isPersonalOrHazardous: boolean;
+  areGoodsReady: string;
+  goodsDescription: string;
+  specialRequirements: string;
+  remarks: string;
+}
+// === End models ===
+
+const initialFormData: FormData = {
+  country: '',
+  origin: '',
+  mode: '',
+  email: '',
+  phone: '',
+  phoneCountryCode: '+234',
+  customerType: '',
+  locationType: '',
+  city: '',
+  zipCode: '',
+  destLocationType: '',
+  destCity: '',
+  destZipCode: '',
+  destPort: '',
+  firstName: '',
+  lastName: '',
+  companyName: '',
+  shipperType: '',
+  loads: [JSON.parse(JSON.stringify(initialLoadDetails))],
+  goodsValue: '',
+  goodsCurrency: 'USD',
+  isPersonalOrHazardous: false,
+  areGoodsReady: 'yes',
+  goodsDescription: '',
+  specialRequirements: '',
+  remarks: '',
+};
+
+// === Field validation state ===
+export interface FieldValid {
+  country: boolean | null;
+  origin: boolean | null;
+  mode: boolean | null;
+  email: boolean | null;
+  phone: boolean | null; // phone number validation
+  phoneCountryCode: boolean | null; // phone country code validation
+  city: boolean | null;
+  zipCode: boolean | null;
+  destCity: boolean | null;
+  destZipCode: boolean | null;
+  destPort: boolean | null;
+  firstName: boolean | null;
+  lastName: boolean | null;
+  companyName: boolean | null;
+  shipperType: boolean | null;
+  goodsValue: boolean | null;
+  destLocationType: boolean | null;
+}
+
+const initialFieldValid: FieldValid = {
+  country: null,
+  origin: null,
+  mode: null,
+  email: null,
+  phone: null,
+  phoneCountryCode: null,
+  city: null,
+  zipCode: null,
+  destCity: null,
+  destZipCode: null,
+  destPort: null,
+  firstName: null,
+  lastName: null,
+  companyName: null,
+  shipperType: null,
+  goodsValue: null,
+  destLocationType: null,
+};
+// === End field validation state ===
+
+// I18N_TEXT (simplified but complete enough for StepDestination)
+const I18N_TEXT = {
+  en: {
+    pickupPortFeedback: 'Great! We will arrange pickup from',
+    pickupCityFeedback: 'Great! We will arrange pickup from',
+    step1Title: 'Where do you ship?',
+    step2Title: 'Shipping Mode',
+    step3Title: 'Select pickup location in China',
+    step4Title: 'What are you shipping?',
+    chooseShippingType: 'Choose your shipping type',
+    selectPackagingMethod: 'Select how your goods are packaged for shipping',
+    looseCargo: 'Loose Cargo',
+    looseCargoDesc: 'Pallets, boxes, or individual items',
+    fullContainer: 'Full Container',
+    fullContainerDesc: 'Complete container (FCL)',
+    imNotSure: "I'm not sure",
+    teamWillHelp: 'Our team will help you choose the best option',
+    looseCargoFeedback: 'Perfect for mixed goods, small to medium quantities, or when you need flexible packaging',
+    containerFeedback: 'Great choice for large volumes, complete product lines, or when you have enough goods to fill a container',
+    unsureFeedback: "No worries! Our experienced team will guide you through the process and recommend the best shipping solution for your specific needs. We'll handle all the technical details.",
+    describeLooseCargo: 'Describe your loose cargo',
+    provideDimensionsWeight: 'Provide dimensions and weight details for accurate pricing',
+    calcPerUnit: 'Calculate by unit type',
+    calcTotal: 'Calculate by total shipment',
+    unitInfo: 'Provide details about each individual item or pallet for accurate calculation.',
+    packageType: 'Package type',
+    pallets: 'Pallets',
+    boxes: 'Boxes/Crates',
+    numUnits: '# of units',
+    palletType: 'Pallet type',
+    palletNonSpecified: 'Non-specified',
+    euroPallet: 'Euro Pallet (120x80 cm)',
+    stdPallet: 'Standard Pallet (120x100 cm)',
+    customSize: 'Custom Size',
+    dimensionsPerUnit: 'Dimensions (L×W×H per unit)',
+    weightPerUnit: 'Weight (Per unit)',
+    weight: 'Weight',
+    required: 'Required',
+    totalInfo: 'Providing total shipment figures can be less precise. Inaccurate or oversized dimensions may lead to additional charges.',
+    enterTotalDimWeight: 'Enter the total dimensions and weight of your shipment.',
+    numUnitsHelp: 'How many logical units does this total volume/weight represent?',
+    totalVolume: 'Total Volume',
+    totalWeight: 'Total Weight',
+    configureContainer: 'Configure your container',
+    selectContainerTypeQty: 'Select container type and quantity for your shipment',
+    containerInfo: 'Select the container type and quantity that best fits your cargo volume.',
+    containerType: 'Container type',
+    numContainers: 'Number of containers',
+    overweightContainer: 'Overweight container (>25 tons)',
+    container20Std: "20' Standard (33 CBM)",
+    container40Std: "40' Standard (67 CBM)",
+    container40HC: "40' High Cube (76 CBM)",
+    container45HC: "45' High Cube (86 CBM)",
+    whatHappensNextTitle: 'What happens next:',
+    contactWithin24h: 'Our shipping experts will contact you within 24 hours',
+    discussCargoDetails: "We'll discuss your cargo details and requirements",
+    personalizedRecommendations: "You'll receive personalized recommendations and pricing",
+    noCommitment: 'No commitment required - just expert guidance!',
+    selectPickupLocationType: 'Select your pickup location type',
+    pickupLocationDescription: 'Choose where we should collect your goods in China',
+    step6Title: 'Contact Information',
+    selectDestinationCountry: 'Select your destination country',
+    selectShippingMode: 'Select your shipping mode',
+    enterContactDetails: 'Enter your contact details',
+    searchCountryDescription: 'Search for the country where you want to ship your goods',
+    modeDescription: 'Choose the best transport method for your needs',
+    contactDescription: 'We need your information to send you the quote',
+    searchCountry: 'Search country...',
+    popular: 'Popular',
+    otherCountries: 'Other Countries',
+    noCountryResults: 'No countries found',
+    clearCountry: 'Clear country',
+    addressTypeQuestion: 'What type of address is your destination?',
+    helpChooseLocation: 'Not sure? Choose Business/Office for professional shipments or Residential for personal deliveries',
+    
+    // Address types
+    factoryWarehouse: 'Factory/Warehouse',
+    factoryWarehouseDesc: 'Factory, distribution center, warehouse',
+    portAirport: 'Port/Airport',
+    portAirportDesc: 'Direct to port/airport pickup',
+    businessAddress: 'Business address',
+    businessAddressDesc: 'Company address, office building',
+    residentialAddress: 'Residential address',
+    residentialAddressDesc: 'House, apartment, personal address',
+    selectDestinationPort: 'Select destination port',
+    selectOriginPort: 'Select pickup port/terminal/airport',
+    enterDestinationDetails: 'Enter destination details',
+    selectDestinationPortDescription: 'Choose the specific port or airport for delivery',
+    cityPostalDescription: 'Provide the city and postal code for accurate shipping',
+    pickupCityPostalDescription: 'Provide the pickup city and postal code for precise collection',
+    enterPickupDetails: 'Enter pickup details',
+    destinationCity: 'Destination City',
+    destinationZipCode: 'Destination ZIP Code',
+    searchDestinationPorts: 'Search destination ports',
+    searchPortsIn: 'Search ports in',
+    annualVolume: 'Annual Volume',
+    noPortsFoundFor: 'No ports found for',
+    selectCountryFirst: 'Please select a country first',
+    
+    // Contact form
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    email: 'Email',
+    phone: 'Phone',
+    companyName: 'Company Name',
+    firstNamePlaceholder: 'Enter your first name',
+    lastNamePlaceholder: 'Enter your last name',
+    emailPlaceholder: 'your.email@company.com',
+    phonePlaceholder: 'Your phone number',
+    companyNamePlaceholder: 'Your company name (optional)',
+    unsureAboutChoice: 'Not sure about your choice?',
+    unsureShipping: 'I\'m not sure yet',
+    unsureShippingDesc: 'Let the experts help',
+    unsureShippingBenefits: 'Professional guidance',
+    unsureShippingFeedback: 'Great choice! We\'ll recommend the best shipping option for your specific needs',
+    seaFeedback: 'Great choice for cost-effective shipping of larger volumes',
+    railFeedback: 'Excellent balance of cost and speed with environmental benefits',
+    airFeedback: 'Perfect for time-sensitive or high-value cargo',
+    expressFeedback: 'Best for urgent, small-to-medium shipments with full tracking',
+
+    // ===== Step 5: Goods Details (EN) =====
+    step5Title: 'Tell us about your goods',
+    goodsValueDeclaration: 'Goods Value & Declaration',
+    goodsValueDescription: 'Provide the commercial value for customs declaration and insurance purposes',
+    commercialValue: 'Commercial value of goods',
+    goodsValueHelp: 'This value is used for customs declaration and insurance calculations',
+    personalOrHazardous: 'Personal effects or contains hazardous/restricted materials',
+    personalHazardousHelp: 'Check this if shipping personal belongings or goods requiring special handling',
+    shipmentReadiness: 'Shipment Readiness',
+    shipmentTimingDescription: 'Help us plan your shipment timeline and provide accurate rates',
+    timingHelp: 'Accurate timing helps us provide the most competitive rates',
+    rateValidityTitle: 'Rate Validity Notice:',
+    rateValidityText: 'Quoted rates are valid until the expiry date shown on each quote. If your goods are not ready for pickup by this date, rates may be subject to change based on current market conditions.',
+    goodsReadyQuestion: 'When will your goods be ready for pickup?',
+    readyNow: '✅ Ready now - goods are available for immediate pickup',
+    readyIn1Week: '📅 Within 1 week - currently preparing',
+    readyIn2Weeks: '📅 Within 2 weeks - production in progress',
+    readyIn1Month: '📅 Within 1 month - planning ahead',
+    dateNotSet: '❔ Date not determined yet',
+    additionalDetails: 'Additional Details (Optional)',
+    additionalDetailsDescription: 'Provide any special requirements or additional information',
+    goodsDescription: 'Brief description of goods (optional)',
+    goodsDescriptionPlaceholder: 'e.g., Electronics, Furniture, Clothing, Machinery...',
+    goodsDescriptionHelp: 'Helps us ensure proper handling and documentation',
+    specialRequirements: 'Special handling requirements (optional)',
+    noSpecialRequirements: 'No special requirements',
+    fragileGoods: 'Fragile goods - handle with care',
+    temperatureControlled: 'Temperature controlled',
+    urgentTimeSensitive: 'Urgent/time-sensitive',
+    highValueInsurance: 'High-value insurance required',
+    otherSpecify: 'Other (please specify)',
+    pleaseSpecifyInRemarks: 'Please specify in remarks',
+    validationGoodsValue: 'Please enter the goods value',
+    validationReadyDate: 'Please select when your goods will be ready'
+  },
+  fr: {
+    pickupPortFeedback: 'Parfait ! Nous organiserons l\'enlèvement depuis',
+    pickupCityFeedback: 'Parfait ! Nous organiserons l\'enlèvement depuis',
+    step1Title: 'Où expédiez-vous ?',
+    step2Title: 'Mode d\'expédition',
+    step3Title: 'Sélectionner le lieu de collecte en Chine',
+    step4Title: 'Que souhaitez-vous expédier ?',
+    chooseShippingType: 'Choisissez votre type d\'expédition',
+    selectPackagingMethod: 'Sélectionnez comment vos marchandises sont emballées pour l\'expédition',
+    looseCargo: 'Marchandises en vrac',
+    looseCargoDesc: 'Palettes, cartons ou articles individuels',
+    fullContainer: 'Conteneur complet',
+    fullContainerDesc: 'Conteneur complet (FCL)',
+    imNotSure: 'Je ne sais pas',
+    teamWillHelp: "Notre équipe vous aidera à choisir la meilleure option",
+    looseCargoFeedback: 'Parfait pour les marchandises mixtes, petites à moyennes quantités, ou lorsque vous avez besoin d’un emballage flexible',
+    containerFeedback: 'Excellent choix pour les gros volumes, les gammes de produits complètes, ou lorsque vous avez assez de marchandises pour remplir un conteneur',
+    unsureFeedback: 'Pas d’inquiétude ! Notre équipe expérimentée vous guidera et recommandera la meilleure solution d’expédition pour vos besoins spécifiques. Nous nous occupons de tous les détails techniques.',
+    describeLooseCargo: 'Décrivez votre marchandise en vrac',
+    provideDimensionsWeight: 'Fournissez dimensions et poids pour un tarif précis',
+    calcPerUnit: 'Calculer par type d’unité',
+    calcTotal: 'Calculer par envoi total',
+    unitInfo: 'Fournissez des détails pour chaque article ou palette pour un calcul précis.',
+    packageType: 'Type d’emballage',
+    pallets: 'Palettes',
+    boxes: 'Cartons/Caisses',
+    numUnits: 'Nb d’unités',
+    palletType: 'Type de palette',
+    palletNonSpecified: 'Non spécifié',
+    euroPallet: 'Palette Europe (120×80 cm)',
+    stdPallet: 'Palette Standard (120×100 cm)',
+    customSize: 'Dimensions personnalisées',
+    dimensionsPerUnit: 'Dimensions (L×l×H par unité)',
+    weightPerUnit: 'Poids (par unité)',
+    weight: 'Poids',
+    required: 'Requis',
+    totalInfo: 'Fournir des valeurs globales peut être moins précis. Des dimensions inexactes ou surdimensionnées peuvent entraîner des frais supplémentaires.',
+    enterTotalDimWeight: 'Saisissez les dimensions et le poids totaux de votre envoi.',
+    numUnitsHelp: 'Ce volume/poids total représente combien d’unités logiques ?',
+    totalVolume: 'Volume total',
+    totalWeight: 'Poids total',
+    configureContainer: 'Configurez votre conteneur',
+    selectContainerTypeQty: 'Sélectionnez le type de conteneur et la quantité pour votre envoi',
+    containerInfo: 'Choisissez le type de conteneur et la quantité adaptés au volume de votre marchandise.',
+    containerType: 'Type de conteneur',
+    numContainers: 'Nombre de conteneurs',
+    overweightContainer: 'Conteneur en surcharge (>25 tonnes)',
+    container20Std: "Conteneur 20' Standard (33 CBM)",
+    container40Std: "Conteneur 40' Standard (67 CBM)",
+    container40HC: "Conteneur 40' High Cube (76 CBM)",
+    container45HC: "Conteneur 45' High Cube (86 CBM)",
+    whatHappensNextTitle: 'Et ensuite :',
+    contactWithin24h: 'Nos experts vous contactent sous 24h',
+    discussCargoDetails: 'Nous échangeons sur votre marchandise et vos besoins',
+    personalizedRecommendations: 'Vous recevez des recommandations et un prix personnalisés',
+    noCommitment: 'Sans engagement — un accompagnement expert !',
+    selectPickupLocationType: 'Sélectionnez votre type de lieu de collecte',
+    pickupLocationDescription: 'Choisissez où nous devons collecter vos marchandises en Chine',
+    step6Title: 'Informations de contact',
+    selectDestinationCountry: 'Sélectionnez votre pays de destination',
+    selectShippingMode: 'Sélectionnez votre mode d\'expédition',
+    enterContactDetails: 'Entrez vos coordonnées',
+    searchCountryDescription: 'Recherchez le pays où vous souhaitez expédier vos marchandises',
+    modeDescription: 'Choisissez la meilleure méthode de transport pour vos besoins',
+    contactDescription: 'Nous avons besoin de vos informations pour vous envoyer le devis',
+    searchCountry: 'Rechercher un pays...',
+    popular: 'Populaires',
+    otherCountries: 'Autres pays',
+    noCountryResults: 'Aucun pays trouvé',
+    clearCountry: 'Effacer le pays',
+    addressTypeQuestion: 'Quel type d\'adresse est votre destination ?',
+    helpChooseLocation: 'Pas sûr ? Choisissez Entreprise/Bureau pour les envois professionnels ou Résidentiel pour les livraisons personnelles',
+    
+    // Address types
+    factoryWarehouse: 'Usine/Entrepôt',
+    factoryWarehouseDesc: 'Usine, centre de distribution, entrepôt',
+    portAirport: 'Port/Aéroport',
+    portAirportDesc: 'Livraison directe au port/aéroport',
+    businessAddress: 'Adresse commerciale',
+    businessAddressDesc: 'Adresse d\'entreprise, bureau',
+    residentialAddress: 'Adresse résidentielle',
+    residentialAddressDesc: 'Maison, appartement, adresse personnelle',
+    selectDestinationPort: 'Sélectionner le port de destination',
+    selectOriginPort: 'Sélectionnez le port/terminal de collecte',
+    enterDestinationDetails: 'Entrez les détails de destination',
+    selectDestinationPortDescription: 'Choisissez le port ou aéroport spécifique pour la livraison',
+    cityPostalDescription: 'Fournissez la ville et le code postal pour une expédition précise',
+    pickupCityPostalDescription: 'Fournissez la ville et le code postal pour une collecte précise',
+    enterPickupDetails: 'Entrez les détails de collecte',
+    destinationCity: 'Ville de destination',
+    destinationZipCode: 'Code postal de destination',
+    searchDestinationPorts: 'Rechercher les ports de destination',
+    searchPortsIn: 'Rechercher les ports en',
+    annualVolume: 'Volume annuel',
+    noPortsFoundFor: 'Aucun port trouvé pour',
+    selectCountryFirst: 'Veuillez d\'abord sélectionner un pays',
+    
+    // Contact form
+    firstName: 'Prénom',
+    lastName: 'Nom',
+    email: 'Email',
+    phone: 'Téléphone',
+    companyName: 'Nom de l\'entreprise',
+    firstNamePlaceholder: 'Entrez votre prénom',
+    lastNamePlaceholder: 'Entrez votre nom',
+    emailPlaceholder: 'votre.email@entreprise.com',
+    phonePlaceholder: 'Votre numéro de téléphone',
+    companyNamePlaceholder: 'Nom de votre entreprise (optionnel)',
+    unsureAboutChoice: 'Pas sûr de votre choix ?',
+    unsureShipping: 'Je ne sais pas encore',
+    unsureShippingDesc: 'Laissez les experts aider',
+    unsureShippingBenefits: 'Conseil professionnel',
+    unsureShippingFeedback: 'Excellent choix ! Nous recommanderons la meilleure option d\'expédition pour vos besoins spécifiques',
+    seaFeedback: 'Excellent choix pour l\'expédition économique de gros volumes',
+    railFeedback: 'Équilibre parfait entre coût et rapidité avec des avantages environnementaux',
+    airFeedback: 'Parfait pour les marchandises sensibles au temps ou de grande valeur',
+    expressFeedback: 'Idéal pour les envois urgents petits à moyens avec suivi complet',
+
+    // ===== Étape 5 : Détails des marchandises (FR) =====
+    step5Title: 'Parlez-nous de vos marchandises',
+    goodsValueDeclaration: 'Valeur des marchandises et déclaration',
+    goodsValueDescription: 'Indiquez la valeur commerciale pour la déclaration douanière et l’assurance',
+    commercialValue: 'Valeur commerciale des marchandises',
+    goodsValueHelp: 'Cette valeur est utilisée pour la déclaration en douane et le calcul de l’assurance',
+    personalOrHazardous: 'Effets personnels ou contient des matières dangereuses/réglementées',
+    personalHazardousHelp: 'Cochez si vous expédiez des effets personnels ou des marchandises nécessitant une manutention spéciale',
+    shipmentReadiness: 'Disponibilité de l’envoi',
+    shipmentTimingDescription: 'Aidez-nous à planifier votre calendrier d’expédition et à fournir des tarifs précis',
+    timingHelp: 'Un calendrier précis nous aide à vous proposer les tarifs les plus compétitifs',
+    rateValidityTitle: 'Avis sur la validité des tarifs :',
+    rateValidityText: 'Les tarifs indiqués sont valables jusqu’à la date d’expiration figurant sur chaque devis. Si vos marchandises ne sont pas prêtes à être enlevées à cette date, les tarifs peuvent être révisés en fonction des conditions actuelles du marché.',
+    goodsReadyQuestion: 'Quand vos marchandises seront-elles prêtes pour l’enlèvement ?',
+    readyNow: '✅ Prêt maintenant - marchandises disponibles pour enlèvement immédiat',
+    readyIn1Week: '📅 Sous 1 semaine - en préparation',
+    readyIn2Weeks: '📅 Sous 2 semaines - en production',
+    readyIn1Month: '📅 Sous 1 mois - en planification',
+    dateNotSet: '❔ Date non déterminée',
+    additionalDetails: 'Détails supplémentaires (optionnel)',
+    additionalDetailsDescription: 'Indiquez toute exigence particulière ou information complémentaire',
+    goodsDescription: 'Brève description des marchandises (optionnel)',
+    goodsDescriptionPlaceholder: 'ex. Électronique, Meubles, Vêtements, Machines…',
+    goodsDescriptionHelp: 'Nous aide à garantir une manutention et une documentation appropriées',
+    specialRequirements: 'Exigences de manutention particulières (optionnel)',
+    noSpecialRequirements: 'Aucune exigence particulière',
+    fragileGoods: 'Marchandises fragiles - manutention avec soin',
+    temperatureControlled: 'Contrôle de température',
+    urgentTimeSensitive: 'Urgent/sensible au temps',
+    highValueInsurance: 'Assurance valeur élevée requise',
+    otherSpecify: 'Autre (veuillez préciser)',
+    pleaseSpecifyInRemarks: 'Veuillez préciser dans les remarques',
+    validationGoodsValue: 'Veuillez entrer la valeur des marchandises',
+    validationReadyDate: 'Veuillez sélectionner quand vos marchandises seront prêtes'
+  },
+  de: {
+    pickupPortFeedback: 'Perfekt! Wir organisieren die Abholung ab',
+    pickupCityFeedback: 'Perfekt! Wir organisieren die Abholung ab',
+    step1Title: 'Wohin versenden Sie?',
+    step2Title: 'Versandart',
+    step3Title: 'Abholort in China auswählen',
+    step4Title: 'Was versenden Sie?',
+    chooseShippingType: 'Wählen Sie Ihren Versandtyp',
+    selectPackagingMethod: 'Wählen Sie, wie Ihre Waren für den Versand verpackt sind',
+    looseCargo: 'Lose Fracht',
+    looseCargoDesc: 'Paletten, Kisten oder Einzelstücke',
+    fullContainer: 'Vollcontainer',
+    fullContainerDesc: 'Vollständiger Container (FCL)',
+    imNotSure: 'Ich bin mir nicht sicher',
+    teamWillHelp: 'Unser Team hilft Ihnen, die beste Option zu wählen',
+    looseCargoFeedback: 'Perfekt für gemischte Waren, kleine bis mittlere Mengen, oder wenn Sie flexible Verpackung benötigen',
+    containerFeedback: 'Ausgezeichnete Wahl für große Volumen, komplette Produktlinien, oder wenn Sie genug Ware haben, um einen Container zu füllen',
+    unsureFeedback: 'Keine Sorge! Unser erfahrenes Team führt Sie durch den Prozess und empfiehlt die beste Versandlösung für Ihre spezifischen Bedürfnisse. Wir kümmern uns um alle technischen Details.',
+    describeLooseCargo: 'Beschreiben Sie Ihre lose Fracht',
+    provideDimensionsWeight: 'Geben Sie Maße und Gewicht für eine genaue Preisberechnung an',
+    calcPerUnit: 'Nach Einheitentyp berechnen',
+    calcTotal: 'Nach Gesamtsendung berechnen',
+    unitInfo: 'Geben Sie Details zu jedem einzelnen Artikel oder jeder Palette für eine genaue Berechnung an.',
+    packageType: 'Verpackungsart',
+    pallets: 'Paletten',
+    boxes: 'Kisten/Boxen',
+    numUnits: 'Anzahl Einheiten',
+    palletType: 'Palettentyp',
+    palletNonSpecified: 'Nicht spezifiziert',
+    euroPallet: 'Euro-Palette (120×80 cm)',
+    stdPallet: 'Standardpalette (120×100 cm)',
+    customSize: 'Benutzerdefinierte Größe',
+    dimensionsPerUnit: 'Abmessungen (L×B×H pro Einheit)',
+    weightPerUnit: 'Gewicht (pro Einheit)',
+    weight: 'Gewicht',
+    required: 'Erforderlich',
+    totalInfo: 'Gesamtdaten können ungenauer sein. Ungenaue oder zu große Maße können zu Zusatzkosten führen.',
+    enterTotalDimWeight: 'Geben Sie die Gesamtmaße und das Gesamtgewicht Ihrer Sendung ein.',
+    numUnitsHelp: 'Wie viele logische Einheiten entsprechen diesem Gesamtvolumen/-gewicht?',
+    totalVolume: 'Gesamtvolumen',
+    totalWeight: 'Gesamtgewicht',
+    configureContainer: 'Konfigurieren Sie Ihren Container',
+    selectContainerTypeQty: 'Wählen Sie Container-Typ und Anzahl für Ihre Sendung',
+    containerInfo: 'Wählen Sie den Containertyp und die Anzahl, die Ihrem Ladungsvolumen am besten entsprechen.',
+    containerType: 'Containertyp',
+    numContainers: 'Anzahl Container',
+    overweightContainer: 'Überladener Container (>25 Tonnen)',
+    container20Std: "20' Standard (33 CBM)",
+    container40Std: "40' Standard (67 CBM)",
+    container40HC: "40' High Cube (76 CBM)",
+    container45HC: "45' High Cube (86 CBM)",
+    whatHappensNextTitle: 'Wie geht es weiter:',
+    contactWithin24h: 'Unsere Experten kontaktieren Sie innerhalb von 24 Stunden',
+    discussCargoDetails: 'Wir besprechen Frachtdetails und Anforderungen',
+    personalizedRecommendations: 'Sie erhalten individuelle Empfehlungen und Preise',
+    noCommitment: 'Keine Verpflichtung — nur fachkundige Beratung!',
+    selectPickupLocationType: 'Wählen Sie Ihren Abholort-Typ',
+    pickupLocationDescription: 'Wählen Sie, wo wir Ihre Waren in China abholen sollen',
+    step6Title: 'Kontaktinformationen',
+    selectDestinationCountry: 'Wählen Sie Ihr Zielland',
+    selectShippingMode: 'Wählen Sie Ihre Versandart',
+    enterContactDetails: 'Geben Sie Ihre Kontaktdaten ein',
+    selectOriginPort: 'Wählen Sie den Abholhafen/-terminal/-flughafen',
+    searchCountryDescription: 'Suchen Sie das Land, in das Sie Ihre Waren versenden möchten',
+    modeDescription: 'Wählen Sie die beste Transportmethode für Ihre Bedürfnisse',
+    contactDescription: 'Wir benötigen Ihre Informationen, um Ihnen das Angebot zu senden',
+    searchCountry: 'Land suchen...',
+    popular: 'Beliebt',
+    otherCountries: 'Andere Länder',
+    noCountryResults: 'Kein Land gefunden',
+    clearCountry: 'Land löschen',
+    addressTypeQuestion: 'Welcher Adresstyp ist Ihr Ziel?',
+    helpChooseLocation: 'Unsicher? Wählen Sie Geschäft/Büro für berufliche Sendungen oder Wohnadresse für private Lieferungen',
+    
+    // Address types
+    factoryWarehouse: 'Fabrik/Lager',
+    factoryWarehouseDesc: 'Fabrik, Verteilzentrum, Lager',
+    portAirport: 'Hafen/Flughafen',
+    portAirportDesc: 'Direkt zum Hafen/Flughafen',
+    businessAddress: 'Geschäftsadresse',
+    businessAddressDesc: 'Firmenadresse, Bürogebäude',
+    residentialAddress: 'Wohnadresse',
+    residentialAddressDesc: 'Haus, Wohnung, Privatadresse',
+    selectDestinationPort: 'Zielhafen auswählen',
+    enterDestinationDetails: 'Zieldetails eingeben',
+    selectDestinationPortDescription: 'Wählen Sie den spezifischen Hafen oder Flughafen für die Lieferung',
+    cityPostalDescription: 'Geben Sie Stadt und Postleitzahl für genauen Versand an',
+    pickupCityPostalDescription: 'Geben Sie Stadt und Postleitzahl für eine präzise Abholung an',
+    enterPickupDetails: 'Geben Sie Abholdetails ein',
+    destinationCity: 'Zielstadt',
+    destinationZipCode: 'Ziel-Postleitzahl',
+    searchDestinationPorts: 'Zielhäfen suchen',
+    searchPortsIn: 'Häfen suchen in',
+    annualVolume: 'Jährliches Volumen',
+    noPortsFoundFor: 'Keine Häfen gefunden für',
+    selectCountryFirst: 'Bitte wählen Sie zuerst ein Land aus',
+    
+    // Contact form
+    firstName: 'Vorname',
+    lastName: 'Nachname',
+    email: 'E-Mail',
+    phone: 'Telefon',
+    companyName: 'Firmenname',
+    firstNamePlaceholder: 'Geben Sie Ihren Vornamen ein',
+    lastNamePlaceholder: 'Geben Sie Ihren Nachnamen ein',
+    emailPlaceholder: 'ihre.email@firma.com',
+    phonePlaceholder: 'Ihre Telefonnummer',
+    companyNamePlaceholder: 'Ihr Firmenname (optional)',
+    unsureAboutChoice: 'Unsicher bei Ihrer Wahl?',
+    unsureShipping: 'Ich bin mir noch nicht sicher',
+    unsureShippingDesc: 'Lassen Sie die Experten helfen',
+    unsureShippingBenefits: 'Professionelle Beratung',
+    unsureShippingFeedback: 'Ausgezeichnete Wahl! Wir empfehlen die beste Versandoption für Ihre spezifischen Bedürfnisse',
+    seaFeedback: 'Tolle Wahl für kosteneffektiven Versand größerer Mengen',
+    railFeedback: 'Ausgezeichnete Balance zwischen Kosten und Geschwindigkeit mit Umweltvorteilen',
+    airFeedback: 'Perfekt für zeitkritische oder hochwertige Fracht',
+    expressFeedback: 'Ideal für dringende, kleine bis mittlere Sendungen mit vollständiger Verfolgung',
+
+    // ===== Schritt 5: Warenangaben (DE) =====
+    step5Title: 'Erzählen Sie uns von Ihrer Ware',
+    goodsValueDeclaration: 'Warenwert & Erklärung',
+    goodsValueDescription: 'Geben Sie den Handelswert für Zollanmeldung und Versicherung an',
+    commercialValue: 'Handelswert der Waren',
+    goodsValueHelp: 'Dieser Wert wird für die Zollanmeldung und die Versicherung verwendet',
+    personalOrHazardous: 'Persönliche Gegenstände oder enthält gefährliche/reglementierte Stoffe',
+    personalHazardousHelp: 'Ankreuzen, wenn persönliche Gegenstände oder besondere Handhabung erforderlich ist',
+    shipmentReadiness: 'Versandbereitschaft',
+    shipmentTimingDescription: 'Helfen Sie uns, Ihren Versandzeitplan zu planen und genaue Preise zu liefern',
+    timingHelp: 'Präzise Zeitangaben helfen uns, die wettbewerbsfähigsten Preise anzubieten',
+    rateValidityTitle: 'Hinweis zur Preisgültigkeit:',
+    rateValidityText: 'Die angegebenen Preise sind bis zum auf jedem Angebot ausgewiesenen Ablaufdatum gültig. Sind Ihre Waren bis zu diesem Datum nicht abholbereit, können die Preise entsprechend der aktuellen Marktlage angepasst werden.',
+    goodsReadyQuestion: 'Wann sind Ihre Waren zur Abholung bereit?',
+    readyNow: '✅ Jetzt bereit - Waren sind zur sofortigen Abholung verfügbar',
+    readyIn1Week: '📅 Innerhalb 1 Woche - in Vorbereitung',
+    readyIn2Weeks: '📅 Innerhalb 2 Wochen - in Produktion',
+    readyIn1Month: '📅 Innerhalb 1 Monat - in Planung',
+    dateNotSet: '❔ Datum noch nicht festgelegt',
+    additionalDetails: 'Zusätzliche Angaben (optional)',
+    additionalDetailsDescription: 'Geben Sie besondere Anforderungen oder zusätzliche Informationen an',
+    goodsDescription: 'Kurzbeschreibung der Waren (optional)',
+    goodsDescriptionPlaceholder: 'z. B. Elektronik, Möbel, Kleidung, Maschinen …',
+    goodsDescriptionHelp: 'Hilft uns, eine geeignete Handhabung und Dokumentation sicherzustellen',
+    specialRequirements: 'Besondere Handhabungsanforderungen (optional)',
+    noSpecialRequirements: 'Keine besonderen Anforderungen',
+    fragileGoods: 'Fragile Waren - vorsichtig behandeln',
+    temperatureControlled: 'Temperaturgeführt',
+    urgentTimeSensitive: 'Dringend/zeitkritisch',
+    highValueInsurance: 'Versicherung für hohen Warenwert erforderlich',
+    otherSpecify: 'Andere (bitte angeben)',
+    pleaseSpecifyInRemarks: 'Bitte in den Bemerkungen angeben',
+    validationGoodsValue: 'Bitte geben Sie den Warenwert ein',
+    validationReadyDate: 'Bitte wählen Sie, wann Ihre Waren bereit sein werden'
+  },
+  es: {
+    pickupPortFeedback: '¡Perfecto! Organizaremos la recogida desde',
+    pickupCityFeedback: '¡Perfecto! Organizaremos la recogida desde',
+    step1Title: '¿A dónde envía?',
+    step2Title: 'Modo de envío',
+    step3Title: 'Seleccionar lugar de recogida en China',
+    step4Title: '¿Qué va a enviar?',
+    chooseShippingType: 'Elija su tipo de envío',
+    selectPackagingMethod: 'Seleccione cómo están embaladas sus mercancías para el envío',
+    looseCargo: 'Carga suelta',
+    looseCargoDesc: 'Palés, cajas o artículos individuales',
+    fullContainer: 'Contenedor completo',
+    fullContainerDesc: 'Contenedor completo (FCL)',
+    imNotSure: 'No estoy seguro',
+    teamWillHelp: 'Nuestro equipo te ayudará a elegir la mejor opción',
+    looseCargoFeedback: 'Perfecto para mercancías mixtas, cantidades pequeñas a medianas, o cuando necesita embalaje flexible',
+    containerFeedback: 'Excelente opción para grandes volúmenes, líneas de productos completas, o cuando tiene suficientes mercancías para llenar un contenedor',
+    unsureFeedback: '¡No se preocupe! Nuestro equipo experimentado lo guiará en el proceso y recomendará la mejor solución de envío para sus necesidades específicas. Nos encargamos de todos los detalles técnicos.',
+    describeLooseCargo: 'Describa su carga suelta',
+    provideDimensionsWeight: 'Proporcione dimensiones y peso para una cotización precisa',
+    calcPerUnit: 'Calcular por tipo de unidad',
+    calcTotal: 'Calcular por envío total',
+    unitInfo: 'Proporcione detalles de cada artículo o pallet para un cálculo preciso.',
+    packageType: 'Tipo de embalaje',
+    pallets: 'Palés',
+    boxes: 'Cajas/Cajones',
+    numUnits: 'N.º de unidades',
+    palletType: 'Tipo de palé',
+    palletNonSpecified: 'No especificado',
+    euroPallet: 'Palé europeo (120×80 cm)',
+    stdPallet: 'Palé estándar (120×100 cm)',
+    customSize: 'Tamaño personalizado',
+    dimensionsPerUnit: 'Dimensiones (L×A×H por unidad)',
+    weightPerUnit: 'Peso (Por unidad)',
+    weight: 'Peso',
+    required: 'Obligatorio',
+    totalInfo: 'Aportar cifras totales puede ser menos preciso. Dimensiones inexactas o sobredimensionadas pueden generar cargos adicionales.',
+    enterTotalDimWeight: 'Introduzca las dimensiones y el peso totales de su envío.',
+    numUnitsHelp: '¿Cuántas unidades lógicas representa este volumen/peso total?',
+    totalVolume: 'Volumen total',
+    totalWeight: 'Peso total',
+    configureContainer: 'Configure su contenedor',
+    selectContainerTypeQty: 'Seleccione el tipo y la cantidad de contenedores para su envío',
+    containerInfo: 'Seleccione el tipo de contenedor y la cantidad que mejor se adapten al volumen de su carga.',
+    containerType: 'Tipo de contenedor',
+    numContainers: 'Número de contenedores',
+    overweightContainer: 'Contenedor con sobrepeso (>25 toneladas)',
+    container20Std: "Contenedor 20' Estándar (33 CBM)",
+    container40Std: "Contenedor 40' Estándar (67 CBM)",
+    container40HC: "Contenedor 40' High Cube (76 CBM)",
+    container45HC: "Contenedor 45' High Cube (86 CBM)",
+    whatHappensNextTitle: '¿Qué sigue?:',
+    contactWithin24h: 'Nuestros expertos lo contactarán en 24 horas',
+    discussCargoDetails: 'Comentaremos los detalles y requisitos de su carga',
+    personalizedRecommendations: 'Recibirá recomendaciones y precios personalizados',
+    noCommitment: 'Sin compromiso — solo asesoría experta',
+    selectPickupLocationType: 'Seleccione su tipo de lugar de recogida',
+    pickupLocationDescription: 'Elija dónde debemos recoger sus mercancías en China',
+    step6Title: 'Información de contacto',
+    selectDestinationCountry: 'Seleccione su país de destino',
+    selectShippingMode: 'Seleccione su modo de envío',
+    enterContactDetails: 'Ingrese sus datos de contacto',
+    selectOriginPort: 'Seleccione el puerto/terminal/aeropuerto de recogida',
+    searchCountryDescription: 'Busque el país donde desea enviar sus mercancías',
+    modeDescription: 'Elija el mejor método de transporte para sus necesidades',
+    contactDescription: 'Necesitamos su información para enviarle la cotización',
+    searchCountry: 'Buscar país...',
+    popular: 'Populares',
+    otherCountries: 'Otros países',
+    noCountryResults: 'No se encontraron países',
+    clearCountry: 'Limpiar país',
+    addressTypeQuestion: '¿Qué tipo de dirección es su destino?',
+    helpChooseLocation: '¿No estás seguro? Elige Empresa/Oficina para envíos profesionales o Residencial para entregas personales',
+    
+    // Address types
+    factoryWarehouse: 'Fábrica/Almacén',
+    factoryWarehouseDesc: 'Fábrica, centro de distribución, almacén',
+    portAirport: 'Puerto/Aeropuerto',
+    portAirportDesc: 'Directo al puerto/aeropuerto',
+    businessAddress: 'Dirección comercial',
+    businessAddressDesc: 'Dirección de empresa, edificio de oficinas',
+    residentialAddress: 'Dirección residencial',
+    residentialAddressDesc: 'Casa, apartamento, dirección personal',
+    selectDestinationPort: 'Seleccionar puerto de destino',
+    enterDestinationDetails: 'Ingrese detalles del destino',
+    selectDestinationPortDescription: 'Elija el puerto o aeropuerto específico para la entrega',
+    cityPostalDescription: 'Proporcione la ciudad y código postal para envío preciso',
+    pickupCityPostalDescription: 'Proporcione la ciudad de recogida y el código postal para una recogida precisa',
+    enterPickupDetails: 'Ingrese los detalles de recogida',
+    destinationCity: 'Ciudad de destino',
+    destinationZipCode: 'Código postal de destino',
+    searchDestinationPorts: 'Buscar puertos de destino',
+    searchPortsIn: 'Buscar puertos en',
+    annualVolume: 'Volumen anual',
+    noPortsFoundFor: 'No se encontraron puertos para',
+    selectCountryFirst: 'Por favor, seleccione primero un país',
+    firstName: 'Nombre',
+    lastName: 'Apellido',
+    email: 'Correo',
+    phone: 'Teléfono',
+    companyName: 'Nombre de empresa',
+    firstNamePlaceholder: 'Ingrese su nombre',
+    lastNamePlaceholder: 'Ingrese su apellido',
+    emailPlaceholder: 'su.correo@empresa.com',
+    phonePlaceholder: 'Su número de teléfono',
+    companyNamePlaceholder: 'Nombre de su empresa (opcional)',
+    unsureAboutChoice: '¿No estás seguro de tu elección?',
+    unsureShipping: 'Aún no estoy seguro',
+    unsureShippingDesc: 'Deja que los expertos ayuden',
+    unsureShippingBenefits: 'Orientación profesional',
+    unsureShippingFeedback: '¡Excelente elección! Recomendaremos la mejor opción de envío para tus necesidades específicas',
+    seaFeedback: 'Excelente opción para envío económico de grandes volúmenes',
+    railFeedback: 'Excelente equilibrio entre costo y velocidad con beneficios ambientales',
+    airFeedback: 'Perfecto para carga sensible al tiempo o de alto valor',
+    expressFeedback: 'Ideal para envíos urgentes pequeños a medianos con seguimiento completo',
+
+    // ===== Paso 5: Detalles de las mercancías (ES) =====
+    step5Title: 'Cuéntenos sobre sus mercancías',
+    goodsValueDeclaration: 'Valor de las mercancías y declaración',
+    goodsValueDescription: 'Indique el valor comercial para declaración aduanera y seguro',
+    commercialValue: 'Valor comercial de las mercancías',
+    goodsValueHelp: 'Este valor se utiliza para la declaración aduanera y el cálculo del seguro',
+    personalOrHazardous: 'Efectos personales o contiene materiales peligrosos/restringidos',
+    personalHazardousHelp: 'Marque si envía efectos personales o mercancías que requieren manejo especial',
+    shipmentReadiness: 'Disponibilidad del envío',
+    shipmentTimingDescription: 'Ayúdenos a planificar su cronograma de envío y proporcionar tarifas precisas',
+    timingHelp: 'Una planificación precisa nos ayuda a ofrecer las tarifas más competitivas',
+    rateValidityTitle: 'Aviso de validez de tarifas:',
+    rateValidityText: 'Las tarifas cotizadas son válidas hasta la fecha de vencimiento indicada en cada cotización. Si sus mercancías no están listas para la recogida en esa fecha, las tarifas podrían cambiar según las condiciones actuales del mercado.',
+    goodsReadyQuestion: '¿Cuándo estarán listas sus mercancías para la recogida?',
+    readyNow: '✅ Listo ahora - mercancías disponibles para recogida inmediata',
+    readyIn1Week: '📅 En 1 semana - en preparación',
+    readyIn2Weeks: '📅 En 2 semanas - en producción',
+    readyIn1Month: '📅 En 1 mes - en planificación',
+    dateNotSet: '❔ Fecha aún no determinada',
+    additionalDetails: 'Detalles adicionales (opcional)',
+    additionalDetailsDescription: 'Indique cualquier requisito especial o información adicional',
+    goodsDescription: 'Breve descripción de las mercancías (opcional)',
+    goodsDescriptionPlaceholder: 'p. ej., Electrónica, Muebles, Ropa, Maquinaria…',
+    goodsDescriptionHelp: 'Nos ayuda a garantizar el manejo y la documentación adecuados',
+    specialRequirements: 'Requisitos especiales de manejo (opcional)',
+    noSpecialRequirements: 'Sin requisitos especiales',
+    fragileGoods: 'Mercancías frágiles - manejar con cuidado',
+    temperatureControlled: 'Control de temperatura',
+    urgentTimeSensitive: 'Urgente/sensible al tiempo',
+    highValueInsurance: 'Se requiere seguro de alto valor',
+    otherSpecify: 'Otro (especifique)',
+    pleaseSpecifyInRemarks: 'Especifique en observaciones',
+    validationGoodsValue: 'Por favor ingrese el valor de los bienes',
+    validationReadyDate: 'Por favor seleccione cuándo estarán listos sus bienes'
+  },
+  it: {
+    pickupPortFeedback: 'Perfetto! Organizzeremo il ritiro da',
+    pickupCityFeedback: 'Perfetto! Organizzeremo il ritiro da',
+    step1Title: 'Dove spedisci?',
+    step2Title: 'Modalità di spedizione',
+    step3Title: 'Seleziona il luogo di ritiro in Cina',
+    step4Title: 'Cosa stai spedendo?',
+    chooseShippingType: 'Scegli il tipo di spedizione',
+    selectPackagingMethod: 'Seleziona come sono imballate le tue merci per la spedizione',
+    looseCargo: 'Merce sfusa',
+    looseCargoDesc: 'Bancali, scatole o singoli articoli',
+    fullContainer: 'Contenitore completo',
+    fullContainerDesc: 'Contenitore completo (FCL)',
+    imNotSure: 'Non sono sicuro',
+    teamWillHelp: 'Il nostro team ti aiuterà a scegliere la soluzione migliore',
+    looseCargoFeedback: 'Perfetto per merci miste, quantità piccole-medie, o quando hai bisogno di un imballaggio flessibile',
+    containerFeedback: 'Scelta eccellente per grandi volumi, linee di prodotti complete, o quando hai abbastanza merce per riempire un container',
+    unsureFeedback: 'Non preoccuparti! Il nostro team esperto ti guiderà e raccomanderà la migliore soluzione di spedizione per le tue esigenze specifiche. Ci occupiamo di tutti i dettagli tecnici.',
+    describeLooseCargo: 'Descrivi la tua merce sfusa',
+    provideDimensionsWeight: 'Fornisci dimensioni e peso per un prezzo accurato',
+    calcPerUnit: 'Calcola per tipo di unità',
+    calcTotal: 'Calcola per spedizione totale',
+    unitInfo: 'Fornisci dettagli per ogni singolo articolo o pallet per un calcolo accurato.',
+    packageType: 'Tipo di imballo',
+    pallets: 'Bancali',
+    boxes: 'Scatole/Casse',
+    numUnits: 'N. di unità',
+    palletType: 'Tipo di pallet',
+    palletNonSpecified: 'Non specificato',
+    euroPallet: 'Europallet (120×80 cm)',
+    stdPallet: 'Pallet standard (120×100 cm)',
+    customSize: 'Dimensione personalizzata',
+    dimensionsPerUnit: 'Dimensioni (L×P×H per unità)',
+    weightPerUnit: 'Peso (Per unità)',
+    weight: 'Peso',
+    required: 'Obbligatorio',
+    totalInfo: 'Fornire valori totali può essere meno preciso. Dimensioni imprecise o sovrastimate possono comportare costi aggiuntivi.',
+    enterTotalDimWeight: 'Inserisci le dimensioni e il peso totali della spedizione.',
+    numUnitsHelp: 'Quante unità logiche rappresentano questo volume/peso totale?',
+    totalVolume: 'Volume totale',
+    totalWeight: 'Peso totale',
+    configureContainer: 'Configura il tuo container',
+    selectContainerTypeQty: 'Seleziona tipo e quantità di container per la spedizione',
+    containerInfo: 'Seleziona il tipo e la quantità di container più adatti al volume del tuo carico.',
+    containerType: 'Tipo di container',
+    numContainers: 'Numero di container',
+    overweightContainer: 'Container sovrappeso (>25 tonnellate)',
+    container20Std: "Container 20' Standard (33 CBM)",
+    container40Std: "Container 40' Standard (67 CBM)",
+    container40HC: "Container 40' High Cube (76 CBM)",
+    container45HC: "Container 45' High Cube (86 CBM)",
+    whatHappensNextTitle: 'Cosa succede dopo:',
+    contactWithin24h: 'I nostri esperti ti contatteranno entro 24 ore',
+    discussCargoDetails: 'Discuteremo i dettagli e i requisiti del carico',
+    personalizedRecommendations: 'Riceverai raccomandazioni e prezzi personalizzati',
+    noCommitment: 'Nessun impegno — solo consulenza esperta!',
+    selectPickupLocationType: 'Seleziona il tuo tipo di luogo di ritiro',
+    pickupLocationDescription: 'Scegli dove dobbiamo ritirare la merce in Cina',
+    step6Title: 'Informazioni di contatto',
+    selectDestinationCountry: 'Seleziona il tuo paese di destinazione',
+    selectShippingMode: 'Seleziona la tua modalità di spedizione',
+    enterContactDetails: 'Inserisci i tuoi dati di contatto',
+    selectOriginPort: 'Seleziona il porto/terminal di ritiro',
+    searchCountryDescription: 'Cerca il paese dove vuoi spedire le tue merci',
+    modeDescription: 'Scegli il miglior metodo di trasporto per le tue esigenze',
+    contactDescription: 'Abbiamo bisogno delle tue informazioni per inviarti il preventivo',
+    searchCountry: 'Cerca paese...',
+    popular: 'Popolari',
+    otherCountries: 'Altri paesi',
+    noCountryResults: 'Nessun paese trovato',
+    clearCountry: 'Cancella paese',
+    addressTypeQuestion: 'Che tipo di indirizzo è la tua destinazione?',
+    helpChooseLocation: 'Non sicuro? Scegli Aziendale/Ufficio per spedizioni professionali o Residenziale per consegne personali',
+    
+    // Address types
+    factoryWarehouse: 'Fabbrica/Magazzino',
+    factoryWarehouseDesc: 'Fabbrica, centro distribuzione, magazzino',
+    portAirport: 'Porto/Aeroporto',
+    portAirportDesc: 'Diretto al porto/aeroporto',
+    businessAddress: 'Indirizzo commerciale',
+    businessAddressDesc: 'Indirizzo aziendale, palazzo uffici',
+    residentialAddress: 'Indirizzo residenziale',
+    residentialAddressDesc: 'Casa, appartamento, indirizzo personale',
+    selectDestinationPort: 'Seleziona porto di destinazione',
+    enterDestinationDetails: 'Inserisci dettagli destinazione',
+    selectDestinationPortDescription: 'Scegli il porto o aeroporto specifico per la consegna',
+    cityPostalDescription: 'Fornisci città e codice postale per spedizione accurata',
+    pickupCityPostalDescription: 'Fornisci la città di ritiro e il CAP per un ritiro accurato',
+    enterPickupDetails: 'Inserisci i dettagli di ritiro',
+    destinationCity: 'Città di destinazione',
+    destinationZipCode: 'Codice postale di destinazione',
+    searchDestinationPorts: 'Cerca porti di destinazione',
+    searchPortsIn: 'Cerca porti in',
+    annualVolume: 'Volume annuale',
+    noPortsFoundFor: 'Nessun porto trovato per',
+    selectCountryFirst: 'Seleziona prima un paese',
+    firstName: 'Nome',
+    lastName: 'Cognome',
+    email: 'Email',
+    phone: 'Telefono',
+    companyName: 'Nome azienda',
+    firstNamePlaceholder: 'Inserisci il tuo nome',
+    lastNamePlaceholder: 'Inserisci il tuo cognome',
+    emailPlaceholder: 'tua.email@azienda.com',
+    phonePlaceholder: 'Il tuo numero di telefono',
+    companyNamePlaceholder: 'Nome della tua azienda (opzionale)',
+    unsureAboutChoice: 'Non sei sicuro della tua scelta?',
+    unsureShipping: 'Non sono ancora sicuro',
+    unsureShippingDesc: 'Lascia che gli esperti ti aiutino',
+    unsureShippingBenefits: 'Consulenza professionale',
+    unsureShippingFeedback: 'Ottima scelta! Raccomanderemo la migliore opzione di spedizione per le tue esigenze specifiche',
+    seaFeedback: 'Ottima scelta per spedizioni economiche di grandi volumi',
+    railFeedback: 'Eccellente equilibrio tra costo e velocità con benefici ambientali',
+    airFeedback: 'Perfetto per merci sensibili al tempo o di alto valore',
+    expressFeedback: 'Ideale per spedizioni urgenti piccole-medie con tracciamento completo',
+
+    // ===== Passo 5: Dettagli delle merci (IT) =====
+    step5Title: 'Parlaci delle tue merci',
+    goodsValueDeclaration: 'Valore delle merci e dichiarazione',
+    goodsValueDescription: 'Indica il valore commerciale per la dichiarazione doganale e l’assicurazione',
+    commercialValue: 'Valore commerciale delle merci',
+    goodsValueHelp: 'Questo valore è utilizzato per la dichiarazione in dogana e il calcolo dell’assicurazione',
+    personalOrHazardous: 'Effetti personali o contiene materiali pericolosi/regolamentati',
+    personalHazardousHelp: 'Seleziona se spedisci effetti personali o merci che richiedono una gestione speciale',
+    shipmentReadiness: 'Prontezza della spedizione',
+    shipmentTimingDescription: 'Aiutaci a pianificare la tua tempistica di spedizione e a fornire tariffe accurate',
+    timingHelp: 'Una tempistica precisa ci aiuta a offrirti le tariffe più competitive',
+    rateValidityTitle: 'Avviso sulla validità delle tariffe:',
+    rateValidityText: 'Le tariffe indicate sono valide fino alla data di scadenza riportata in ogni preventivo. Se le merci non sono pronte per il ritiro entro tale data, le tariffe potrebbero variare in base alle condizioni di mercato.',
+    goodsReadyQuestion: 'Quando saranno pronte le tue merci per il ritiro?',
+    readyNow: '✅ Pronto ora - merci disponibili per ritiro immediato',
+    readyIn1Week: '📅 Entro 1 settimana - in preparazione',
+    readyIn2Weeks: '📅 Entro 2 settimane - in produzione',
+    readyIn1Month: '📅 Entro 1 mese - in pianificazione',
+    dateNotSet: '❔ Data non determinata',
+    additionalDetails: 'Dettagli aggiuntivi (opzionale)',
+    additionalDetailsDescription: 'Indica eventuali requisiti speciali o informazioni aggiuntive',
+    goodsDescription: 'Breve descrizione delle merci (opzionale)',
+    goodsDescriptionPlaceholder: 'es. Elettronica, Mobili, Abbigliamento, Macchinari…',
+    goodsDescriptionHelp: 'Ci aiuta a garantire una corretta gestione e documentazione',
+    specialRequirements: 'Requisiti speciali di manipolazione (opzionale)',
+    noSpecialRequirements: 'Nessun requisito speciale',
+    fragileGoods: 'Merci fragili - maneggiare con cura',
+    temperatureControlled: 'Controllo della temperatura',
+    urgentTimeSensitive: 'Urgente/sensibile al tempo',
+    highValueInsurance: 'Assicurazione ad alto valore richiesta',
+    otherSpecify: 'Altro (specificare)',
+    pleaseSpecifyInRemarks: 'Specificare nelle note',
+    validationGoodsValue: 'Per favore inserisci il valore delle merci',
+    validationReadyDate: 'Per favore seleziona quando le tue merci saranno pronte'
+  },
+  nl: {
+    pickupPortFeedback: 'Perfect! We regelen de afhaling vanaf',
+    pickupCityFeedback: 'Perfect! We regelen de afhaling vanaf',
+    step1Title: 'Waar verzendt u naar?',
+    step2Title: 'Verzendmethode',
+    step3Title: 'Kies ophaallocatie in China',
+    step4Title: 'Wat verzendt u?',
+    chooseShippingType: 'Kies uw verzendtype',
+    selectPackagingMethod: 'Selecteer hoe uw goederen voor verzending zijn verpakt',
+    looseCargo: 'Losse lading',
+    looseCargoDesc: 'Pallets, dozen of individuele items',
+    fullContainer: 'Volledige container',
+    fullContainerDesc: 'Volledige container (FCL)',
+    imNotSure: 'Ik weet het niet zeker',
+    teamWillHelp: 'Ons team helpt u de beste optie te kiezen',
+    looseCargoFeedback: 'Perfect voor gemengde goederen, kleine tot middelgrote hoeveelheden, of wanneer u flexibele verpakking nodig heeft',
+    containerFeedback: 'Uitstekende keuze voor grote volumes, complete productlijnen, of wanneer u genoeg goederen heeft om een container te vullen',
+    unsureFeedback: 'Geen zorgen! Ons ervaren team begeleidt u door het proces en beveelt de beste verzendoplossing aan voor uw specifieke behoeften. Wij zorgen voor alle technische details.',
+    describeLooseCargo: 'Beschrijf uw losse lading',
+    provideDimensionsWeight: 'Geef afmetingen en gewicht op voor nauwkeurige prijsbepaling',
+    calcPerUnit: 'Berekenen per eenheidstype',
+    calcTotal: 'Berekenen op totale zending',
+    unitInfo: 'Geef details per item of pallet voor een nauwkeurige berekening.',
+    packageType: 'Verpakkingstype',
+    pallets: 'Pallets',
+    boxes: 'Dozen/Kratten',
+    numUnits: 'Aantal eenheden',
+    palletType: 'Pallettype',
+    palletNonSpecified: 'Niet gespecificeerd',
+    euroPallet: 'Europallet (120×80 cm)',
+    stdPallet: 'Standaardpallet (120×100 cm)',
+    customSize: 'Aangepast formaat',
+    dimensionsPerUnit: 'Afmetingen (L×B×H per eenheid)',
+    weightPerUnit: 'Gewicht (Per eenheid)',
+    weight: 'Gewicht',
+    required: 'Vereist',
+    totalInfo: 'Totale cijfers kunnen minder precies zijn. Onnauwkeurige of te grote afmetingen kunnen extra kosten veroorzaken.',
+    enterTotalDimWeight: 'Voer de totale afmetingen en het totale gewicht van uw zending in.',
+    numUnitsHelp: 'Uit hoeveel logische eenheden bestaat dit totale volume/gewicht?',
+    totalVolume: 'Totaal volume',
+    totalWeight: 'Totaal gewicht',
+    configureContainer: 'Configureer uw container',
+    selectContainerTypeQty: 'Selecteer containertype en aantal voor uw zending',
+    containerInfo: 'Selecteer het containertype en aantal dat past bij uw ladingsvolume.',
+    containerType: 'Containertype',
+    numContainers: 'Aantal containers',
+    overweightContainer: 'Overbeladen container (>25 ton)',
+    container20Std: "20' Standaard (33 CBM)",
+    container40Std: "40' Standaard (67 CBM)",
+    container40HC: "40' High Cube (76 CBM)",
+    container45HC: "45' High Cube (86 CBM)",
+    whatHappensNextTitle: 'Vervolgstappen:',
+    contactWithin24h: 'Onze experts nemen binnen 24 uur contact op',
+    discussCargoDetails: 'We bespreken ladingdetails en requirements',
+    personalizedRecommendations: 'U ontvangt persoonlijke aanbevelingen en prijzen',
+    noCommitment: 'Geen verplichting — alleen deskundige begeleiding!',
+    selectPickupLocationType: 'Kies uw type ophaallocatie',
+    pickupLocationDescription: 'Kies waar we uw goederen in China moeten ophalen',
+    step6Title: 'Contactinformatie',
+    selectDestinationCountry: 'Selecteer uw bestemmingsland',
+    selectShippingMode: 'Selecteer uw verzendmethode',
+    enterContactDetails: 'Voer uw contactgegevens in',
+    selectOriginPort: 'Selecteer de ophaalhaven/terminal/luchthaven',
+    searchCountryDescription: 'Zoek het land waar u uw goederen naartoe wilt verzenden',
+    modeDescription: 'Kies de beste transportmethode voor uw behoeften',
+    contactDescription: 'We hebben uw informatie nodig om u de offerte te sturen',
+    searchCountry: 'Zoek land...',
+    popular: 'Populaire',
+    otherCountries: 'Andere landen',
+    noCountryResults: 'Geen landen gevonden',
+    clearCountry: 'Land wissen',
+    addressTypeQuestion: 'Welk type adres is uw bestemming?',
+    helpChooseLocation: 'Niet zeker? Kies Bedrijf/Kantoor voor zakelijke zendingen of Woonadres voor persoonlijke leveringen',
+    
+    // Address types
+    factoryWarehouse: 'Fabriek/Magazijn',
+    factoryWarehouseDesc: 'Fabriek, distributiecentrum, magazijn',
+    portAirport: 'Haven/Luchthaven',
+    portAirportDesc: 'Direct naar haven/luchthaven',
+    businessAddress: 'Bedrijfsadres',
+    businessAddressDesc: 'Bedrijfsadres, kantoorgebouw',
+    residentialAddress: 'Woonadres',
+    residentialAddressDesc: 'Huis, appartement, privéadres',
+    selectDestinationPort: 'Selecteer bestemmingshaven',
+    enterDestinationDetails: 'Voer bestemmingsdetails in',
+    selectDestinationPortDescription: 'Kies de specifieke haven of luchthaven voor levering',
+    cityPostalDescription: 'Geef stad en postcode voor nauwkeurige verzending',
+    pickupCityPostalDescription: 'Geef de ophaalstad en postcode op voor een nauwkeurige ophaling',
+    enterPickupDetails: 'Voer ophaalgegevens in',
+    destinationCity: 'Bestemmingsstad',
+    destinationZipCode: 'Bestemmingspostcode',
+    searchDestinationPorts: 'Zoek bestemmingshavens',
+    searchPortsIn: 'Zoek havens in',
+    annualVolume: 'Jaarlijks volume',
+    noPortsFoundFor: 'Geen havens gevonden voor',
+    selectCountryFirst: 'Selecteer eerst een land',
+    firstName: 'Voornaam',
+    lastName: 'Achternaam',
+    email: 'E-mail',
+    phone: 'Telefoon',
+    companyName: 'Bedrijfsnaam',
+    firstNamePlaceholder: 'Voer uw voornaam in',
+    lastNamePlaceholder: 'Voer uw achternaam in',
+    emailPlaceholder: 'uw.email@bedrijf.com',
+    phonePlaceholder: 'Uw telefoonnummer',
+    companyNamePlaceholder: 'Uw bedrijfsnaam (optioneel)',
+    unsureAboutChoice: 'Niet zeker van uw keuze?',
+    unsureShipping: 'Ik weet het nog niet zeker',
+    unsureShippingDesc: 'Laat de experts helpen',
+    unsureShippingBenefits: 'Professionele begeleiding',
+    unsureShippingFeedback: 'Uitstekende keuze! We zullen de beste verzendoptie voor uw specifieke behoeften aanbevelen',
+    seaFeedback: 'Uitstekende keuze voor kosteneffectieve verzending van grote volumes',
+    railFeedback: 'Uitstekende balans tussen kosten en snelheid met milieuvoordelen',
+    airFeedback: 'Perfect voor tijdgevoelige of hoogwaardige vracht',
+    expressFeedback: 'Ideaal voor urgente, kleine tot middelgrote zendingen met volledige tracking',
+
+    // ===== Stap 5: Goederendetails (NL) =====
+    step5Title: 'Vertel ons over uw goederen',
+    goodsValueDeclaration: 'Waarde van de goederen en verklaring',
+    goodsValueDescription: 'Geef de handelswaarde op voor douaneaangifte en verzekering',
+    commercialValue: 'Handelswaarde van de goederen',
+    goodsValueHelp: 'Deze waarde wordt gebruikt voor douaneaangifte en verzekeringsberekeningen',
+    personalOrHazardous: 'Persoonlijke goederen of bevat gevaarlijke/beperkte materialen',
+    personalHazardousHelp: 'Aanvinken indien persoonlijke goederen of speciale behandeling vereist is',
+    shipmentReadiness: 'Verzendgereedheid',
+    shipmentTimingDescription: 'Help ons uw verzendschema te plannen en nauwkeurige tarieven te geven',
+    timingHelp: 'Nauwkeurige timing helpt ons de meest concurrerende tarieven te bieden',
+    rateValidityTitle: 'Kennisgeving geldigheid tarieven:',
+    rateValidityText: 'De opgegeven tarieven zijn geldig tot de vervaldatum die op elke offerte staat. Als uw goederen niet vóór deze datum klaar zijn voor afhaling, kunnen de tarieven worden aangepast op basis van de actuele marktomstandigheden.',
+    goodsReadyQuestion: 'Wanneer zijn uw goederen klaar voor afhaling?',
+    readyNow: '✅ Nu klaar - goederen direct beschikbaar voor afhaling',
+    readyIn1Week: '📅 Binnen 1 week - in voorbereiding',
+    readyIn2Weeks: '📅 Binnen 2 weken - in productie',
+    readyIn1Month: '📅 Binnen 1 maand - in planning',
+    dateNotSet: '❔ Datum nog niet bepaald',
+    additionalDetails: 'Aanvullende informatie (optioneel)',
+    additionalDetailsDescription: 'Geef eventuele speciale vereisten of extra informatie op',
+    goodsDescription: 'Korte beschrijving van de goederen (optioneel)',
+    goodsDescriptionPlaceholder: 'bijv. Elektronica, Meubels, Kleding, Machines…',
+    goodsDescriptionHelp: 'Helpt ons correcte handling en documentatie te waarborgen',
+    specialRequirements: 'Speciale behandelingsvereisten (optioneel)',
+    noSpecialRequirements: 'Geen speciale vereisten',
+    fragileGoods: 'Breekbare goederen - voorzichtig behandelen',
+    temperatureControlled: 'Gecontroleerde temperatuur',
+    urgentTimeSensitive: 'Urgent/tijdsgevoelig',
+    highValueInsurance: 'Hoge-waarde verzekering vereist',
+    otherSpecify: 'Anders (specificeer)',
+    pleaseSpecifyInRemarks: 'Gelieve te specificeren in opmerkingen',
+    validationGoodsValue: 'Voer de waarde van de goederen in',
+    validationReadyDate: 'Selecteer wanneer uw goederen klaar zullen zijn'
+  },
+  zh: {
+    pickupPortFeedback: '很好！我们将从以下地点提货',
+    pickupCityFeedback: '很好！我们将从以下地点提货',
+    step1Title: '您要运输到哪里？',
+    step2Title: '运输方式',
+    step3Title: '选择在中国的提货地点',
+    step4Title: '您要运输什么？',
+    chooseShippingType: '选择您的运输类型',
+    selectPackagingMethod: '选择货物的运输包装方式',
+    looseCargo: '散货',
+    looseCargoDesc: '托盘、箱子或单件物品',
+    fullContainer: '整箱',
+    fullContainerDesc: '整箱运输（FCL）',
+    imNotSure: '我还不确定',
+    teamWillHelp: '我们的团队将帮助您选择最佳方案',
+    looseCargoFeedback: '适合混合货物、中小数量，或当您需要灵活包装时',
+    containerFeedback: '大容量、完整产品线的绝佳选择，或当您有足够货物填满集装箱时',
+    unsureFeedback: '不用担心！我们经验丰富的团队将指导您完成流程，并为您的特定需求推荐最佳运输解决方案。我们将处理所有技术细节。',
+    describeLooseCargo: '描述您的散货',
+    provideDimensionsWeight: '提供尺寸和重量以便准确报价',
+    calcPerUnit: '按单件类型计算',
+    calcTotal: '按整票货物计算',
+    unitInfo: '为每个单件或托盘提供详细信息以便准确计算。',
+    packageType: '包装类型',
+    pallets: '托盘',
+    boxes: '箱/木箱',
+    numUnits: '单位数量',
+    palletType: '托盘类型',
+    palletNonSpecified: '未指定',
+    euroPallet: '欧标托盘（120×80 cm）',
+    stdPallet: '标准托盘（120×100 cm）',
+    customSize: '自定义尺寸',
+    dimensionsPerUnit: '尺寸（长×宽×高/每件）',
+    weightPerUnit: '重量（每件）',
+    weight: '重量',
+    required: '必填',
+    totalInfo: '仅提供整票合计可能不够精确。不准确或超大的尺寸可能产生额外费用。',
+    enterTotalDimWeight: '请输入货物的总体尺寸和重量。',
+    numUnitsHelp: '该总体体积/重量对应多少逻辑单位？',
+    totalVolume: '总体积',
+    totalWeight: '总重量',
+    configureContainer: '配置您的集装箱',
+    selectContainerTypeQty: '选择适合您货物的箱型与数量',
+    containerInfo: '选择最适合货物体积的箱型与数量。',
+    containerType: '箱型',
+    numContainers: '箱量',
+    overweightContainer: '超重箱（>25 吨）',
+    container20Std: "20' 标准箱 (33 立方米)",
+    container40Std: "40' 标准箱 (67 立方米)",
+    container40HC: "40' 高箱 (76 立方米)",
+    container45HC: "45' 高箱 (86 立方米)",
+    whatHappensNextTitle: '接下来：',
+    contactWithin24h: '我们的专家将在24小时内联系您',
+    discussCargoDetails: '我们会沟通货物细节与需求',
+    personalizedRecommendations: '您将获得个性化建议与报价',
+    noCommitment: '无需承诺 — 仅提供专业指引！',
+    selectPickupLocationType: '选择提货地点类型',
+    pickupLocationDescription: '选择我们应在中国何处收货',
+    step6Title: '联系信息',
+    selectDestinationCountry: '选择您的目的地国家',
+    selectShippingMode: '选择您的运输方式',
+    enterContactDetails: '输入您的联系方式',
+    selectOriginPort: '选择提货港口/码头/机场',
+    searchCountryDescription: '搜索您要运送货物的国家',
+    modeDescription: '选择最适合您需求的运输方式',
+    contactDescription: '我们需要您的信息来发送报价',
+    searchCountry: '搜索国家...',
+    popular: '热门',
+    otherCountries: '其他国家',
+    noCountryResults: '未找到国家',
+    clearCountry: '清除国家',
+    addressTypeQuestion: '您的目的地是什么类型的地址？',
+    helpChooseLocation: '不确定？选择商业/办公室用于商务运输，或选择住宅用于个人配送',
+    
+    // Address types
+    factoryWarehouse: '工厂/仓库',
+    factoryWarehouseDesc: '工厂，配送中心，仓库',
+    portAirport: '港口/机场',
+    portAirportDesc: '直接到港口/机场取货',
+    businessAddress: '商业地址',
+    businessAddressDesc: '公司地址，办公楼',
+    residentialAddress: '住宅地址',
+    residentialAddressDesc: '住宅，公寓，个人地址',
+    selectDestinationPort: '选择目的港',
+    enterDestinationDetails: '输入目的地详情',
+    selectDestinationPortDescription: '选择具体的港口或机场进行交付',
+    cityPostalDescription: '提供城市和邮政编码以确保准确运输',
+    pickupCityPostalDescription: '提供提货城市和邮政编码以确保精准提货',
+    enterPickupDetails: '输入提货详细信息',
+    destinationCity: '目的地城市',
+    destinationZipCode: '目的地邮政编码',
+    searchDestinationPorts: '搜索目的港',
+    searchPortsIn: '搜索港口在',
+    annualVolume: '年度体积',
+    noPortsFoundFor: '未找到港口',
+    selectCountryFirst: '请先选择一个国家',
+    firstName: '名',
+    lastName: '姓',
+    email: '邮箱',
+    phone: '电话',
+    companyName: '公司名称',
+    firstNamePlaceholder: '输入您的名字',
+    lastNamePlaceholder: '输入您的姓氏',
+    emailPlaceholder: '您的.邮箱@公司.com',
+    phonePlaceholder: '您的电话号码',
+    companyNamePlaceholder: '您的公司名称（可选）',
+    unsureAboutChoice: '不确定您的选择？',
+    unsureShipping: '我还不确定',
+    unsureShippingDesc: '让专家帮助您',
+    unsureShippingBenefits: '专业指导',
+    unsureShippingFeedback: '很好的选择！我们将为您的具体需求推荐最佳的运输方案',
+    seaFeedback: '大批量经济型运输的最佳选择',
+    railFeedback: '成本和速度的完美平衡，具有环境效益',
+    airFeedback: '适合时间敏感或高价值货物',
+    expressFeedback: '适合急件小到中型货物的全程跟踪',
+
+    // ===== 第5步：货物详情（ZH） =====
+    step5Title: '请介绍您的货物',
+    goodsValueDeclaration: '货物价值与申报',
+    goodsValueDescription: '请提供用于报关与保险的商业价值',
+    commercialValue: '货物商业价值',
+    goodsValueHelp: '该金额用于报关及保险计算',
+    personalOrHazardous: '私人用品或含有危险/受限物品',
+    personalHazardousHelp: '如为私人行李或需特殊处理的货物请勾选',
+    shipmentReadiness: '出运时间',
+    shipmentTimingDescription: '帮助我们规划运输时间并提供准确报价',
+    timingHelp: '准确的时间安排有助于我们提供最具竞争力的运价',
+    rateValidityTitle: '运价有效期通知：',
+    rateValidityText: '所报运价在每份报价上标明的到期日前有效。若您的货物未能在该日期前准备好提货，运价可能会根据当时的市场情况调整。',
+    goodsReadyQuestion: '您的货物何时可以提货？',
+    readyNow: '✅ 现在准备好 - 货物可立即取货',
+    readyIn1Week: '📅 1周内 - 正在准备',
+    readyIn2Weeks: '📅 2周内 - 生产中',
+    readyIn1Month: '📅 1个月内 - 计划中',
+    dateNotSet: '❔ 日期未确定',
+    additionalDetails: '补充信息（可选）',
+    additionalDetailsDescription: '请注明任何特殊要求或补充信息',
+    goodsDescription: '货物简要描述（可选）',
+    goodsDescriptionPlaceholder: '例如：电子产品、家具、服装、机械…',
+    goodsDescriptionHelp: '有助于我们确保正确操作与单证',
+    specialRequirements: '特殊处理要求（可选）',
+    noSpecialRequirements: '无特殊要求',
+    fragileGoods: '易碎品 - 小心搬运',
+    temperatureControlled: '恒温/冷链',
+    urgentTimeSensitive: '紧急/时效敏感',
+    highValueInsurance: '高价值保险要求',
+    otherSpecify: '其他（请说明）',
+    pleaseSpecifyInRemarks: '请在备注中说明',
+    validationGoodsValue: '请输入货物价值',
+    validationReadyDate: '请选择货物准备就绪时间'
+  },
+  ar: {
+    pickupPortFeedback: 'رائع! سننظم الاستلام من',
+    pickupCityFeedback: 'رائع! سننظم الاستلام من',
+    step1Title: 'إلى أين تشحن؟',
+    step2Title: 'طريقة الشحن',
+    step3Title: 'اختر موقع الاستلام في الصين',
+    step4Title: 'ماذا ستشحن؟',
+    chooseShippingType: 'اختر نوع الشحن',
+    selectPackagingMethod: 'اختر كيفية تغليف بضائعك للشحن',
+    looseCargo: 'بضائع مفككة',
+    looseCargoDesc: 'منصات، صناديق أو قطع فردية',
+    fullContainer: 'حاوية كاملة',
+    fullContainerDesc: 'حاوية كاملة (FCL)',
+    imNotSure: 'لست متأكداً',
+    teamWillHelp: 'سيساعدك فريقنا في اختيار الخيار الأفضل',
+    looseCargoFeedback: 'مثالي للبضائع المختلطة والكميات الصغيرة إلى المتوسطة، أو عندما تحتاج إلى تغليف مرن',
+    containerFeedback: 'خيار ممتاز للأحجام الكبيرة وخطوط المنتجات الكاملة، أو عندما تكون لديك بضائع كافية لملء حاوية',
+    unsureFeedback: 'لا تقلق! سيرشدك فريقنا ذو الخبرة خلال العملية ويوصي بأفضل حل شحن لاحتياجاتك الخاصة. سنتولى جميع التفاصيل التقنية.',
+    describeLooseCargo: 'صف بضاعتك المفككة',
+    provideDimensionsWeight: 'قدم الأبعاد والوزن للحصول على تسعير دقيق',
+    calcPerUnit: 'احسب حسب نوع الوحدة',
+    calcTotal: 'احسب حسب الشحنة الإجمالية',
+    unitInfo: 'قدّم تفاصيل عن كل قطعة أو منصة لاحتساب دقيق.',
+    packageType: 'نوع التغليف',
+    pallets: 'منصات',
+    boxes: 'صناديق/صناديق خشبية',
+    numUnits: 'عدد الوحدات',
+    palletType: 'نوع المنصة',
+    palletNonSpecified: 'غير محدد',
+    euroPallet: 'منصة أوروبية (120×80 سم)',
+    stdPallet: 'منصة قياسية (120×100 سم)',
+    customSize: 'مقاس مخصص',
+    dimensionsPerUnit: 'الأبعاد (ط×ع×ا لكل وحدة)',
+    weightPerUnit: 'الوزن (لكل وحدة)',
+    weight: 'الوزن',
+    required: 'مطلوب',
+    totalInfo: 'قد تكون القيم الإجمالية أقل دقة. الأبعاد غير الدقيقة أو الكبيرة قد تؤدي إلى رسوم إضافية.',
+    enterTotalDimWeight: 'أدخل الأبعاد والوزن الإجماليين للشحنة.',
+    numUnitsHelp: 'كم عدد الوحدات المنطقية يمثلها هذا الحجم/الوزن الإجمالي؟',
+    totalVolume: 'الحجم الإجمالي',
+    totalWeight: 'الوزن الإجمالي',
+    configureContainer: 'اضبط إعدادات الحاوية',
+    selectContainerTypeQty: 'اختر نوع الحاوية والكمية للشحنة',
+    containerInfo: 'اختر نوع الحاوية والكمية الأنسب لحجم بضاعتك.',
+    containerType: 'نوع الحاوية',
+    numContainers: 'عدد الحاويات',
+    overweightContainer: 'حاوية زائدة الوزن (>25 طن)',
+    container20Std: "حاوية 20' قياسية (33 م³)",
+    container40Std: "حاوية 40' قياسية (67 م³)",
+    container40HC: "حاوية 40' هاي كيوب (76 م³)",
+    container45HC: "حاوية 45' هاي كيوب (86 م³)",
+    whatHappensNextTitle: 'ماذا يحدث بعد ذلك:',
+    contactWithin24h: 'سيتواصل خبراؤنا خلال 24 ساعة',
+    discussCargoDetails: 'سنناقش تفاصيل واحتياجات الشحنة',
+    personalizedRecommendations: 'ستتلقى توصيات وتسعيراً مخصصين',
+    noCommitment: 'بدون التزام — فقط إرشاد احترافي!',
+    selectPickupLocationType: 'اختر نوع موقع الاستلام',
+    pickupLocationDescription: 'اختر المكان الذي يجب أن نجمع فيه بضائعك في الصين',
+    step6Title: 'معلومات الاتصال',
+    selectDestinationCountry: 'اختر بلد الوجهة',
+    selectShippingMode: 'اختر طريقة الشحن',
+    enterContactDetails: 'أدخل بيانات الاتصال',
+    selectOriginPort: 'اختر ميناء / محطة / مطار الاستلام',
+    searchCountryDescription: 'ابحث عن البلد الذي تريد شحن بضائعك إليه',
+    modeDescription: 'اختر أفضل طريقة نقل لاحتياجاتك',
+    contactDescription: 'نحتاج معلوماتك لإرسال العرض',
+    searchCountry: 'البحث عن بلد...',
+    popular: 'شائع',
+    otherCountries: 'بلدان أخرى',
+    noCountryResults: 'لم يتم العثور على بلدان',
+    clearCountry: 'مسح البلد',
+    addressTypeQuestion: 'ما نوع العنوان الذي هو وجهتك؟',
+    helpChooseLocation: 'غير متأكد؟ اختر الأعمال/المكتب للشحنات المهنية أو السكني للتوصيل الشخصي',
+    
+    // Address types
+    factoryWarehouse: 'مصنع/مستودع',
+    factoryWarehouseDesc: 'مصنع، مركز توزيع، مستودع',
+    portAirport: 'ميناء/مطار',
+    portAirportDesc: 'مباشرة إلى الميناء/المطار',
+    businessAddress: 'عنوان العمل',
+    businessAddressDesc: 'عنوان الشركة، مبنى مكاتب',
+    residentialAddress: 'عنوان سكني',
+    residentialAddressDesc: 'منزل، شقة، عنوان شخصي',
+    selectDestinationPort: 'اختر ميناء الوجهة',
+    enterDestinationDetails: 'أدخل تفاصيل الوجهة',
+    selectDestinationPortDescription: 'اختر الميناء أو المطار المحدد للتسليم',
+    cityPostalDescription: 'قدم المدينة والرمز البريدي للشحن الدقيق',
+    pickupCityPostalDescription: 'يرجى تقديم مدينة الاستلام والرمز البريدي لضمان استلام دقيق',
+    enterPickupDetails: 'أدخل تفاصيل الاستلام',
+    destinationCity: 'مدينة الوجهة',
+    destinationZipCode: 'الرمز البريدي للوجهة',
+    searchDestinationPorts: 'البحث عن موانئ الوجهة',
+    searchPortsIn: 'البحث عن موانئ في',
+    annualVolume: 'الحجم السنوي',
+    noPortsFoundFor: 'لم يتم العثور على موانئ لـ',
+    selectCountryFirst: 'يرجى اختيار دولة أولاً',
+    firstName: 'الاسم الأول',
+    lastName: 'اسم العائلة',
+    email: 'البريد الإلكتروني',
+    phone: 'الهاتف',
+    companyName: 'اسم الشركة',
+    firstNamePlaceholder: 'أدخل اسمك الأول',
+    lastNamePlaceholder: 'أدخل اسم عائلتك',
+    emailPlaceholder: 'بريدك.الإلكتروني@شركة.com',
+    phonePlaceholder: 'رقم هاتفك',
+    companyNamePlaceholder: 'اسم شركتك (اختياري)',
+    unsureAboutChoice: 'غير متأكد من اختيارك؟',
+    unsureShipping: 'لست متأكداً بعد',
+    unsureShippingDesc: 'دع الخبراء يساعدون',
+    unsureShippingBenefits: 'إرشاد مهني',
+    unsureShippingFeedback: 'خيار ممتاز! سنوصي بأفضل خيار شحن لاحتياجاتك المحددة',
+    seaFeedback: 'خيار ممتاز للشحن الاقتصادي للحجوم الكبيرة',
+    railFeedback: 'توازن ممتاز بين التكلفة والسرعة مع فوائد بيئية',
+    airFeedback: 'مثالي للبضائع الحساسة للوقت أو عالية القيمة',
+    expressFeedback: 'الأفضل للشحنات العاجلة الصغيرة إلى المتوسطة مع التتبع الكامل',
+
+    // ===== الخطوة 5: تفاصيل البضائع (AR) =====
+    step5Title: 'أخبرنا عن بضائعك',
+    goodsValueDeclaration: 'قيمة البضائع والتصريح',
+    goodsValueDescription: 'يرجى إدخال القيمة التجارية لأغراض التخليص الجمركي والتأمين',
+    commercialValue: 'القيمة التجارية للبضائع',
+    goodsValueHelp: 'تُستخدم هذه القيمة للتصريح الجمركي وحساب التأمين',
+    personalOrHazardous: 'أغراض شخصية أو تحتوي مواد خطرة/مقيدة',
+    personalHazardousHelp: 'حدد إذا كانت الشحنة أغراض شخصية أو تتطلب مناولة خاصة',
+    shipmentReadiness: 'جاهزية الشحنة',
+    shipmentTimingDescription: 'ساعدنا في تخطيط الجدول الزمني لشحنتك وتقديم أسعار دقيقة',
+    timingHelp: 'تساعدنا الدقة في المواعيد على تقديم أكثر الأسعار تنافسية',
+    rateValidityTitle: 'إشعار صلاحية الأسعار:',
+    rateValidityText: 'تكون الأسعار المعروضة سارية حتى تاريخ الانتهاء الموضح في كل عرض. إذا لم تكن بضائعك جاهزة للاستلام بحلول ذلك التاريخ، فقد تخضع الأسعار للتغيير وفقًا لظروف السوق الحالية.',
+    goodsReadyQuestion: 'متى ستكون بضائعك جاهزة للالتقاط؟',
+    readyNow: '✅ جاهز الآن - البضائع متاحة للاستلام الفوري',
+    readyIn1Week: '📅 خلال أسبوع - قيد التحضير',
+    readyIn2Weeks: '📅 خلال أسبوعين - قيد الإنتاج',
+    readyIn1Month: '📅 خلال شهر - قيد التخطيط',
+    dateNotSet: '❔ لم يتم تحديد التاريخ بعد',
+    additionalDetails: 'معلومات إضافية (اختياري)',
+    additionalDetailsDescription: 'اذكر أي متطلبات خاصة أو معلومات إضافية',
+    goodsDescription: 'وصف موجز للبضائع (اختياري)',
+    goodsDescriptionPlaceholder: 'مثل: إلكترونيات، أثاث، ملابس، آلات…',
+    goodsDescriptionHelp: 'يساعدنا على ضمان المناولة الصحيحة والمستندات',
+    specialRequirements: 'متطلبات مناولة خاصة (اختياري)',
+    noSpecialRequirements: 'لا توجد متطلبات خاصة',
+    fragileGoods: 'بضائع قابلة للكسر - تُعامل بحذر',
+    temperatureControlled: 'مراقبة/تحكم في الحرارة',
+    urgentTimeSensitive: 'عاجلة/حساسة للوقت',
+    highValueInsurance: 'يتطلب تأمين قيمة عالية',
+    otherSpecify: 'أخرى (يرجى التحديد)',
+    pleaseSpecifyInRemarks: 'يرجى التحديد في الملاحظات',
+    validationGoodsValue: 'يرجى إدخال قيمة البضائع',
+    validationReadyDate: 'يرجى اختيار موعد جاهزية البضائع'
+  },
+  pt: {
+    pickupPortFeedback: 'Perfeito! Vamos organizar a coleta a partir de',
+    pickupCityFeedback: 'Perfeito! Vamos organizar a coleta a partir de',
+    step1Title: 'Para onde você envia?',
+    step2Title: 'Modo de envio',
+    step3Title: 'Selecionar local de coleta na China',
+    step4Title: 'O que você está enviando?',
+    chooseShippingType: 'Escolha o tipo de envio',
+    selectPackagingMethod: 'Selecione como suas mercadorias estão embaladas para envio',
+    looseCargo: 'Carga solta',
+    looseCargoDesc: 'Pallets, caixas ou itens individuais',
+    fullContainer: 'Contêiner completo',
+    fullContainerDesc: 'Contêiner completo (FCL)',
+    imNotSure: 'Não tenho certeza',
+    teamWillHelp: 'Nossa equipe ajudará você a escolher a melhor opção',
+    looseCargoFeedback: 'Perfeito para mercadorias mistas, quantidades pequenas a médias, ou quando você precisa de embalagem flexível',
+    containerFeedback: 'Excelente escolha para grandes volumes, linhas de produtos completas, ou quando há mercadorias suficientes para preencher um contêiner',
+    unsureFeedback: 'Não se preocupe! Nossa equipe experiente o guiará pelo processo e recomendará a melhor solução de frete para suas necessidades específicas. Cuidaremos de todos os detalhes técnicos.',
+    describeLooseCargo: 'Descreva sua carga solta',
+    provideDimensionsWeight: 'Forneça dimensões e peso para precificação precisa',
+    calcPerUnit: 'Calcular por tipo de unidade',
+    calcTotal: 'Calcular pela remessa total',
+    unitInfo: 'Forneça detalhes de cada item ou pallet para um cálculo preciso.',
+    packageType: 'Tipo de embalagem',
+    pallets: 'Paletes',
+    boxes: 'Caixas/Engradados',
+    numUnits: 'Nº de unidades',
+    palletType: 'Tipo de palete',
+    palletNonSpecified: 'Não especificado',
+    euroPallet: 'Palete Europeu (120×80 cm)',
+    stdPallet: 'Palete Padrão (120×100 cm)',
+    customSize: 'Tamanho personalizado',
+    dimensionsPerUnit: 'Dimensões (C×L×A por unidade)',
+    weightPerUnit: 'Peso (Por unidade)',
+    weight: 'Peso',
+    required: 'Obrigatório',
+    totalInfo: 'Fornecer valores totais pode ser menos preciso. Dimensões imprecisas ou superdimensionadas podem gerar custos adicionais.',
+    enterTotalDimWeight: 'Informe as dimensões e o peso totais da sua remessa.',
+    numUnitsHelp: 'Quantas unidades lógicas este volume/peso total representa?',
+    totalVolume: 'Volume total',
+    totalWeight: 'Peso total',
+    configureContainer: 'Configure seu contêiner',
+    selectContainerTypeQty: 'Selecione o tipo e a quantidade de contêineres para sua remessa',
+    containerInfo: 'Selecione o tipo e a quantidade de contêiner que melhor atendem ao volume da sua carga.',
+    containerType: 'Tipo de contêiner',
+    numContainers: 'Número de contêineres',
+    overweightContainer: 'Contêiner com excesso de peso (>25 toneladas)',
+    container20Std: "Contêiner 20' Padrão (33 CBM)",
+    container40Std: "Contêiner 40' Padrão (67 CBM)",
+    container40HC: "Contêiner 40' High Cube (76 CBM)",
+    container45HC: "Contêiner 45' High Cube (86 CBM)",
+    whatHappensNextTitle: 'O que acontece a seguir:',
+    contactWithin24h: 'Nossos especialistas entrarão em contato em até 24 horas',
+    discussCargoDetails: 'Vamos discutir detalhes e requisitos da sua carga',
+    personalizedRecommendations: 'Você receberá recomendações e preços personalizados',
+    noCommitment: 'Sem compromisso — apenas orientação especializada!',
+    selectPickupLocationType: 'Selecione o tipo de local de coleta',
+    pickupLocationDescription: 'Escolha onde devemos coletar suas mercadorias na China',
+    step6Title: 'Informações de contato',
+    selectDestinationCountry: 'Selecione seu país de destino',
+    selectShippingMode: 'Selecione seu modo de envio',
+    enterContactDetails: 'Digite suas informações de contato',
+    selectOriginPort: 'Selecione o porto/terminal/aeroporto de coleta',
+    searchCountryDescription: 'Procure o país para onde deseja enviar suas mercadorias',
+    modeDescription: 'Escolha o melhor método de transporte para suas necessidades',
+    contactDescription: 'Precisamos de suas informações para enviar a cotação',
+    searchCountry: 'Buscar país...',
+    popular: 'Populares',
+    otherCountries: 'Outros países',
+    noCountryResults: 'Nenhum país encontrado',
+    clearCountry: 'Limpar país',
+    addressTypeQuestion: 'Que tipo de endereço é seu destino?',
+    helpChooseLocation: 'Não tem certeza? Escolha Empresa/Escritório para remessas profissionais ou Residencial para entregas pessoais',
+    
+    // Address types
+    factoryWarehouse: 'Fábrica/Armazém',
+    factoryWarehouseDesc: 'Fábrica, centro de distribuição, armazém',
+    portAirport: 'Porto/Aeroporto',
+    portAirportDesc: 'Direto ao porto/aeroporto',
+    businessAddress: 'Endereço comercial',
+    businessAddressDesc: 'Endereço comercial, prédio de escritórios',
+    residentialAddress: 'Endereço residencial',
+    residentialAddressDesc: 'Casa, apartamento, endereço pessoal',
+    selectDestinationPort: 'Selecionar porto de destino',
+    enterDestinationDetails: 'Digite detalhes do destino',
+    selectDestinationPortDescription: 'Escolha o porto ou aeroporto específico para entrega',
+    cityPostalDescription: 'Forneça cidade e código postal para envio preciso',
+    pickupCityPostalDescription: 'Forneça a cidade de coleta e o CEP para uma coleta precisa',
+    enterPickupDetails: 'Digite os detalhes da coleta',
+    destinationCity: 'Cidade de destino',
+    destinationZipCode: 'CEP de destino',
+    searchDestinationPorts: 'Buscar portos de destino',
+    searchPortsIn: 'Buscar portos em',
+    annualVolume: 'Volume anual',
+    noPortsFoundFor: 'Nenhum porto encontrado para',
+    selectCountryFirst: 'Por favor, selecione um país primeiro',
+    firstName: 'Nome',
+    lastName: 'Sobrenome',
+    email: 'E-mail',
+    phone: 'Telefone',
+    companyName: 'Nome da empresa',
+    firstNamePlaceholder: 'Digite seu nome',
+    lastNamePlaceholder: 'Digite seu sobrenome',
+    emailPlaceholder: 'seu.email@empresa.com',
+    phonePlaceholder: 'Seu número de telefone',
+    companyNamePlaceholder: 'Nome da sua empresa (opcional)',
+    unsureAboutChoice: 'Não tem certeza da sua escolha?',
+    unsureShipping: 'Ainda não tenho certeza',
+    unsureShippingDesc: 'Deixe os especialistas ajudarem',
+    unsureShippingBenefits: 'Orientação profissional',
+    unsureShippingFeedback: 'Excelente escolha! Recomendaremos a melhor opção de frete para suas necessidades específicas',
+    seaFeedback: 'Ótima escolha para frete econômico de grandes volumes',
+    railFeedback: 'Excelente equilíbrio entre custo e velocidade com benefícios ambientais',
+    airFeedback: 'Perfeito para carga sensível ao tempo ou de alto valor',
+    expressFeedback: 'Ideal para remessas urgentes pequenas a médias com rastreamento completo',
+
+    // ===== Etapa 5: Detalhes das mercadorias (PT) =====
+    step5Title: 'Fale-nos sobre suas mercadorias',
+    goodsValueDeclaration: 'Valor das mercadorias e declaração',
+    goodsValueDescription: 'Informe o valor comercial para a declaração aduaneira e o seguro',
+    commercialValue: 'Valor comercial das mercadorias',
+    goodsValueHelp: 'Este valor é usado para a declaração aduaneira e o cálculo do seguro',
+    personalOrHazardous: 'Efeitos pessoais ou contém materiais perigosos/restritos',
+    personalHazardousHelp: 'Marque se estiver enviando efeitos pessoais ou mercadorias que exigem manuseio especial',
+    shipmentReadiness: 'Prontidão da remessa',
+    shipmentTimingDescription: 'Ajude-nos a planejar o cronograma de envio e fornecer tarifas precisas',
+    timingHelp: 'Um cronograma preciso nos ajuda a oferecer as tarifas mais competitivas',
+    rateValidityTitle: 'Aviso de validade das tarifas:',
+    rateValidityText: 'As tarifas cotadas são válidas até a data de validade indicada em cada cotação. Se suas mercadorias não estiverem prontas para coleta até essa data, as tarifas poderão ser alteradas conforme as condições atuais do mercado.',
+    goodsReadyQuestion: 'Quando suas mercadorias estarão prontas para coleta?',
+    readyNow: '✅ Pronto agora - mercadorias disponíveis para coleta imediata',
+    readyIn1Week: '📅 Em 1 semana - em preparação',
+    readyIn2Weeks: '📅 Em 2 semanas - em produção',
+    readyIn1Month: '📅 Em 1 mês - em planejamento',
+    dateNotSet: '❔ Data ainda não determinada',
+    additionalDetails: 'Informações adicionais (opcional)',
+    additionalDetailsDescription: 'Informe quaisquer requisitos especiais ou informações adicionais',
+    goodsDescription: 'Breve descrição das mercadorias (opcional)',
+    goodsDescriptionPlaceholder: 'ex.: Eletrônicos, Móveis, Roupas, Máquinas…',
+    goodsDescriptionHelp: 'Ajuda a garantir manuseio e documentação adequados',
+    specialRequirements: 'Requisitos especiais de manuseio (opcional)',
+    noSpecialRequirements: 'Sem requisitos especiais',
+    fragileGoods: 'Mercadorias frágeis - manusear com cuidado',
+    temperatureControlled: 'Controle de temperatura',
+    urgentTimeSensitive: 'Urgente/sensível ao tempo',
+    highValueInsurance: 'Seguro de alto valor exigido',
+    otherSpecify: 'Outro (especificar)',
+    pleaseSpecifyInRemarks: 'Especifique nas observações',
+    validationGoodsValue: 'Por favor, insira o valor dos bens',
+    validationReadyDate: 'Por favor, selecione quando seus bens estarão prontos'
+  },
+  tr: {
+    pickupPortFeedback: 'Harika! Alımı şu noktadan ayarlayacağız',
+    pickupCityFeedback: 'Harika! Alımı şu noktadan ayarlayacağız',
+    step1Title: 'Nereye gönderiyorsunuz?',
+    step2Title: 'Gönderim şekli',
+    step3Title: 'Çin’de alım yerini seçin',
+    step4Title: 'Ne gönderiyorsunuz?',
+    chooseShippingType: 'Gönderi türünüzü seçin',
+    selectPackagingMethod: 'Gönderim için mallarınızın nasıl paketlendiğini seçin',
+    looseCargo: 'Parça yük',
+    looseCargoDesc: 'Paletler, kutular veya tekil ürünler',
+    fullContainer: 'Tam konteyner',
+    fullContainerDesc: 'Tam konteyner (FCL)',
+    imNotSure: 'Emin değilim',
+    teamWillHelp: 'Ekibimiz en iyi seçeneği seçmenize yardımcı olacak',
+    looseCargoFeedback: 'Karma ürünler, küçük-orta miktarlar veya esnek ambalaja ihtiyaç duyduğunuz durumlar için ideal',
+    containerFeedback: 'Büyük hacimler, tam ürün serileri veya bir konteyneri doldurmaya yetecek kadar mal olduğunda mükemmel seçim',
+    unsureFeedback: 'Endişe etmeyin! Deneyimli ekibimiz sürecin her aşamasında size rehberlik edecek ve özel ihtiyaçlarınıza en uygun nakliye çözümünü önerecektir. Tüm teknik detayları biz hallederiz.',
+    describeLooseCargo: 'Gevşek yükünüzü açıklayın',
+    provideDimensionsWeight: 'Doğru fiyatlandırma için ölçüler ve ağırlık bilgisi girin',
+    calcPerUnit: 'Birim türüne göre hesapla',
+    calcTotal: 'Toplam sevkiyata göre hesapla',
+    unitInfo: 'Doğru hesaplama için her bir ürün veya palet hakkında bilgi girin.',
+    packageType: 'Paketleme türü',
+    pallets: 'Paletler',
+    boxes: 'Kutular/Sandıklar',
+    numUnits: 'Birim sayısı',
+    palletType: 'Palet türü',
+    palletNonSpecified: 'Belirtilmemiş',
+    euroPallet: 'Euro Palet (120×80 cm)',
+    stdPallet: 'Standart Palet (120×100 cm)',
+    customSize: 'Özel ölçü',
+    dimensionsPerUnit: 'Boyutlar (U×G×Y birim başına)',
+    weightPerUnit: 'Ağırlık (Birim başına)',
+    weight: 'Ağırlık',
+    required: 'Zorunlu',
+    totalInfo: 'Toplam değerler daha az hassas olabilir. Hatalı veya büyük ölçüler ek ücretlere neden olabilir.',
+    enterTotalDimWeight: 'Gönderinizin toplam ölçülerini ve toplam ağırlığını girin.',
+    numUnitsHelp: 'Bu toplam hacim/ağırlık kaç mantıksal birimi temsil ediyor?',
+    totalVolume: 'Toplam Hacim',
+    totalWeight: 'Toplam Ağırlık',
+    configureContainer: 'Konteynerinizi yapılandırın',
+    selectContainerTypeQty: 'Sevkiyat için konteyner tipi ve adedini seçin',
+    containerInfo: 'Yük hacminize en uygun konteyner tipi ve adedini seçin.',
+    containerType: 'Konteyner tipi',
+    numContainers: 'Konteyner sayısı',
+    overweightContainer: 'Aşırı yüklü konteyner (>25 ton)',
+    container20Std: "20' Standart (33 CBM)",
+    container40Std: "40' Standart (67 CBM)",
+    container40HC: "40' High Cube (76 CBM)",
+    container45HC: "45' High Cube (86 CBM)",
+    whatHappensNextTitle: 'Sırada ne var:',
+    contactWithin24h: 'Uzmanlarımız 24 saat içinde sizinle iletişime geçecek',
+    discussCargoDetails: 'Yük detayları ve gereksinimleri konuşacağız',
+    personalizedRecommendations: 'Kişiselleştirilmiş öneriler ve fiyatlandırma alacaksınız',
+    noCommitment: 'Zorunluluk yok — yalnızca uzman rehberliği!',
+    selectPickupLocationType: 'Alım yeri türünü seçin',
+    pickupLocationDescription: 'Çin’de mallarınızı nereden almamız gerektiğini seçin',
+    selectOriginPort: 'Alım limanı/terminali/havalimanını seçin',
+    step6Title: 'İletişim bilgileri',
+    selectDestinationCountry: 'Hedef ülkenizi seçin',
+    selectShippingMode: 'Gönderim şeklinizi seçin',
+    enterContactDetails: 'İletişim bilgilerinizi girin',
+    searchCountryDescription: 'Mallarınızı göndermek istediğiniz ülkeyi arayın',
+    modeDescription: 'İhtiyaçlarınız için en iyi taşıma yöntemini seçin',
+    contactDescription: 'Teklifi gönderebilmemiz için bilgilerinize ihtiyacımız var',
+    searchCountry: 'Ülke ara...',
+    popular: 'Popüler',
+    otherCountries: 'Diğer ülkeler',
+    noCountryResults: 'Ülke bulunamadı',
+    clearCountry: 'Ülkeyi temizle',
+    addressTypeQuestion: 'Hedefiniz ne tür bir adres?',
+    helpChooseLocation: 'Emin değil misiniz? Ticari gönderiler için İş/Ofis veya kişisel teslimatlar için Konut seçin',
+    
+    // Address types
+    factoryWarehouse: 'Fabrika/Depo',
+    factoryWarehouseDesc: 'Fabrika, dağıtım merkezi, depo',
+    portAirport: 'Liman/Havaalanı',
+    portAirportDesc: 'Doğrudan liman/havaalanına',
+    businessAddress: 'İş adresi',
+    businessAddressDesc: 'İş adresi, ofis binası',
+    residentialAddress: 'Konut adresi',
+    residentialAddressDesc: 'Ev, daire, kişisel adres',
+    selectDestinationPort: 'Hedef limanı seçin',
+    enterDestinationDetails: 'Hedef detaylarını girin',
+    selectDestinationPortDescription: 'Teslimat için belirli liman veya havaalanını seçin',
+    cityPostalDescription: 'Kesin nakliye için şehir ve posta kodu belirtin',
+    pickupCityPostalDescription: 'Doğru alım için alım şehrini ve posta kodunu belirtin',
+    enterPickupDetails: 'Alım detaylarını girin',
+    destinationCity: 'Hedef şehir',
+    destinationZipCode: 'Hedef posta kodu',
+    searchDestinationPorts: 'Hedef limanları ara',
+    searchPortsIn: 'Limanları ara',
+    annualVolume: 'Yıllık hacim',
+    noPortsFoundFor: 'İçin liman bulunamadı',
+    selectCountryFirst: 'Lütfen önce bir ülke seçin',
+    firstName: 'Ad',
+    lastName: 'Soyad',
+    email: 'E-posta',
+    phone: 'Telefon',
+    companyName: 'Şirket adı',
+    firstNamePlaceholder: 'Adınızı girin',
+    lastNamePlaceholder: 'Soyadınızı girin',
+    emailPlaceholder: 'sizin.email@sirket.com',
+    phonePlaceholder: 'Telefon numaranız',
+    companyNamePlaceholder: 'Şirket adınız (isteğe bağlı)',
+    unsureAboutChoice: 'Seçiminizden emin değil misiniz?',
+    unsureShipping: 'Henüz emin değilim',
+    unsureShippingDesc: 'Uzmanların yardım etmesine izin verin',
+    unsureShippingBenefits: 'Profesyonel rehberlik',
+    unsureShippingFeedback: 'Mükemmel seçim! Özel ihtiyaçlarınız için en iyi nakliye seçeneğini önereceğiz',
+    seaFeedback: 'Büyük hacimlerde ekonomik nakliye için harika seçim',
+    railFeedback: 'Çevresel faydalarla maliyet ve hız arasında mükemmel denge',
+    airFeedback: 'Zamana duyarlı veya yüksek değerli kargo için mükemmel',
+    expressFeedback: 'Tam takipli küçük ila orta acil gönderiler için ideal',
+
+    // ===== Adım 5: Yük detayları (TR) =====
+    step5Title: 'Yükünüz hakkında bize anlatın',
+    goodsValueDeclaration: 'Yük değeri ve beyanı',
+    goodsValueDescription: 'Gümrük beyanı ve sigorta için ticari değeri giriniz',
+    commercialValue: 'Yükün ticari değeri',
+    goodsValueHelp: 'Bu değer gümrük beyanı ve sigorta hesabı için kullanılır',
+    personalOrHazardous: 'Kişisel eşya veya tehlikeli/kısıtlı madde içerir',
+    personalHazardousHelp: 'Kişisel eşya veya özel işlem gerektiren yükler için işaretleyin',
+    shipmentReadiness: 'Sevkiyat hazırlığı',
+    shipmentTimingDescription: 'Sevkiyat takviminizi planlamamıza ve doğru fiyat vermemize yardımcı olun',
+    timingHelp: 'Doğru zamanlama en rekabetçi fiyatları sunmamıza yardımcı olur',
+    rateValidityTitle: 'Fiyat Geçerlilik Bildirimi:',
+    rateValidityText: 'Verilen fiyatlar, her teklifte belirtilen son geçerlilik tarihine kadar geçerlidir. Yükünüz bu tarihe kadar alıma hazır değilse, fiyatlar mevcut piyasa koşullarına göre değiştirilebilir.',
+    goodsReadyQuestion: 'Yükünüz ne zaman alıma hazır olacak?',
+    readyNow: '✅ Şimdi hazır - yük derhal alım için uygun',
+    readyIn1Week: '📅 1 hafta içinde - hazırlık aşamasında',
+    readyIn2Weeks: '📅 2 hafta içinde - üretimde',
+    readyIn1Month: '📅 1 ay içinde - planlama aşamasında',
+    dateNotSet: '❔ Tarih henüz belirlenmedi',
+    additionalDetails: 'Ek bilgiler (opsiyonel)',
+    additionalDetailsDescription: 'Herhangi bir özel gereksinim veya ek bilgi belirtin',
+    goodsDescription: 'Yükün kısa açıklaması (opsiyonel)',
+    goodsDescriptionPlaceholder: 'örn. Elektronik, Mobilya, Giyim, Makineler…',
+    goodsDescriptionHelp: 'Doğru işlem ve evrakı sağlamamıza yardımcı olur',
+    specialRequirements: 'Özel işlem gereksinimleri (opsiyonel)',
+    noSpecialRequirements: 'Özel gereksinim yok',
+    fragileGoods: 'Kırılabilir yük - dikkatle taşıyın',
+    temperatureControlled: 'Sıcaklık kontrollü',
+    urgentTimeSensitive: 'Acil/zaman hassas',
+    highValueInsurance: 'Yüksek değer sigortası gerekli',
+    otherSpecify: 'Diğer (lütfen belirtin)',
+    pleaseSpecifyInRemarks: 'Lütfen notlarda belirtin',
+    validationGoodsValue: 'Lütfen yükün değerini girin',
+    validationReadyDate: 'Lütfen yükün ne zaman hazır olacağını seçin'
+  },
+  ru: {
+    pickupPortFeedback: 'Отлично! Мы организуем забор из',
+    pickupCityFeedback: 'Отлично! Мы организуем забор из',
+    step1Title: 'Куда вы отправляете?',
+    step2Title: 'Способ доставки',
+    step3Title: 'Выберите место забора в Китае',
+    step4Title: 'Что вы отправляете?',
+    chooseShippingType: 'Выберите тип отправки',
+    selectPackagingMethod: 'Выберите, как упакован ваш груз для доставки',
+    looseCargo: 'Сборный груз',
+    looseCargoDesc: 'Поддоны, коробки или отдельные предметы',
+    fullContainer: 'Полный контейнер',
+    fullContainerDesc: 'Полный контейнер (FCL)',
+    imNotSure: 'Я не уверен',
+    teamWillHelp: 'Наша команда поможет выбрать лучший вариант',
+    looseCargoFeedback: 'Подходит для смешанных товаров, небольших и средних объёмов или когда требуется гибкая упаковка',
+    containerFeedback: 'Отличный выбор для больших объёмов, полноценных линеек продукции или когда у вас достаточно товара, чтобы заполнить контейнер',
+    unsureFeedback: 'Не волнуйтесь! Наша опытная команда проведёт вас через процесс и порекомендует лучшее решение для ваших потребностей. Все технические детали мы возьмём на себя.',
+    describeLooseCargo: 'Опишите ваш сборный груз',
+    provideDimensionsWeight: 'Укажите габариты и вес для точного расчёта стоимости',
+    calcPerUnit: 'Рассчитать по типу единицы',
+    calcTotal: 'Рассчитать по всей отправке',
+    unitInfo: 'Укажите данные по каждой единице или поддону для точного расчёта.',
+    packageType: 'Тип упаковки',
+    pallets: 'Поддоны',
+    boxes: 'Коробки/Ящики',
+    numUnits: 'Количество единиц',
+    palletType: 'Тип поддона',
+    palletNonSpecified: 'Не указано',
+    euroPallet: 'Европоддон (120×80 см)',
+    stdPallet: 'Стандартный поддон (120×100 см)',
+    customSize: 'Произвольный размер',
+    dimensionsPerUnit: 'Габариты (Д×Ш×В на единицу)',
+    weightPerUnit: 'Вес (на единицу)',
+    weight: 'Вес',
+    required: 'Обязательно',
+    totalInfo: 'Общие значения могут быть менее точными. Неточные или завышенные габариты могут привести к доп. расходам.',
+    enterTotalDimWeight: 'Укажите общие габариты и общий вес вашей отправки.',
+    numUnitsHelp: 'Сколько логических единиц соответствует этому общему объёму/весу?',
+    totalVolume: 'Общий объём',
+    totalWeight: 'Общий вес',
+    configureContainer: 'Настройте ваш контейнер',
+    selectContainerTypeQty: 'Выберите тип контейнера и количество для отправки',
+    containerInfo: 'Выберите тип и количество контейнеров, подходящие под объём вашего груза.',
+    containerType: 'Тип контейнера',
+    numContainers: 'Количество контейнеров',
+    overweightContainer: 'Перегруженный контейнер (>25 тонн)',
+    container20Std: "20' Стандарт (33 м³)",
+    container40Std: "40' Стандарт (67 м³)",
+    container40HC: "40' High Cube (76 м³)",
+    container45HC: "45' High Cube (86 м³)",
+    whatHappensNextTitle: 'Что дальше:',
+    contactWithin24h: 'Наши эксперты свяжутся с вами в течение 24 часов',
+    discussCargoDetails: 'Обсудим детали и требования к грузу',
+    personalizedRecommendations: 'Вы получите персональные рекомендации и цены',
+    noCommitment: 'Никаких обязательств — только экспертная поддержка!',
+    selectPickupLocationType: 'Выберите тип места забора',
+    pickupLocationDescription: 'Укажите, где в Китае нам забрать ваш груз',
+    selectOriginPort: 'Выберите порт/терминал/аэропорт забора',
+    step6Title: 'Контактная информация',
+    selectDestinationCountry: 'Выберите страну назначения',
+    selectShippingMode: 'Выберите способ доставки',
+    enterContactDetails: 'Введите контактные данные',
+    searchCountryDescription: 'Найдите страну, куда хотите отправить товары',
+    modeDescription: 'Выберите лучший способ транспортировки для ваших нужд',
+    contactDescription: 'Нам нужна ваша информация для отправки предложения',
+    searchCountry: 'Поиск страны...',
+    popular: 'Популярные',
+    otherCountries: 'Другие страны',
+    noCountryResults: 'Страны не найдены',
+    clearCountry: 'Очистить страну',
+    addressTypeQuestion: 'Какой тип адреса ваше назначение?',
+    helpChooseLocation: 'Не уверены? Выберите Бизнес/Офис для деловых отправлений или Жилой для личных доставок',
+    
+    // Address types
+    factoryWarehouse: 'Завод/Склад',
+    factoryWarehouseDesc: 'Завод, распределительный центр, склад',
+    portAirport: 'Порт/Аэропорт',
+    portAirportDesc: 'Прямо в порт/аэропорт',
+    businessAddress: 'Деловой адрес',
+    businessAddressDesc: 'Деловой адрес, офисное здание',
+    residentialAddress: 'Жилой адрес',
+    residentialAddressDesc: 'Дом, квартира, личный адрес',
+    selectDestinationPort: 'Выберите порт назначения',
+    enterDestinationDetails: 'Введите детали назначения',
+    selectDestinationPortDescription: 'Выберите конкретный порт или аэропорт для доставки',
+    cityPostalDescription: 'Укажите город и почтовый индекс для точной доставки',
+    pickupCityPostalDescription: 'Укажите город забора и почтовый индекс для точного забора',
+    enterPickupDetails: 'Введите детали забора',
+    destinationCity: 'Город назначения',
+    destinationZipCode: 'Почтовый индекс назначения',
+    searchDestinationPorts: 'Поиск портов назначения',
+    searchPortsIn: 'Поиск портов в',
+    annualVolume: 'Годовой объем',
+    noPortsFoundFor: 'Порты не найдены для',
+    selectCountryFirst: 'Пожалуйста, сначала выберите страну',
+    firstName: 'Имя',
+    lastName: 'Фамилия',
+    email: 'Эл. почта',
+    phone: 'Телефон',
+    companyName: 'Название компании',
+    firstNamePlaceholder: 'Введите ваше имя',
+    lastNamePlaceholder: 'Введите вашу фамилию',
+    emailPlaceholder: 'ваш.email@компания.com',
+    phonePlaceholder: 'Ваш номер телефона',
+    companyNamePlaceholder: 'Название вашей компании (необязательно)',
+    unsureAboutChoice: 'Не уверены в своём выборе?',
+    unsureShipping: 'Я ещё не уверен',
+    unsureShippingDesc: 'Пусть эксперты помогут',
+    unsureShippingBenefits: 'Профессиональное руководство',
+    unsureShippingFeedback: 'Отличный выбор! Мы порекомендуем лучший вариант доставки для ваших конкретных потребностей',
+    seaFeedback: 'Отличный выбор для экономичной доставки больших объёмов',
+    railFeedback: 'Превосходный баланс стоимости и скорости с экологическими преимуществами',
+    airFeedback: 'Идеально для срочных или ценных грузов',
+    expressFeedback: 'Лучшее для срочных малых и средних отправлений с полным отслеживанием',
+
+    // ===== Шаг 5: Сведения о товаре (RU) =====
+    step5Title: 'Расскажите нам о вашем товаре',
+    goodsValueDeclaration: 'Стоимость товара и декларация',
+    goodsValueDescription: 'Укажите коммерческую стоимость для таможенного оформления и страхования',
+    commercialValue: 'Коммерческая стоимость товара',
+    goodsValueHelp: 'Это значение используется для таможни и расчёта страхования',
+    personalOrHazardous: 'Личные вещи или содержит опасные/ограниченные материалы',
+    personalHazardousHelp: 'Отметьте, если отправляете личные вещи или требуется специальная обработка',
+    shipmentReadiness: 'Готовность к отправке',
+    shipmentTimingDescription: 'Помогите нам спланировать сроки отправки и предоставить точные тарифы',
+    timingHelp: 'Точные сроки помогают нам предлагать самые конкурентные ставки',
+    rateValidityTitle: 'Уведомление о сроке действия ставок:',
+    rateValidityText: 'Указанные ставки действуют до даты истечения, указанной в каждом предложении. Если ваш товар не будет готов к забору к этой дате, ставки могут быть изменены в зависимости от текущей рыночной конъюнктуры.',
+    goodsReadyQuestion: 'Когда ваш товар будет готов к забору?',
+    readyNow: '✅ Готов сейчас — доступен для немедленного забора',
+    readyIn1Week: '📅 В течение 1 недели — в подготовке',
+    readyIn2Weeks: '📅 В течение 2 недель — в производстве',
+    readyIn1Month: '📅 В течение 1 месяца — на стадии планирования',
+    dateNotSet: '❔ Дата ещё не определена',
+    additionalDetails: 'Дополнительная информация (необязательно)',
+    additionalDetailsDescription: 'Укажите особые требования или дополнительную информацию',
+    goodsDescription: 'Краткое описание товара (необязательно)',
+    goodsDescriptionPlaceholder: 'например, Электроника, Мебель, Одежда, Оборудование…',
+    goodsDescriptionHelp: 'Помогает обеспечить правильную обработку и документы',
+    specialRequirements: 'Особые требования к обработке (необязательно)',
+    noSpecialRequirements: 'Особых требований нет',
+    fragileGoods: 'Хрупкий груз — обращаться аккуратно',
+    temperatureControlled: 'Температурный режим',
+    urgentTimeSensitive: 'Срочный/чувствительный ко времени',
+    highValueInsurance: 'Требуется страхование высокой стоимости',
+    otherSpecify: 'Другое (уточните)',
+    pleaseSpecifyInRemarks: 'Уточните в примечаниях',
+    validationGoodsValue: 'Пожалуйста, введите стоимость товаров',
+    validationReadyDate: 'Пожалуйста, выберите, когда товар будет готов'
+  }
+};
+
+// Destination ports by country (comprehensive list)
+export const DESTINATION_PORTS_BY_COUNTRY: Record<string, Array<{code: string, name: string, type: 'sea' | 'air' | 'rail', flag: string, volume?: string}>> = {
+  'FR': [
+    // Ports maritimes
+    { code: 'FRMRS', name: 'Port de Marseille-Fos', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'FRLEH', name: 'Port du Havre', type: 'sea', flag: '🚢', volume: '2.9M TEU' },
+    { code: 'FRDKK', name: 'Port de Dunkerque', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'FRLRT', name: 'Port de La Rochelle', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'FRNTS', name: 'Port de Nantes Saint-Nazaire', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    { code: 'FRBOD', name: 'Port de Bordeaux', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    // Aéroports
+    { code: 'FRCDG', name: 'Aéroport Charles de Gaulle', type: 'air', flag: '✈️', volume: '2.1M tons' },
+    { code: 'FRORY', name: 'Aéroport Paris-Orly', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'FRLYS', name: 'Aéroport Lyon Saint-Exupéry', type: 'air', flag: '✈️', volume: '0.15M tons' },
+    { code: 'FRMRS_AIR', name: 'Aéroport Marseille Provence', type: 'air', flag: '✈️', volume: '0.08M tons' },
+    { code: 'FRNTE', name: 'Aéroport Nice Côte d\'Azur', type: 'air', flag: '✈️', volume: '0.06M tons' },
+    { code: 'FRTLS', name: 'Aéroport Toulouse-Blagnac', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'FRPARIS_RAIL', name: 'Gares de Paris', type: 'rail', flag: '🚂', volume: '15M tons' },
+    { code: 'FRLYON_RAIL', name: 'Gare de Lyon Part-Dieu', type: 'rail', flag: '🚂', volume: '8M tons' },
+    { code: 'FRMARS_RAIL', name: 'Gare de Marseille Saint-Charles', type: 'rail', flag: '🚂', volume: '3M tons' }
+  ],
+  'DE': [
+    // Ports maritimes
+    { code: 'DEHAM', name: 'Port of Hamburg', type: 'sea', flag: '🚢', volume: '8.5M TEU' },
+    { code: 'DEBRE', name: 'Port of Bremen', type: 'sea', flag: '🚢', volume: '4.6M TEU' },
+    { code: 'DEWVN', name: 'Port of Wilhelmshaven', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'DELUB', name: 'Port of Lübeck', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    { code: 'DEROS', name: 'Port of Rostock', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'DEFRA', name: 'Frankfurt Airport', type: 'air', flag: '✈️', volume: '2.0M tons' },
+    { code: 'DEMUC', name: 'Munich Airport', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    { code: 'DEBER', name: 'Berlin Brandenburg Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'DEDUS', name: 'Düsseldorf Airport', type: 'air', flag: '✈️', volume: '0.18M tons' },
+    { code: 'DEHAM_AIR', name: 'Hamburg Airport', type: 'air', flag: '✈️', volume: '0.12M tons' },
+    { code: 'DECGN', name: 'Cologne Bonn Airport', type: 'air', flag: '✈️', volume: '0.8M tons' },
+    { code: 'DESTR', name: 'Stuttgart Airport', type: 'air', flag: '✈️', volume: '0.06M tons' },
+    { code: 'DENUR', name: 'Nuremberg Airport', type: 'air', flag: '✈️', volume: '0.03M tons' },
+    // Gares
+    { code: 'DEBER_RAIL', name: 'Berlin Central Station', type: 'rail', flag: '🚂', volume: '12M tons' },
+    { code: 'DEFRA_RAIL', name: 'Frankfurt Central Station', type: 'rail', flag: '🚂', volume: '18M tons' },
+    { code: 'DEHAM_RAIL', name: 'Hamburg Central Station', type: 'rail', flag: '🚂', volume: '22M tons' },
+    { code: 'DEMUC_RAIL', name: 'Munich Central Station', type: 'rail', flag: '🚂', volume: '14M tons' },
+    { code: 'DECGN_RAIL', name: 'Cologne Central Station', type: 'rail', flag: '🚂', volume: '16M tons' }
+  ],
+  'GB': [
+    // Ports maritimes
+    { code: 'GBFXT', name: 'Port of Felixstowe', type: 'sea', flag: '🚢', volume: '4.0M TEU' },
+    { code: 'GBSOU', name: 'Port of Southampton', type: 'sea', flag: '🚢', volume: '1.9M TEU' },
+    { code: 'GBLIV', name: 'Port of Liverpool', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'GBLOND', name: 'Port of London', type: 'sea', flag: '🚢', volume: '2.8M TEU' },
+    { code: 'GBIMM', name: 'Port of Immingham', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'GBDOV', name: 'Port of Dover', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    // Aéroports
+    { code: 'GBLHR', name: 'London Heathrow Airport', type: 'air', flag: '✈️', volume: '1.8M tons' },
+    { code: 'GBLGW', name: 'London Gatwick Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'GBSTN', name: 'London Stansted Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'GBLUTON', name: 'London Luton Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'GBMAN', name: 'Manchester Airport', type: 'air', flag: '✈️', volume: '0.12M tons' },
+    { code: 'GBEDI', name: 'Edinburgh Airport', type: 'air', flag: '✈️', volume: '0.04M tons' },
+    { code: 'GBBHM', name: 'Birmingham Airport', type: 'air', flag: '✈️', volume: '0.03M tons' },
+    // Gares
+    { code: 'GBLOND_RAIL', name: 'London St Pancras International', type: 'rail', flag: '🚂', volume: '25M tons' },
+    { code: 'GBMAN_RAIL', name: 'Manchester Piccadilly Station', type: 'rail', flag: '🚂', volume: '8M tons' },
+    { code: 'GBBHM_RAIL', name: 'Birmingham New Street Station', type: 'rail', flag: '🚂', volume: '6M tons' }
+  ],
+  'US': [
+    // Ports maritimes
+    { code: 'USLAX', name: 'Port of Los Angeles', type: 'sea', flag: '🚢', volume: '10.7M TEU' },
+    { code: 'USLGB', name: 'Port of Long Beach', type: 'sea', flag: '🚢', volume: '8.1M TEU' },
+    { code: 'USNYC', name: 'Port of New York/New Jersey', type: 'sea', flag: '🚢', volume: '7.8M TEU' },
+    { code: 'USSAV', name: 'Port of Savannah', type: 'sea', flag: '🚢', volume: '4.6M TEU' },
+    { code: 'USSEA', name: 'Port of Seattle', type: 'sea', flag: '🚢', volume: '3.8M TEU' },
+    { code: 'USTAC', name: 'Port of Tacoma', type: 'sea', flag: '🚢', volume: '3.4M TEU' },
+    { code: 'USHOU', name: 'Port of Houston', type: 'sea', flag: '🚢', volume: '3.0M TEU' },
+    { code: 'USMIA', name: 'Port of Miami', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    // Aéroports
+    { code: 'USLAX_AIR', name: 'Los Angeles International Airport (LAX)', type: 'air', flag: '✈️', volume: '2.2M tons' },
+    { code: 'USJFK', name: 'John F. Kennedy International Airport (JFK)', type: 'air', flag: '✈️', volume: '1.3M tons' },
+    { code: 'USMEM', name: 'Memphis International Airport', type: 'air', flag: '✈️', volume: '4.3M tons' },
+    { code: 'USANC', name: 'Anchorage Ted Stevens Airport', type: 'air', flag: '✈️', volume: '3.2M tons' },
+    { code: 'USORD', name: 'O\'Hare International Airport (ORD)', type: 'air', flag: '✈️', volume: '1.8M tons' },
+    { code: 'USMIA_AIR', name: 'Miami International Airport', type: 'air', flag: '✈️', volume: '2.3M tons' },
+    { code: 'USDFW', name: 'Dallas/Fort Worth International Airport (DFW)', type: 'air', flag: '✈️', volume: '0.8M tons' },
+    { code: 'USATL', name: 'Hartsfield-Jackson Atlanta International Airport (ATL)', type: 'air', flag: '✈️', volume: '0.7M tons' },
+    // Gares
+    { code: 'USNYC_RAIL', name: 'New York Penn Station', type: 'rail', flag: '🚂', volume: '45M tons' },
+    { code: 'USCHI_RAIL', name: 'Chicago Union Station', type: 'rail', flag: '🚂', volume: '55M tons' },
+    { code: 'USLAX_RAIL', name: 'Los Angeles Union Station', type: 'rail', flag: '🚂', volume: '35M tons' }
+  ],
+  'ES': [
+    // Ports maritimes
+    { code: 'ESALG', name: 'Port d\'Algésiras', type: 'sea', flag: '🚢', volume: '5.1M TEU' },
+    { code: 'ESVLC', name: 'Port de Valence', type: 'sea', flag: '🚢', volume: '5.4M TEU' },
+    { code: 'ESBCN', name: 'Port de Barcelone', type: 'sea', flag: '🚢', volume: '3.4M TEU' },
+    { code: 'ESBIL', name: 'Port de Bilbao', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    { code: 'ESLAS', name: 'Port de Las Palmas', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    // Aéroports
+    { code: 'ESMAD', name: 'Aéroport de Madrid-Barajas', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    { code: 'ESBCN_AIR', name: 'Aéroport de Barcelone-El Prat', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'ESVLC_AIR', name: 'Aéroport de Valence', type: 'air', flag: '✈️', volume: '0.03M tons' },
+    { code: 'ESBIL_AIR', name: 'Aéroport de Bilbao', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    // Gares
+    { code: 'ESMAD_RAIL', name: 'Gare de Madrid Atocha', type: 'rail', flag: '🚂', volume: '12M tons' },
+    { code: 'ESBCN_RAIL', name: 'Gare de Barcelona Sants', type: 'rail', flag: '🚂', volume: '8M tons' },
+    { code: 'ESVLC_RAIL', name: 'Gare de Valencia Joaquín Sorolla', type: 'rail', flag: '🚂', volume: '4M tons' }
+  ],
+  'IT': [
+    // Ports maritimes
+    { code: 'ITGOA', name: 'Port of Genoa', type: 'sea', flag: '🚢', volume: '2.6M TEU' },
+    { code: 'ITLSP', name: 'Port of La Spezia', type: 'sea', flag: '🚢', volume: '1.4M TEU' },
+    { code: 'ITLIV', name: 'Port of Livorno', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    { code: 'ITNAS', name: 'Port of Naples', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'ITVEN', name: 'Port of Venice', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    // Aéroports
+    { code: 'ITROM', name: 'Rome Fiumicino Airport', type: 'air', flag: '✈️', volume: '0.18M tons' },
+    { code: 'ITMIL', name: 'Milan Malpensa Airport', type: 'air', flag: '✈️', volume: '0.6M tons' },
+    { code: 'ITVEN_AIR', name: 'Venice Marco Polo Airport', type: 'air', flag: '✈️', volume: '0.03M tons' },
+    { code: 'ITNAS_AIR', name: 'Naples Airport', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    // Gares
+    { code: 'ITROM_RAIL', name: 'Roma Termini Station', type: 'rail', flag: '🚂', volume: '9M tons' },
+    { code: 'ITMIL_RAIL', name: 'Milano Centrale Station', type: 'rail', flag: '🚂', volume: '15M tons' },
+    { code: 'ITVEN_RAIL', name: 'Venezia Santa Lucia Station', type: 'rail', flag: '🚂', volume: '5M tons' }
+  ],
+  'NL': [
+    // Ports maritimes
+    { code: 'NLRTM', name: 'Port of Rotterdam', type: 'sea', flag: '🚢', volume: '14.8M TEU' },
+    { code: 'NLAMS', name: 'Port of Amsterdam', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    // Aéroports
+    { code: 'NLAMS_AIR', name: 'Amsterdam Schiphol Airport', type: 'air', flag: '✈️', volume: '1.7M tons' },
+    { code: 'NLEIN', name: 'Eindhoven Airport', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    // Gares
+    { code: 'NLAMS_RAIL', name: 'Amsterdam Centraal Station', type: 'rail', flag: '🚂', volume: '8M tons' },
+    { code: 'NLRTM_RAIL', name: 'Rotterdam Centraal Station', type: 'rail', flag: '🚂', volume: '25M tons' },
+    { code: 'NLHAG_RAIL', name: 'Den Haag Centraal Station', type: 'rail', flag: '🚂', volume: '4M tons' }
+  ],
+  'BE': [
+    // Ports maritimes
+    { code: 'BEANR', name: 'Port d\'Anvers', type: 'sea', flag: '🚢', volume: '12.0M TEU' },
+    { code: 'BEZEE', name: 'Port de Zeebruges', type: 'sea', flag: '🚢', volume: '1.6M TEU' },
+    // Aéroports
+    { code: 'BEBRU', name: 'Aéroport de Bruxelles-National', type: 'air', flag: '✈️', volume: '0.8M tons' },
+    { code: 'BELIE', name: 'Aéroport de Liège', type: 'air', flag: '✈️', volume: '0.9M tons' },
+    // Gares
+    { code: 'BEBRU_RAIL', name: 'Gare centrale de Bruxelles', type: 'rail', flag: '🚂', volume: '6M tons' },
+    { code: 'BEANR_RAIL', name: 'Gare centrale d\'Anvers', type: 'rail', flag: '🚂', volume: '18M tons' }
+  ],
+  'CA': [
+    // Ports maritimes
+    { code: 'CAVAN', name: 'Port de Vancouver', type: 'sea', flag: '🚢', volume: '3.4M TEU' },
+    { code: 'CAMON', name: 'Port de Montréal', type: 'sea', flag: '🚢', volume: '1.7M TEU' },
+    { code: 'CAHAL', name: 'Port de Halifax', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    // Aéroports
+    { code: 'CAYVR', name: 'Aéroport international de Vancouver', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    { code: 'CAYYZ', name: 'Aéroport international de Toronto Pearson', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    { code: 'CAYMQ', name: 'Aéroport international de Montréal Trudeau', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'CAYYC', name: 'Aéroport international de Calgary', type: 'air', flag: '✈️', volume: '0.15M tons' },
+    // Gares
+    { code: 'CAVAN_RAIL', name: 'Gare centrale du Pacifique de Vancouver', type: 'rail', flag: '🚂', volume: '28M tons' },
+    { code: 'CATOR_RAIL', name: 'Gare Union de Toronto', type: 'rail', flag: '🚂', volume: '15M tons' }
+  ],
+  'AU': [
+    // Ports maritimes
+    { code: 'AUSYD', name: 'Port de Sydney', type: 'sea', flag: '🚢', volume: '2.6M TEU' },
+    { code: 'AUMEL', name: 'Port de Melbourne', type: 'sea', flag: '🚢', volume: '3.0M TEU' },
+    { code: 'AUBNE', name: 'Port de Brisbane', type: 'sea', flag: '🚢', volume: '1.3M TEU' },
+    { code: 'AUFRE', name: 'Port de Fremantle', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    // Aéroports
+    { code: 'AUSYD_AIR', name: 'Aéroport de Sydney Kingsford Smith', type: 'air', flag: '✈️', volume: '0.4M tons' },
+    { code: 'AUMEL_AIR', name: 'Aéroport de Melbourne Tullamarine', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    { code: 'AUBNE_AIR', name: 'Aéroport de Brisbane', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'AUPER_AIR', name: 'Aéroport de Perth', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'JP': [
+    // Ports maritimes
+    { code: 'JPTYO', name: 'Port of Tokyo', type: 'sea', flag: '🚢', volume: '4.3M TEU' },
+    { code: 'JPYOK', name: 'Port of Yokohama', type: 'sea', flag: '🚢', volume: '2.9M TEU' },
+    { code: 'JPOSA', name: 'Port of Osaka', type: 'sea', flag: '🚢', volume: '2.4M TEU' },
+    { code: 'JPNGO', name: 'Port of Nagoya', type: 'sea', flag: '🚢', volume: '2.9M TEU' },
+    { code: 'JPKOB', name: 'Port of Kobe', type: 'sea', flag: '🚢', volume: '2.7M TEU' },
+    // Aéroports
+    { code: 'JPNRT', name: 'Tokyo Narita International Airport', type: 'air', flag: '✈️', volume: '2.3M tons' },
+    { code: 'JPHND', name: 'Tokyo Haneda Airport', type: 'air', flag: '✈️', volume: '0.9M tons' },
+    { code: 'JPKIX', name: 'Osaka Kansai International Airport', type: 'air', flag: '✈️', volume: '0.8M tons' },
+    { code: 'JPNGO_AIR', name: 'Nagoya Chubu Centrair International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    // Gares
+    { code: 'JPTYO_RAIL', name: 'Tokyo Station', type: 'rail', flag: '🚂', volume: '32M tons' },
+    { code: 'JPOSA_RAIL', name: 'Osaka Station', type: 'rail', flag: '🚂', volume: '18M tons' },
+    { code: 'JPNGO_RAIL', name: 'Nagoya Station', type: 'rail', flag: '🚂', volume: '12M tons' }
+  ],
+  'CN': [
+    // Ports maritimes
+    { code: 'CNSHA', name: 'Port de Shanghai', type: 'sea', flag: '🚢', volume: '47.0M TEU' },
+    { code: 'CNSZX', name: 'Port de Shenzhen', type: 'sea', flag: '🚢', volume: '25.2M TEU' },
+    { code: 'CNNGB', name: 'Port de Ningbo-Zhoushan', type: 'sea', flag: '🚢', volume: '28.7M TEU' },
+    { code: 'CNQIN', name: 'Port de Qingdao', type: 'sea', flag: '🚢', volume: '22.0M TEU' },
+    { code: 'CNGUA', name: 'Port de Guangzhou', type: 'sea', flag: '🚢', volume: '23.2M TEU' },
+    { code: 'CNTIA', name: 'Port de Tianjin', type: 'sea', flag: '🚢', volume: '18.5M TEU' },
+    // Aéroports
+    { code: 'CNPVG', name: 'Aéroport international de Shanghai Pudong', type: 'air', flag: '✈️', volume: '3.7M tons' },
+    { code: 'CNPEK', name: 'Aéroport international de Pékin Capital', type: 'air', flag: '✈️', volume: '2.0M tons' },
+    { code: 'CNCAN', name: 'Aéroport international de Guangzhou Baiyun', type: 'air', flag: '✈️', volume: '1.8M tons' },
+    { code: 'CNSZX_AIR', name: 'Aéroport international de Shenzhen Bao\'an', type: 'air', flag: '✈️', volume: '1.2M tons' },
+    { code: 'CNHGH', name: 'Aéroport international de Hangzhou Xiaoshan', type: 'air', flag: '✈️', volume: '0.7M tons' },
+    // Gares
+    { code: 'CNBEI_RAIL', name: 'Gare ferroviaire de Pékin', type: 'rail', flag: '🚂', volume: '95M tons' },
+    { code: 'CNSHA_RAIL', name: 'Gare ferroviaire de Shanghai', type: 'rail', flag: '🚂', volume: '85M tons' },
+    { code: 'CNGUA_RAIL', name: 'Gare ferroviaire de Guangzhou', type: 'rail', flag: '🚂', volume: '65M tons' }
+  ],
+  'KR': [
+    // Ports maritimes
+    { code: 'KRPUS', name: 'Port of Busan', type: 'sea', flag: '🚢', volume: '22.0M TEU' },
+    { code: 'KRICN', name: 'Port of Incheon', type: 'sea', flag: '🚢', volume: '3.0M TEU' },
+    { code: 'KRULZ', name: 'Port of Ulsan', type: 'sea', flag: '🚢', volume: '1.7M TEU' },
+    // Aéroports
+    { code: 'KRICN_AIR', name: 'Incheon International Airport', type: 'air', flag: '✈️', volume: '3.0M tons' },
+    { code: 'KRGMP', name: 'Gimpo Airport', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    { code: 'KRPUS_AIR', name: 'Busan Gimhae International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'KRSEO_RAIL', name: 'Seoul Station', type: 'rail', flag: '🚂', volume: '24M tons' },
+    { code: 'KRPUS_RAIL', name: 'Busan Station', type: 'rail', flag: '🚂', volume: '18M tons' }
+  ],
+  'SG': [
+    // Ports maritimes
+    { code: 'SGSIN', name: 'Port of Singapore', type: 'sea', flag: '🚢', volume: '36.9M TEU' },
+    // Aéroports
+    { code: 'SGSIN_AIR', name: 'Singapore Changi Airport', type: 'air', flag: '✈️', volume: '2.0M tons' }
+  ],
+  'MY': [
+    // Ports maritimes
+    { code: 'MYPKG', name: 'Port Klang', type: 'sea', flag: '🚢', volume: '13.5M TEU' },
+    { code: 'MYTPP', name: 'Port of Tanjung Pelepas', type: 'sea', flag: '🚢', volume: '9.1M TEU' },
+    // Aéroports
+    { code: 'MYKUL', name: 'Kuala Lumpur International Airport', type: 'air', flag: '✈️', volume: '0.7M tons' }
+  ],
+  'TH': [
+    // Ports maritimes
+    { code: 'THLCH', name: 'Port of Laem Chabang', type: 'sea', flag: '🚢', volume: '8.1M TEU' },
+    { code: 'THBKK', name: 'Port of Bangkok', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    // Aéroports
+    { code: 'THBKK_AIR', name: 'Bangkok Suvarnabhumi Airport', type: 'air', flag: '✈️', volume: '1.2M tons' }
+  ],
+  'IN': [
+    // Ports maritimes
+    { code: 'INJNP', name: 'Jawaharlal Nehru Port', type: 'sea', flag: '🚢', volume: '5.1M TEU' },
+    { code: 'INMUN', name: 'Port of Mumbai', type: 'sea', flag: '🚢', volume: '4.7M TEU' },
+    { code: 'INCHE', name: 'Port of Chennai', type: 'sea', flag: '🚢', volume: '2.1M TEU' },
+    { code: 'INCOK', name: 'Port of Cochin', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    // Aéroports
+    { code: 'INDEL', name: 'Delhi Indira Gandhi International Airport', type: 'air', flag: '✈️', volume: '1.1M tons' },
+    { code: 'INMUN_AIR', name: 'Mumbai Chhatrapati Shivaji Maharaj International Airport', type: 'air', flag: '✈️', volume: '0.9M tons' },
+    { code: 'INBLR', name: 'Bangalore Kempegowda International Airport', type: 'air', flag: '✈️', volume: '0.4M tons' },
+    { code: 'INCHE_AIR', name: 'Chennai International Airport', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'BR': [
+    // Ports maritimes
+    { code: 'BRSFS', name: 'Port de Santos', type: 'sea', flag: '🚢', volume: '4.3M TEU' },
+    { code: 'BRRIO', name: 'Port de Rio de Janeiro', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'BRPAR', name: 'Port de Paranaguá', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    // Aéroports
+    { code: 'BRGRU', name: 'Aéroport international de São Paulo Guarulhos', type: 'air', flag: '✈️', volume: '0.4M tons' },
+    { code: 'BRRIO_AIR', name: 'Aéroport international de Rio de Janeiro Galeão', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'BRBSB', name: 'Aéroport international de Brasília', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'MX': [
+    // Ports maritimes
+    { code: 'MXMAN', name: 'Port of Manzanillo', type: 'sea', flag: '🚢', volume: '3.0M TEU' },
+    { code: 'MXLAZ', name: 'Port of Lázaro Cárdenas', type: 'sea', flag: '🚢', volume: '1.3M TEU' },
+    { code: 'MXVER', name: 'Port of Veracruz', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    // Aéroports
+    { code: 'MXMEX', name: 'Mexico City International Airport', type: 'air', flag: '✈️', volume: '0.7M tons' },
+    { code: 'MXCUN', name: 'Cancún International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'AE': [
+    // Ports maritimes
+    { code: 'AEJEA', name: 'Port de Jebel Ali', type: 'sea', flag: '🚢', volume: '14.1M TEU' },
+    { code: 'AESHJ', name: 'Port de Sharjah', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    // Aéroports
+    { code: 'AEDXB', name: 'Aéroport international de Dubaï', type: 'air', flag: '✈️', volume: '2.9M tons' },
+    { code: 'AEAUH', name: 'Aéroport international d\'Abu Dhabi', type: 'air', flag: '✈️', volume: '0.7M tons' }
+  ],
+  'TR': [
+    // Ports maritimes
+    { code: 'TRAMB', name: 'Port of Ambarli', type: 'sea', flag: '🚢', volume: '3.0M TEU' },
+    { code: 'TRIST', name: 'Port of Istanbul', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    { code: 'TRIZM', name: 'Port of Izmir', type: 'sea', flag: '🚢', volume: '1.4M TEU' },
+    // Aéroports
+    { code: 'TRIST_AIR', name: 'Istanbul Airport', type: 'air', flag: '✈️', volume: '1.4M tons' },
+    { code: 'TRSAW', name: 'Sabiha Gökçen Airport', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    { code: 'TRIZM_AIR', name: 'Izmir Adnan Menderes Airport', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'RU': [
+    // Ports maritimes
+    { code: 'RULED', name: 'Port of Saint Petersburg', type: 'sea', flag: '🚢', volume: '2.1M TEU' },
+    { code: 'RUNVS', name: 'Port of Novorossiysk', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'RUVVO', name: 'Port of Vladivostok', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    // Aéroports
+    { code: 'RUSVO', name: 'Moscow Sheremetyevo International Airport', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    { code: 'RULED_AIR', name: 'Saint Petersburg Pulkovo Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'RUMOS_RAIL', name: 'Moscow Kazansky Railway Station', type: 'rail', flag: '🚂', volume: '75M tons' },
+    { code: 'RULED_RAIL', name: 'Saint Petersburg Baltic Station', type: 'rail', flag: '🚂', volume: '35M tons' }
+  ],
+  'ZA': [
+    // Ports maritimes
+    { code: 'ZADUR', name: 'Port of Durban', type: 'sea', flag: '🚢', volume: '2.9M TEU' },
+    { code: 'ZACPT', name: 'Port of Cape Town', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    // Aéroports
+    { code: 'ZAJNB', name: 'OR Tambo International Airport', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    { code: 'ZACPT_AIR', name: 'Cape Town International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+  'EG': [
+    // Ports maritimes
+    { code: 'EGALY', name: 'Port d\'Alexandrie', type: 'sea', flag: '🚢', volume: '1.8M TEU' },
+    { code: 'EGDKH', name: 'Port de Damiette', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'EGSEZ', name: 'Port de Suez', type: 'sea', flag: '🚢', volume: '3.5M TEU' },
+    // Aéroports
+    { code: 'EGCAI', name: 'Aéroport international du Caire', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'CL': [
+    // Ports maritimes
+    { code: 'CLVAP', name: 'Port de Valparaíso', type: 'sea', flag: '🚢', volume: '1.0M TEU' },
+    { code: 'CLSAI', name: 'Port de San Antonio', type: 'sea', flag: '🚢', volume: '1.4M TEU' },
+    // Aéroports
+    { code: 'CLSCL', name: 'Aéroport international de Santiago', type: 'air', flag: '✈️', volume: '0.5M tons' }
+  ],
+  'AR': [
+    // Ports maritimes
+    { code: 'ARBUE', name: 'Port de Buenos Aires', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    // Aéroports
+    { code: 'AREZE', name: 'Aéroport international d\'Ezeiza', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'PE': [
+    // Ports maritimes
+    { code: 'PECLL', name: 'Port of Callao', type: 'sea', flag: '🚢', volume: '2.3M TEU' },
+    // Aéroports
+    { code: 'PELIM', name: 'Jorge Chávez International Airport', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'CO': [
+    // Ports maritimes
+    { code: 'COCTG', name: 'Port de Cartagena', type: 'sea', flag: '🚢', volume: '3.0M TEU' },
+    { code: 'COBAR', name: 'Port de Barranquilla', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    // Aéroports
+    { code: 'COBOG', name: 'Aéroport international de Bogotá El Dorado', type: 'air', flag: '✈️', volume: '0.7M tons' }
+  ],
+  'MA': [
+    // Ports maritimes
+    { code: 'MACAS', name: 'Port of Casablanca', type: 'sea', flag: '🚢', volume: '1.3M TEU' },
+    { code: 'MATAN', name: 'Port of Tanger Med', type: 'sea', flag: '🚢', volume: '5.8M TEU' },
+    // Aéroports
+    { code: 'MACMN', name: 'Casablanca Mohammed V International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+  'NG': [
+    // Ports maritimes
+    { code: 'NGLAG', name: 'Port of Lagos Apapa', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
+    { code: 'NGTCR', name: 'Port of Tin Can Island', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    // Aéroports
+    { code: 'NGLOS', name: 'Lagos Murtala Muhammed International Airport', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'DK': [
+    // Ports maritimes
+    { code: 'DKAAR', name: 'Port of Aarhus', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'DKCPH', name: 'Port of Copenhagen', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'DKCPH_AIR', name: 'Copenhagen Airport', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    // Gares
+    { code: 'DKCPH_RAIL', name: 'Copenhagen Central Station', type: 'rail', flag: '🚂', volume: '4M tons' }
+  ],
+  'SE': [
+    // Ports maritimes
+    { code: 'SEGOT', name: 'Port of Gothenburg', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'SESTO', name: 'Port of Stockholm', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    // Aéroports
+    { code: 'SEARN', name: 'Stockholm Arlanda Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'SEGOT_AIR', name: 'Gothenburg Landvetter Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'SESTO_RAIL', name: 'Stockholm Central Station', type: 'rail', flag: '🚂', volume: '6M tons' },
+    { code: 'SEGOT_RAIL', name: 'Gothenburg Central Station', type: 'rail', flag: '🚂', volume: '8M tons' }
+  ],
+  'FI': [
+    // Ports maritimes
+    { code: 'FIHAM', name: 'Port de Hamina-Kotka', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'FIHEL', name: 'Port d\'Helsinki', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    // Aéroports
+    { code: 'FIHEL_AIR', name: 'Aéroport d\'Helsinki-Vantaa', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    // Gares
+    { code: 'FIHEL_RAIL', name: 'Gare centrale d\'Helsinki', type: 'rail', flag: '🚂', volume: '5M tons' }
+  ],
+  'NO': [
+    // Ports maritimes
+    { code: 'NOOSL', name: 'Port of Oslo', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    { code: 'NOBERG', name: 'Port of Bergen', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'NOOSL_AIR', name: 'Oslo Gardermoen Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    // Gares
+    { code: 'NOOSL_RAIL', name: 'Oslo Central Station', type: 'rail', flag: '🚂', volume: '5M tons' }
+  ],
+  'PL': [
+    // Ports maritimes
+    { code: 'PLGDN', name: 'Port of Gdansk', type: 'sea', flag: '🚢', volume: '2.1M TEU' },
+    { code: 'PLGDY', name: 'Port of Gdynia', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    { code: 'PLSZZ', name: 'Port of Szczecin', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    // Aéroports
+    { code: 'PLWAW', name: 'Warsaw Chopin Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'PLKRK', name: 'Kraków John Paul II International Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'PLWAR_RAIL', name: 'Warsaw Central Station', type: 'rail', flag: '🚂', volume: '12M tons' },
+    { code: 'PLKRK_RAIL', name: 'Kraków Main Station', type: 'rail', flag: '🚂', volume: '6M tons' }
+  ],
+  'CZ': [
+    // Aéroports
+    { code: 'CZPRG', name: 'Aéroport de Prague Václav Havel', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'CZPRG_RAIL', name: 'Gare centrale de Prague', type: 'rail', flag: '🚂', volume: '8M tons' }
+  ],
+  'AT': [
+    // Aéroports
+    { code: 'ATVIE', name: 'Aéroport international de Vienne', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    // Gares
+    { code: 'ATVIE_RAIL', name: 'Gare centrale de Vienne', type: 'rail', flag: '🚂', volume: '10M tons' }
+  ],
+  'CH': [
+    // Aéroports
+    { code: 'CHZUR', name: 'Aéroport de Zürich', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    { code: 'CHGVA', name: 'Aéroport de Genève', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'CHZUR_RAIL', name: 'Gare centrale de Zürich', type: 'rail', flag: '🚂', volume: '7M tons' },
+    { code: 'CHGVA_RAIL', name: 'Gare de Genève-Cornavin', type: 'rail', flag: '🚂', volume: '3M tons' }
+  ],
+  'PT': [
+    // Ports maritimes
+    { code: 'PTLIS', name: 'Port of Lisbon', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'PTLEI', name: 'Port of Leixões', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    // Aéroports
+    { code: 'PTLIS_AIR', name: 'Lisbon Portela Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'PTOPO', name: 'Porto Francisco Sá Carneiro Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'PTLIS_RAIL', name: 'Lisbon Santa Apolónia Station', type: 'rail', flag: '🚂', volume: '3M tons' },
+    { code: 'PTOPO_RAIL', name: 'Porto Campanhã Station', type: 'rail', flag: '🚂', volume: '2M tons' }
+  ],
+  'GR': [
+    // Ports maritimes
+    { code: 'GRPIR', name: 'Port of Piraeus', type: 'sea', flag: '🚢', volume: '5.4M TEU' },
+    { code: 'GRTHE', name: 'Port of Thessaloniki', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    // Aéroports
+    { code: 'GRATH', name: 'Athens Eleftherios Venizelos Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'GRATH_RAIL', name: 'Athens Railway Station', type: 'rail', flag: '🚂', volume: '2M tons' }
+  ],
+  'HK': [
+    // Ports maritimes
+    { code: 'HKHKG', name: 'Port of Hong Kong', type: 'sea', flag: '🚢', volume: '18.1M TEU' },
+    // Aéroports
+    { code: 'HKHKG_AIR', name: 'Hong Kong International Airport', type: 'air', flag: '✈️', volume: '5.1M tons' }
+  ],
+  'IE': [
+    // Ports maritimes
+    { code: 'IEDUB', name: 'Port of Dublin', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    { code: 'IECOR', name: 'Port of Cork', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    // Aéroports
+    { code: 'IEDUB_AIR', name: 'Dublin Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'IECOR_AIR', name: 'Cork Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'IEDUB_RAIL', name: 'Dublin Heuston Station', type: 'rail', flag: '🚂', volume: '2M tons' }
+  ],
+  'NZ': [
+    // Ports maritimes
+    { code: 'NZAKL', name: 'Port of Auckland', type: 'sea', flag: '🚢', volume: '1.0M TEU' },
+    { code: 'NZTRG', name: 'Port of Tauranga', type: 'sea', flag: '🚢', volume: '1.3M TEU' },
+    { code: 'NZWEL', name: 'Port of Wellington', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    // Aéroports
+    { code: 'NZAKL_AIR', name: 'Auckland Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'NZWEL_AIR', name: 'Wellington Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'NZCHC_AIR', name: 'Christchurch Airport', type: 'air', flag: '✈️', volume: '0.08M tons' }
+  ],
+  'TW': [
+    // Ports maritimes
+    { code: 'TWKHH', name: 'Port of Kaohsiung', type: 'sea', flag: '🚢', volume: '9.9M TEU' },
+    { code: 'TWTPE', name: 'Port of Taipei', type: 'sea', flag: '🚢', volume: '1.6M TEU' },
+    { code: 'TWTCG', name: 'Port of Taichung', type: 'sea', flag: '🚢', volume: '1.7M TEU' },
+    // Aéroports
+    { code: 'TWTPE_AIR', name: 'Taipei Taoyuan International Airport', type: 'air', flag: '✈️', volume: '2.3M tons' },
+    { code: 'TWKHH_AIR', name: 'Kaohsiung International Airport', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    // Gares
+    { code: 'TWTPE_RAIL', name: 'Taipei Main Station', type: 'rail', flag: '🚂', volume: '8M tons' },
+    { code: 'TWKHH_RAIL', name: 'Kaohsiung Railway Station', type: 'rail', flag: '🚂', volume: '4M tons' }
+  ],
+  'QA': [
+    // Ports maritimes
+    { code: 'QADOH', name: 'Port of Doha', type: 'sea', flag: '🚢', volume: '1.3M TEU' },
+    { code: 'QAMES', name: 'Port of Mesaieed', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    // Aéroports
+    { code: 'QADOH_AIR', name: 'Doha Hamad International Airport', type: 'air', flag: '✈️', volume: '2.3M tons' }
+  ],
+  'SA': [
+    // Ports maritimes
+    { code: 'SAJED', name: 'Port of Jeddah', type: 'sea', flag: '🚢', volume: '4.0M TEU' },
+    { code: 'SADAM', name: 'Port of Dammam', type: 'sea', flag: '🚢', volume: '1.8M TEU' },
+    { code: 'SAYAN', name: 'Port of Yanbu', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    // Aéroports
+    { code: 'SARUH', name: 'Riyadh King Khalid International Airport', type: 'air', flag: '✈️', volume: '0.4M tons' },
+    { code: 'SAJED_AIR', name: 'Jeddah King Abdulaziz International Airport', type: 'air', flag: '✈️', volume: '0.7M tons' },
+    { code: 'SADAM_AIR', name: 'Dammam King Fahd International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+  'UA': [
+    // Ports maritimes
+    { code: 'UAODE', name: 'Port of Odesa', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    { code: 'UAIEV', name: 'Port of Chornomorsk', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    { code: 'UAMYK', name: 'Port of Mykolaiv', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'UAKBP', name: 'Kyiv Boryspil International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'UAODS', name: 'Odesa International Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'UAKIV_RAIL', name: 'Kyiv Central Railway Station', type: 'rail', flag: '🚂', volume: '18M tons' },
+    { code: 'UAODE_RAIL', name: 'Odesa Railway Station', type: 'rail', flag: '🚂', volume: '8M tons' }
+  ],
+  'PH': [
+    // Ports maritimes
+    { code: 'PHMNL', name: 'Port of Manila', type: 'sea', flag: '🚢', volume: '4.2M TEU' },
+    { code: 'PHCEB', name: 'Port of Cebu', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    { code: 'PHBAT', name: 'Port of Batangas', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    // Aéroports
+    { code: 'PHMNL_AIR', name: 'Ninoy Aquino International Airport', type: 'air', flag: '✈️', volume: '0.6M tons' },
+    { code: 'PHCEB_AIR', name: 'Mactan-Cebu International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'PHCRK', name: 'Clark International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'VN': [
+    // Ports maritimes
+    { code: 'VNSGN', name: 'Port of Ho Chi Minh City', type: 'sea', flag: '🚢', volume: '7.2M TEU' },
+    { code: 'VNHAN', name: 'Port of Haiphong', type: 'sea', flag: '🚢', volume: '2.1M TEU' },
+    { code: 'VNDAN', name: 'Port of Da Nang', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    // Aéroports
+    { code: 'VNSGN_AIR', name: 'Ho Chi Minh City Tan Son Nhat International Airport', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    { code: 'VNHAN_AIR', name: 'Hanoi Noi Bai International Airport', type: 'air', flag: '✈️', volume: '0.4M tons' },
+    { code: 'VNDAN_AIR', name: 'Da Nang International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'VNHAN_RAIL', name: 'Hanoi Railway Station', type: 'rail', flag: '🚂', volume: '12M tons' },
+    { code: 'VNSGN_RAIL', name: 'Ho Chi Minh City Railway Station', type: 'rail', flag: '🚂', volume: '8M tons' }
+  ],
+  'ID': [
+    // Ports maritimes
+    { code: 'IDJKT', name: 'Jakarta Tanjung Priok Port', type: 'sea', flag: '🚢', volume: '7.6M TEU' },
+    { code: 'IDSUB', name: 'Port of Surabaya', type: 'sea', flag: '🚢', volume: '3.4M TEU' },
+    { code: 'IDBLW', name: 'Belawan Medan Port', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    // Aéroports
+    { code: 'IDJKT_AIR', name: 'Jakarta Soekarno-Hatta International Airport', type: 'air', flag: '✈️', volume: '0.7M tons' },
+    { code: 'IDSUB_AIR', name: 'Surabaya Juanda International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'IDMED_AIR', name: 'Medan Kualanamu International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'IL': [
+    // Ports maritimes
+    { code: 'ILHFA', name: 'Port of Haifa', type: 'sea', flag: '🚢', volume: '1.6M TEU' },
+    { code: 'ILASD', name: 'Port of Ashdod', type: 'sea', flag: '🚢', volume: '1.7M TEU' },
+    { code: 'ILEIL', name: 'Port of Eilat', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    // Aéroports
+    { code: 'ILTLV', name: 'Tel Aviv Ben Gurion Airport', type: 'air', flag: '✈️', volume: '0.4M tons' },
+    { code: 'ILHFA_AIR', name: 'Haifa Airport', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'KZ': [
+    // Ports maritimes
+    { code: 'KZAKT', name: 'Port of Aktau', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'KZALA', name: 'Almaty International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'KZNUR', name: 'Nur-Sultan Nazarbayev International Airport', type: 'air', flag: '✈️', volume: '0.08M tons' },
+    // Gares
+    { code: 'KZALA_RAIL', name: 'Almaty Railway Station', type: 'rail', flag: '🚂', volume: '25M tons' },
+    { code: 'KZNUR_RAIL', name: 'Nur-Sultan Railway Station', type: 'rail', flag: '🚂', volume: '15M tons' }
+  ],
+  'PK': [
+    // Ports maritimes
+    { code: 'PKKAR', name: 'Port of Karachi', type: 'sea', flag: '🚢', volume: '2.4M TEU' },
+    { code: 'PKQAS', name: 'Port Qasim', type: 'sea', flag: '🚢', volume: '1.3M TEU' },
+    { code: 'PKGWA', name: 'Port of Gwadar', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    // Aéroports
+    { code: 'PKKAR_AIR', name: 'Jinnah International Airport', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    { code: 'PKLHE', name: 'Allama Iqbal International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'PKISB', name: 'Islamabad International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'PKKAR_RAIL', name: 'Karachi City Railway Station', type: 'rail', flag: '🚂', volume: '8M tons' },
+    { code: 'PKLHE_RAIL', name: 'Lahore Railway Station', type: 'rail', flag: '🚂', volume: '6M tons' }
+  ],
+  'LK': [
+    // Ports maritimes
+    { code: 'LKCMB', name: 'Port of Colombo', type: 'sea', flag: '🚢', volume: '7.2M TEU' },
+    { code: 'LKHMS', name: 'Port of Hambantota', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    // Aéroports
+    { code: 'LKCMB_AIR', name: 'Colombo Bandaranaike International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+  'BD': [
+    // Ports maritimes
+    { code: 'BDCGP', name: 'Port de Chittagong', type: 'sea', flag: '🚢', volume: '3.1M TEU' },
+    { code: 'BDDHA', name: 'Port de Dhaka', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    { code: 'BDMGL', name: 'Port de Mongla', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    // Aéroports
+    { code: 'BDDAC', name: 'Aéroport international de Dhaka Hazrat Shahjalal', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    { code: 'BDCGP_AIR', name: 'Aéroport international de Chittagong Shah Amanat', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'BDDHA_RAIL', name: 'Gare ferroviaire de Dhaka', type: 'rail', flag: '🚂', volume: '4M tons' },
+    { code: 'BDCGP_RAIL', name: 'Gare ferroviaire de Chittagong', type: 'rail', flag: '🚂', volume: '3M tons' }
+  ],
+  'OM': [
+    // Ports maritimes
+    { code: 'OMSAL', name: 'Port of Salalah', type: 'sea', flag: '🚢', volume: '5.0M TEU' },
+    { code: 'OMMUS', name: 'Port of Muscat', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'OMSOH', name: 'Port of Sohar', type: 'sea', flag: '🚢', volume: '4.1M TEU' },
+    // Aéroports
+    { code: 'OMMUS_AIR', name: 'Muscat International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'OMSAL_AIR', name: 'Salalah Airport', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'KW': [
+    // Ports maritimes
+    { code: 'KWKWI', name: 'Port of Kuwait', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    { code: 'KWSHU', name: 'Port of Shuwaikh', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    // Aéroports
+    { code: 'KWKWI_AIR', name: 'Kuwait International Airport', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'JO': [
+    // Ports maritimes
+    { code: 'JOAQJ', name: 'Port of Aqaba', type: 'sea', flag: '🚢', volume: '0.9M TEU' },
+    // Aéroports
+    { code: 'JOAMM', name: 'Amman Queen Alia International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'JOAQJ_AIR', name: 'Aqaba King Hussein International Airport', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'LB': [
+    // Ports maritimes
+    { code: 'LBBEY', name: 'Port of Beirut', type: 'sea', flag: '🚢', volume: '1.0M TEU' },
+    { code: 'LBTRI', name: 'Port of Tripoli', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'LBBEY_AIR', name: 'Beirut Rafic Hariri International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'IR': [
+    // Ports maritimes
+    { code: 'IRBND', name: 'Port of Bandar Abbas', type: 'sea', flag: '🚢', volume: '2.8M TEU' },
+    { code: 'IRIMAM', name: 'Imam Khomeini Port', type: 'sea', flag: '🚢', volume: '2.2M TEU' },
+    { code: 'IRBZG', name: 'Port of Bushehr', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    // Aéroports
+    { code: 'IRIKU', name: 'Tehran Imam Khomeini International Airport', type: 'air', flag: '✈️', volume: '0.4M tons' },
+    { code: 'IRMHD', name: 'Mashhad Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'IRTEH_RAIL', name: 'Tehran Railway Station', type: 'rail', flag: '🚂', volume: '10M tons' },
+    { code: 'IRISF_RAIL', name: 'Isfahan Railway Station', type: 'rail', flag: '🚂', volume: '4M tons' }
+  ],
+  'HR': [
+    // Ports maritimes
+    { code: 'HRRJK', name: 'Port of Rijeka', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'HRSPT', name: 'Port of Split', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'HRZAG', name: 'Port of Zadar', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    // Aéroports
+    { code: 'HRZAG_AIR', name: 'Zagreb Franjo Tuđman Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'HRSPT_AIR', name: 'Split Airport', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    // Gares
+    { code: 'HRZAG_RAIL', name: 'Zagreb Central Station', type: 'rail', flag: '🚂', volume: '3M tons' }
+  ],
+  'RO': [
+    // Ports maritimes
+    { code: 'ROCND', name: 'Port of Constanta', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    { code: 'ROGLT', name: 'Port of Galati', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'ROBUH', name: 'Bucharest Henri Coandă International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'ROCND_AIR', name: 'Constanta Airport', type: 'air', flag: '✈️', volume: '0.01M tons' },
+    // Gares
+    { code: 'ROBUH_RAIL', name: 'Bucharest North Railway Station', type: 'rail', flag: '🚂', volume: '8M tons' },
+    { code: 'ROCND_RAIL', name: 'Constanta Railway Station', type: 'rail', flag: '🚂', volume: '5M tons' }
+  ],
+  'BG': [
+    // Ports maritimes
+    { code: 'BGVAR', name: 'Port de Varna', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'BGBOJ', name: 'Port de Bourgas', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    // Aéroports
+    { code: 'BGSOF', name: 'Aéroport de Sofia', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'BGVAR_AIR', name: 'Aéroport de Varna', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    // Gares
+    { code: 'BGSOF_RAIL', name: 'Gare centrale de Sofia', type: 'rail', flag: '🚂', volume: '4M tons' }
+  ],
+  'RS': [
+    // Ports maritimes
+    { code: 'RSBEG', name: 'Port of Belgrade', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    { code: 'RSNOV', name: 'Port of Novi Sad', type: 'sea', flag: '🚢', volume: '0.05M TEU' },
+    // Aéroports
+    { code: 'RSBEG_AIR', name: 'Belgrade Nikola Tesla Airport', type: 'air', flag: '✈️', volume: '0.08M tons' },
+    // Gares
+    { code: 'RSBEG_RAIL', name: 'Belgrade Central Station', type: 'rail', flag: '🚂', volume: '6M tons' }
+  ],
+  'HU': [
+    // Ports maritimes
+    { code: 'HUBUD', name: 'Port of Budapest', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'HUBUD_AIR', name: 'Budapest Liszt Ferenc International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'HUBUD_RAIL', name: 'Budapest Keleti Railway Station', type: 'rail', flag: '🚂', volume: '7M tons' }
+  ],
+  'SK': [
+    // Aéroports
+    { code: 'SKBTS', name: 'Bratislava Milan Rastislav Štefánik Airport', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    // Gares
+    { code: 'SKBTS_RAIL', name: 'Bratislava Central Station', type: 'rail', flag: '🚂', volume: '3M tons' }
+  ],
+  'SI': [
+    // Ports maritimes
+    { code: 'SIKOP', name: 'Port of Koper', type: 'sea', flag: '🚢', volume: '1.0M TEU' },
+    // Aéroports
+    { code: 'SILJU', name: 'Ljubljana Jože Pučnik Airport', type: 'air', flag: '✈️', volume: '0.03M tons' },
+    // Gares
+    { code: 'SILJU_RAIL', name: 'Ljubljana Railway Station', type: 'rail', flag: '🚂', volume: '2M tons' }
+  ],
+  'LT': [
+    // Ports maritimes
+    { code: 'LTKLA', name: 'Port of Klaipeda', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    // Aéroports
+    { code: 'LTVIL', name: 'Vilnius Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'LTKUN', name: 'Kaunas Airport', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    // Gares
+    { code: 'LTVIL_RAIL', name: 'Vilnius Railway Station', type: 'rail', flag: '🚂', volume: '3M tons' },
+    { code: 'LTKLA_RAIL', name: 'Klaipeda Railway Station', type: 'rail', flag: '🚂', volume: '4M tons' }
+  ],
+  'LV': [
+    // Ports maritimes
+    { code: 'LVRIX', name: 'Port of Riga', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    { code: 'LVVEN', name: 'Port of Ventspils', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    // Aéroports
+    { code: 'LVRIX_AIR', name: 'Riga Airport', type: 'air', flag: '✈️', volume: '0.06M tons' },
+    // Gares
+    { code: 'LVRIX_RAIL', name: 'Riga Central Station', type: 'rail', flag: '🚂', volume: '5M tons' }
+  ],
+  'EE': [
+    // Ports maritimes
+    { code: 'EETLL', name: 'Port de Tallinn', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    // Aéroports
+    { code: 'EETLL_AIR', name: 'Aéroport de Tallinn Lennart Meri', type: 'air', flag: '✈️', volume: '0.04M tons' },
+    // Gares
+    { code: 'EETLL_RAIL', name: 'Gare ferroviaire de Tallinn', type: 'rail', flag: '🚂', volume: '2M tons' }
+  ],
+  'KE': [
+    // Ports maritimes
+    { code: 'KEMSA', name: 'Port of Mombasa', type: 'sea', flag: '🚢', volume: '1.4M TEU' },
+    { code: 'KEKIS', name: 'Port of Kisumu', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    // Aéroports
+    { code: 'KENBO', name: 'Nairobi Jomo Kenyatta International Airport', type: 'air', flag: '✈️', volume: '0.3M tons' },
+    { code: 'KEMSA_AIR', name: 'Mombasa Moi International Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'KENBO_RAIL', name: 'Nairobi Railway Station', type: 'rail', flag: '🚂', volume: '2M tons' },
+    { code: 'KEMSA_RAIL', name: 'Mombasa Railway Station', type: 'rail', flag: '🚂', volume: '3M tons' }
+  ],
+  'GH': [
+    // Ports maritimes
+    { code: 'GHTEM', name: 'Port of Tema', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'GHTKO', name: 'Port of Takoradi', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    // Aéroports
+    { code: 'GHACC', name: 'Accra Kotoka International Airport', type: 'air', flag: '✈️', volume: '0.2M tons' }
+  ],
+  'CI': [
+    // Ports maritimes
+    { code: 'CIABJ', name: 'Port d\'Abidjan', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    { code: 'CISAN', name: 'Port de San-Pédro', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    // Aéroports
+    { code: 'CIABJ_AIR', name: 'Aéroport international d\'Abidjan Félix Houphouët-Boigny', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'AO': [
+    // Ports maritimes
+    { code: 'AOLAD', name: 'Port de Luanda', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'AOLOS', name: 'Port de Lobito', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'AOLAD_AIR', name: 'Aéroport de Luanda Quatro de Fevereiro', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'AOLAD_RAIL', name: 'Gare ferroviaire de Luanda', type: 'rail', flag: '🚂', volume: '1M tons' }
+  ],
+  'MZ': [
+    // Ports maritimes
+    { code: 'MZMPM', name: 'Port of Maputo', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'MZBEI', name: 'Port of Beira', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'MZNAC', name: 'Port of Nacala', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'MZMPM_AIR', name: 'Maputo International Airport', type: 'air', flag: '✈️', volume: '0.08M tons' },
+    // Gares
+    { code: 'MZMPM_RAIL', name: 'Maputo Railway Station', type: 'rail', flag: '🚂', volume: '2M tons' }
+  ],
+  'ET': [
+    // Aéroports
+    { code: 'ETADD', name: 'Aéroport international d\'Addis-Abeba Bole', type: 'air', flag: '✈️', volume: '0.5M tons' },
+    // Gares
+    { code: 'ETADD_RAIL', name: 'Gare ferroviaire d\'Addis-Abeba', type: 'rail', flag: '🚂', volume: '1M tons' }
+  ],
+  'TN': [
+    // Ports maritimes
+    { code: 'TNTU1', name: 'Port of Tunis', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'TNSFA', name: 'Port of Sfax', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'TNRAD', name: 'Port of Radès', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    // Aéroports
+    { code: 'TNTU1_AIR', name: 'Tunis-Carthage Airport', type: 'air', flag: '✈️', volume: '0.08M tons' },
+    // Gares
+    { code: 'TNTU1_RAIL', name: 'Tunis Central Station', type: 'rail', flag: '🚂', volume: '1M tons' }
+  ],
+  'SN': [
+    // Ports maritimes
+    { code: 'SNDKR', name: 'Port of Dakar', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    // Aéroports
+    { code: 'SNDSS', name: 'Dakar Blaise Diagne International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'SNDKR_RAIL', name: 'Dakar Railway Station', type: 'rail', flag: '🚂', volume: '0.5M tons' }
+  ],
+  'UY': [
+    // Ports maritimes
+    { code: 'UYMVD', name: 'Port of Montevideo', type: 'sea', flag: '🚢', volume: '1.1M TEU' },
+    // Aéroports
+    { code: 'UYMVD_AIR', name: 'Montevideo Carrasco International Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'UYMVD_RAIL', name: 'Montevideo Central Station', type: 'rail', flag: '🚂', volume: '0.8M tons' }
+  ],
+  'PY': [
+    // Ports maritimes
+    { code: 'PYASU', name: 'Port of Asunción', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    // Aéroports
+    { code: 'PYASU_AIR', name: 'Silvio Pettirossi International Airport', type: 'air', flag: '✈️', volume: '0.03M tons' },
+    // Gares
+    { code: 'PYASU_RAIL', name: 'Asunción Railway Station', type: 'rail', flag: '🚂', volume: '0.5M tons' }
+  ],
+  'EC': [
+    // Ports maritimes
+    { code: 'ECGYE', name: 'Port de Guayaquil', type: 'sea', flag: '🚢', volume: '2.0M TEU' },
+    { code: 'ECMNT', name: 'Port de Manta', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    // Aéroports
+    { code: 'ECUIO', name: 'Aéroport international de Quito Mariscal Sucre', type: 'air', flag: '✈️', volume: '0.2M tons' },
+    { code: 'ECGYE_AIR', name: 'Aéroport international de Guayaquil José Joaquín de Olmedo', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'ECUIO_RAIL', name: 'Gare ferroviaire de Quito', type: 'rail', flag: '🚂', volume: '0.3M tons' }
+  ],
+  'PA': [
+    // Ports maritimes
+    { code: 'PABAL', name: 'Port of Balboa', type: 'sea', flag: '🚢', volume: '3.5M TEU' },
+    { code: 'PACOL', name: 'Port of Colón', type: 'sea', flag: '🚢', volume: '4.3M TEU' },
+    { code: 'PACRZ', name: 'Port of Cristóbal', type: 'sea', flag: '🚢', volume: '2.8M TEU' },
+    // Aéroports
+    { code: 'PAPTY', name: 'Tocumen International Airport', type: 'air', flag: '✈️', volume: '0.3M tons' }
+  ],
+  'VE': [
+    // Ports maritimes
+    { code: 'VELAS', name: 'Port of La Guaira', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    { code: 'VEPZO', name: 'Port of Puerto Cabello', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    { code: 'VEMCB', name: 'Port of Maracaibo', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    // Aéroports
+    { code: 'VECCS', name: 'Caracas Simón Bolívar International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    // Gares
+    { code: 'VECCS_RAIL', name: 'Caracas Railway Station', type: 'rail', flag: '🚂', volume: '0.5M tons' }
+  ],
+  'GT': [
+    // Ports maritimes
+    { code: 'GTGUA', name: 'Port of Guatemala', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'GTPAC', name: 'Port Quetzal', type: 'sea', flag: '🚢', volume: '1.0M TEU' },
+    // Aéroports
+    { code: 'GTGUA_AIR', name: 'Guatemala City La Aurora International Airport', type: 'air', flag: '✈️', volume: '0.08M tons' }
+  ],
+  'CR': [
+    // Ports maritimes
+    { code: 'CRLIM', name: 'Port de Limón', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'CRPUN', name: 'Port de Puntarenas', type: 'sea', flag: '🚢', volume: '0.4M TEU' },
+    // Aéroports
+    { code: 'CRSJO', name: 'Aéroport international Juan Santamaría', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'DO': [
+    // Ports maritimes
+    { code: 'DOSDQ', name: 'Port of Santo Domingo', type: 'sea', flag: '🚢', volume: '1.4M TEU' },
+    { code: 'DOHIG', name: 'Port of Haina', type: 'sea', flag: '🚢', volume: '0.6M TEU' },
+    // Aéroports
+    { code: 'DOSDQ_AIR', name: 'Santo Domingo Las Américas International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'DOPOP', name: 'Puerto Plata Gregorio Luperón International Airport', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'JM': [
+    // Ports maritimes
+    { code: 'JMKIN', name: 'Port of Kingston', type: 'sea', flag: '🚢', volume: '1.7M TEU' },
+    { code: 'JMMBY', name: 'Port of Montego Bay', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    // Aéroports
+    { code: 'JMKIN_AIR', name: 'Kingston Norman Manley International Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'JMMBY_AIR', name: 'Montego Bay Sangster International Airport', type: 'air', flag: '✈️', volume: '0.08M tons' }
+  ],
+  'TT': [
+    // Ports maritimes
+    { code: 'TTPOS', name: 'Port of Port of Spain', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'TTCOU', name: 'Port of Point Lisas', type: 'sea', flag: '🚢', volume: '0.5M TEU' },
+    // Aéroports
+    { code: 'TTPOS_AIR', name: 'Port of Spain Piarco International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' }
+  ],
+  'LU': [
+    // Aéroports
+    { code: 'LULUX', name: 'Luxembourg Findel Airport', type: 'air', flag: '✈️', volume: '0.9M tons' },
+    // Gares
+    { code: 'LULUX_RAIL', name: 'Luxembourg Central Station', type: 'rail', flag: '🚂', volume: '2M tons' }
+  ],
+  'MC': [
+    // Ports maritimes
+    { code: 'MCMON', name: 'Port of Monaco', type: 'sea', flag: '🚢', volume: '0.05M TEU' },
+    // Aéroports (utilise Nice)
+    { code: 'MCNCE', name: 'Nice Côte d\'Azur Airport', type: 'air', flag: '✈️', volume: '0.06M tons' }
+  ],
+  'LI': [
+    // Pas de ports/aéroports propres (utilise Suisse/Autriche)
+    // Gares
+    { code: 'LIVAD_RAIL', name: 'Vaduz Railway Connection', type: 'rail', flag: '🚂', volume: '0.1M tons' }
+  ],
+  'IS': [
+    // Ports maritimes
+    { code: 'ISREY', name: 'Port of Reykjavik', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    { code: 'ISAKR', name: 'Port of Akranes', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    // Aéroports
+    { code: 'ISKEF', name: 'Reykjavik Keflavik Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'ISREY_AIR', name: 'Reykjavik Airport', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'MT': [
+    // Ports maritimes
+    { code: 'MTMLA', name: 'Port of Valletta', type: 'sea', flag: '🚢', volume: '3.2M TEU' },
+    { code: 'MTMRS', name: 'Port of Marsaxlokk', type: 'sea', flag: '🚢', volume: '3.5M TEU' },
+    // Aéroports
+    { code: 'MTMLA_AIR', name: 'Malta International Airport', type: 'air', flag: '✈️', volume: '0.08M tons' }
+  ],
+  'CY': [
+    // Ports maritimes
+    { code: 'CYLIM', name: 'Port de Limassol', type: 'sea', flag: '🚢', volume: '0.8M TEU' },
+    { code: 'CYLCA', name: 'Port de Larnaca', type: 'sea', flag: '🚢', volume: '0.3M TEU' },
+    { code: 'CYPAF', name: 'Port de Paphos', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    // Aéroports
+    { code: 'CYLCA_AIR', name: 'Aéroport international de Larnaca', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'CYPAF_AIR', name: 'Aéroport international de Paphos', type: 'air', flag: '✈️', volume: '0.05M tons' }
+  ],
+  'RW': [
+    // Aéroports
+    { code: 'RWKGL', name: 'Kigali International Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'RWKGL_RAIL', name: 'Kigali Railway Station', type: 'rail', flag: '🚂', volume: '0.3M tons' }
+  ],
+  'UG': [
+    // Ports maritimes (Lac Victoria)
+    { code: 'UGKMP', name: 'Port of Kampala', type: 'sea', flag: '🚢', volume: '0.05M TEU' },
+    { code: 'UGENT', name: 'Port of Entebbe', type: 'sea', flag: '🚢', volume: '0.03M TEU' },
+    // Aéroports
+    { code: 'UGENT_AIR', name: 'Entebbe International Airport', type: 'air', flag: '✈️', volume: '0.08M tons' },
+    // Gares
+    { code: 'UGKMP_RAIL', name: 'Kampala Railway Station', type: 'rail', flag: '🚂', volume: '0.5M tons' }
+  ],
+  'TZ': [
+    // Ports maritimes
+    { code: 'TZDAR', name: 'Port of Dar es Salaam', type: 'sea', flag: '🚢', volume: '1.2M TEU' },
+    { code: 'TZMTW', name: 'Port of Mtwara', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    { code: 'TZMZA', name: 'Port of Mwanza', type: 'sea', flag: '🚢', volume: '0.05M TEU' },
+    // Aéroports
+    { code: 'TZDAR_AIR', name: 'Dar es Salaam Julius Nyerere International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'TZKIL', name: 'Kilimanjaro International Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    // Gares
+    { code: 'TZDAR_RAIL', name: 'Dar es Salaam Railway Station', type: 'rail', flag: '🚂', volume: '2M tons' },
+    { code: 'TZMZA_RAIL', name: 'Mwanza Railway Station', type: 'rail', flag: '🚂', volume: '0.8M tons' }
+  ],
+  'ZW': [
+    // Ports maritimes (fluviaux)
+    { code: 'ZWHRE', name: 'Port of Harare', type: 'sea', flag: '🚢', volume: '0.02M TEU' },
+    { code: 'ZWBYO', name: 'Port of Bulawayo', type: 'sea', flag: '🚢', volume: '0.01M TEU' },
+    // Aéroports
+    { code: 'ZWHRE_AIR', name: 'Harare International Airport', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'ZWBYO_AIR', name: 'Bulawayo Airport', type: 'air', flag: '✈️', volume: '0.02M tons' },
+    // Gares
+    { code: 'ZWHRE_RAIL', name: 'Harare Railway Station', type: 'rail', flag: '🚂', volume: '1M tons' },
+    { code: 'ZWBYO_RAIL', name: 'Bulawayo Railway Station', type: 'rail', flag: '🚂', volume: '1.5M tons' }
+  ],
+  'ZM': [
+    // Ports maritimes (fluviaux)
+    { code: 'ZMLUN', name: 'Port of Lusaka', type: 'sea', flag: '🚢', volume: '0.03M TEU' },
+    { code: 'ZMKAP', name: 'Port of Kapiri Mposhi', type: 'sea', flag: '🚢', volume: '0.02M TEU' },
+    // Aéroports
+    { code: 'ZMLUN_AIR', name: 'Kenneth Kaunda International Airport', type: 'air', flag: '✈️', volume: '0.06M tons' },
+    { code: 'ZMNDO', name: 'Ndola Airport', type: 'air', flag: '✈️', volume: '0.03M tons' },
+    // Gares
+    { code: 'ZMLUN_RAIL', name: 'Lusaka Railway Station', type: 'rail', flag: '🚂', volume: '2M tons' },
+    { code: 'ZMKAP_RAIL', name: 'Kapiri Mposhi Railway Station', type: 'rail', flag: '🚂', volume: '3M tons' }
+  ],
+  'FJ': [
+    // Ports maritimes
+    { code: 'FJSUV', name: 'Port de Suva', type: 'sea', flag: '🚢', volume: '0.2M TEU' },
+    { code: 'FJLAU', name: 'Port de Lautoka', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    // Aéroports
+    { code: 'FJNAN', name: 'Aéroport de Nadi', type: 'air', flag: '✈️', volume: '0.05M tons' },
+    { code: 'FJSUV_AIR', name: 'Aéroport de Suva Nausori', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'MU': [
+    // Ports maritimes
+    { code: 'MUPTS', name: 'Port Louis', type: 'sea', flag: '🚢', volume: '0.7M TEU' },
+    // Aéroports
+    { code: 'MUPTS_AIR', name: 'Mauritius Sir Seewoosagur Ramgoolam International Airport', type: 'air', flag: '✈️', volume: '0.1M tons' },
+    { code: 'MUPLN', name: 'Plaine Corail Airport', type: 'air', flag: '✈️', volume: '0.02M tons' }
+  ],
+  'SC': [
+    // Ports maritimes
+    { code: 'SCVIC', name: 'Port of Victoria', type: 'sea', flag: '🚢', volume: '0.1M TEU' },
+    { code: 'SCPRS', name: 'Port of Praslin', type: 'sea', flag: '🚢', volume: '0.02M TEU' },
+    // Aéroports
+    { code: 'SCVIC_AIR', name: 'Mahé Seychelles International Airport', type: 'air', flag: '✈️', volume: '0.03M tons' },
+    { code: 'SCPRS_AIR', name: 'Praslin Airport', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ],
+  'MV': [
+    // Ports maritimes
+    { code: 'MVMAL', name: 'Port of Malé', type: 'sea', flag: '🚢', volume: '0.05M TEU' },
+    { code: 'MVGAN', name: 'Port of Gan', type: 'sea', flag: '🚢', volume: '0.02M TEU' },
+    // Aéroports
+    { code: 'MVMAL_AIR', name: 'Malé Velana International Airport', type: 'air', flag: '✈️', volume: '0.08M tons' },
+    { code: 'MVGAN_AIR', name: 'Gan International Airport', type: 'air', flag: '✈️', volume: '0.01M tons' }
+  ]
+};
+
+export interface QuoteFormContextValue {
+  // Main navigation
+  currentStep: number;
+  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
+  nextStep: () => void;
+  prevStep: () => void;
+
+  // Form data
+  formData: FormData;
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+
+  // Field validation state
+  fieldValid: FieldValid;
+  setFieldValid: React.Dispatch<React.SetStateAction<FieldValid>>;
+
+  // Country search states
+  countrySearch: string;
+  setCountrySearch: React.Dispatch<React.SetStateAction<string>>;
+  isCountryListVisible: boolean;
+  setIsCountryListVisible: React.Dispatch<React.SetStateAction<boolean>>;
+  highlightedCountryIndex: number;
+  setHighlightedCountryIndex: React.Dispatch<React.SetStateAction<number>>;
+
+  // Language & phone prefix for later steps
+  userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru';
+  setUserLang: React.Dispatch<React.SetStateAction<'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'>>;
+  phonePrefixSearch: string;
+  setPhonePrefixSearch: React.Dispatch<React.SetStateAction<string>>;
+
+  // Additional states for Step 1 
+  debouncedCountrySearch: string;
+  setDebouncedCountrySearch: React.Dispatch<React.SetStateAction<string>>;
+  destPortSearch: string;
+  setDestPortSearch: React.Dispatch<React.SetStateAction<string>>;
+  isDestPortListVisible: boolean;
+  setIsDestPortListVisible: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Step 5 substep navigation
+  step5SubStep: number;
+  setStep5SubStep: React.Dispatch<React.SetStateAction<number>>;
+  
+  // Cargo/Load management
+  activeLoadIndex: number;
+  setActiveLoadIndex: React.Dispatch<React.SetStateAction<number>>;
+  shippingType: 'container' | 'pallets' | 'loose';
+  setShippingType: React.Dispatch<React.SetStateAction<'container' | 'pallets' | 'loose'>>;
+  
+  // Currency selection for Step 5
+  currencySearch: string;
+  setCurrencySearch: React.Dispatch<React.SetStateAction<string>>;
+  isCurrencyListVisible: boolean;
+  setIsCurrencyListVisible: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Handlers
+  handleCountrySelect: (countryCode: string) => void;
+  handleCountrySearchKeyDown: (e: React.KeyboardEvent) => void;
+  clearCountrySelection: () => void;
+  handleDestLocationTypeSelect: (typeId: string) => void;
+  handleDestPortSelect: (portCode: string) => void;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleCurrencySelect: (currencyCode: string) => void;
+
+  // Helper functions
+  getDestinationLocationTypes: () => Array<{id: string, name: string, icon: any}>;
+  getFilteredDestinationPorts: () => Array<{code: string, name: string, type: string, flag: string, volume?: string}>;
+  filteredCountries: Array<{code: string, name: string, flag: string}>;
+  sanitizedCountrySearch: string;
+  
+  // I18N and helpers
+  I18N_TEXT: typeof I18N_TEXT;
+  getLocationTypeName: (typeId: string, userLang: string) => string;
+  getLocationTypeDescription: (typeId: string, userLang: string) => string;
+  getTranslatedPortNameLocal: (port: any, userLang: string) => string;
+  getTranslatedPortType: (portType: string, userLang: string) => string;
+  getSearchPortsText: (countryCode: string, userLang: string) => string;
+  getTranslatedCountryName: (countryCode: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => string;
+}
+
+const QuoteFormContext = createContext<QuoteFormContextValue | undefined>(undefined);
+
+// Helper to translate country names (copied from QuoteForm.tsx)
+export const getTranslatedCountryName = (
+  countryCode: string,
+  userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'
+): string => {
+  const translations = (COUNTRY_TRANSLATIONS as any)[countryCode];
+  if (translations && translations[userLang]) return translations[userLang];
+  if (translations && translations.en) return translations.en;
+  const country = COUNTRIES.find((c) => c.code === countryCode);
+  return country ? country.name : countryCode;
+};
+
+const PRIORITY_COUNTRIES_BY_LANG: Record<string, string[]> = {
+  fr: ['FR', 'BE', 'CH', 'CA', 'LU', 'MC'],
+  en: ['US', 'GB', 'CA', 'AU', 'NZ', 'IE'],
+  de: ['DE', 'AT', 'CH', 'LI'],
+  es: ['ES', 'MX', 'AR', 'CO', 'PE', 'CL'],
+  it: ['IT', 'SM', 'VA', 'CH'],
+  nl: ['NL', 'BE'],
+  pt: ['PT', 'BR', 'AO', 'MZ'],
+  zh: ['CN', 'TW', 'HK', 'MO', 'SG'],
+  ar: ['SA', 'AE', 'EG', 'JO', 'LB', 'MA'],
+  tr: ['TR', 'CY'],
+  ru: ['RU', 'BY', 'KZ', 'KG', 'UA'],
+};
+
+export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [fieldValid, setFieldValid] = useState<FieldValid>(initialFieldValid);
+
+  // Step 1 UI list states
+  const [countrySearch, setCountrySearch] = useState('');
+  const [isCountryListVisible, setIsCountryListVisible] = useState(false);
+  const [highlightedCountryIndex, setHighlightedCountryIndex] = useState(-1);
+
+  // Language state (copied from QuoteForm.tsx)
+  const [userLang, setUserLang] = useState<'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'>(() => {
+    if (typeof navigator !== 'undefined') {
+      const lang = navigator.language || 'en';
+      if (lang.startsWith('fr')) return 'fr';
+      if (lang.startsWith('zh')) return 'zh';
+      if (lang.startsWith('de')) return 'de';
+      if (lang.startsWith('es')) return 'es';
+      if (lang.startsWith('it')) return 'it';
+      if (lang.startsWith('nl')) return 'nl';
+      if (lang.startsWith('ar')) return 'ar';
+      if (lang.startsWith('pt')) return 'pt';
+      if (lang.startsWith('tr')) return 'tr';
+      if (lang.startsWith('ru')) return 'ru';
+    }
+    return 'en';
+  });
+
+  const [phonePrefixSearch, setPhonePrefixSearch] = useState('');
+
+  // Additional Step 1 states
+  const [debouncedCountrySearch, setDebouncedCountrySearch] = useState('');
+  const [destPortSearch, setDestPortSearch] = useState('');
+  const [isDestPortListVisible, setIsDestPortListVisible] = useState(false);
+
+  // Step 5 and cargo-related states
+  const [step5SubStep, setStep5SubStep] = useState(1);
+  const [activeLoadIndex, setActiveLoadIndex] = useState(0);
+  const [shippingType, setShippingType] = useState<'container' | 'pallets' | 'loose'>('container');
+  
+  // Currency selection states
+  const [currencySearch, setCurrencySearch] = useState('USD 💵');
+  const [isCurrencyListVisible, setIsCurrencyListVisible] = useState(false);
+
+  // Handler migrated from QuoteForm.tsx (simplified)
+  const handleCountrySelect = useCallback(
+    (countryCode: string) => {
+      const selected = COUNTRIES.find((c) => c.code === countryCode);
+      setFormData((prev) => ({ 
+        ...prev, 
+        country: countryCode,
+        phoneCountryCode: selected?.phonePrefix || prev.phoneCountryCode,
+        // Reset destination fields when country changes
+        destPort: '',
+        destCity: '',
+        destZipCode: '',
+        destLocationType: ''
+      }));
+      setFieldValid((prev) => ({ 
+        ...prev, 
+        country: true,
+        // Reset destination field validations
+        destPort: null,
+        destCity: null,
+        destZipCode: null,
+        destLocationType: null
+      }));
+      if (selected) {
+        setCountrySearch(`${selected.flag} ${getTranslatedCountryName(selected.code, userLang)}`);
+        if (selected.phonePrefix) {
+          setPhonePrefixSearch(`${selected.flag} ${selected.phonePrefix}`);
+        }
+      }
+      setIsCountryListVisible(false);
+      
+      // Usage tracking
+      if (typeof window !== 'undefined') {
+        try {
+          const key = 'countryUsage';
+          const usageRaw = localStorage.getItem(key);
+          const usageObj: Record<string, number> = usageRaw ? JSON.parse(usageRaw) : {};
+          usageObj[countryCode] = (usageObj[countryCode] || 0) + 1;
+          localStorage.setItem(key, JSON.stringify(usageObj));
+        } catch (err) { /* ignore */ }
+      }
+    },
+    [userLang, setFormData, setFieldValid, setCountrySearch, setPhonePrefixSearch, setIsCountryListVisible]
+  );
+
+  // Helper functions  
+  const getDestinationLocationTypes = useCallback(() => {
+    // Based on shipping mode, return appropriate location types with proper icons
+    return [
+      { id: 'factory', name: 'Factory/Warehouse', icon: Warehouse },
+      { id: 'port', name: 'Port/Airport', icon: Ship },
+      { id: 'business', name: 'Business address', icon: Building2 },
+      { id: 'residential', name: 'Residential address', icon: Home },
+    ];
+  }, []);
+
+  const getFilteredDestinationPorts = useCallback(() => {
+    if (!formData.country) return [];
+    
+    const countryPorts = DESTINATION_PORTS_BY_COUNTRY[formData.country] || [];
+    if (!destPortSearch.trim()) return countryPorts;
+    
+    // If a port is already selected, show all ports (don't filter based on the displayed value)
+    if (formData.destPort) return countryPorts;
+    
+    // Clean search term by removing emojis and extra spaces
+    const cleanSearchTerm = destPortSearch.replace(/[🚢✈️🚂]/g, '').trim().toLowerCase();
+    if (!cleanSearchTerm) return countryPorts;
+    
+    return countryPorts.filter(port => 
+      port.name.toLowerCase().includes(cleanSearchTerm) ||
+      port.code.toLowerCase().includes(cleanSearchTerm) ||
+      port.type.toLowerCase().includes(cleanSearchTerm)
+    );
+  }, [formData.country, destPortSearch, formData.destPort]);
+
+  // Helper functions for location types and names (using I18N_TEXT)
+  const getLocationTypeName = useCallback((typeId: string, userLang: string) => {
+    const translations = (I18N_TEXT as any)[userLang];
+    switch (typeId) {
+      case 'factory': return translations?.factoryWarehouse || 'Factory/Warehouse';
+      case 'port': return translations?.portAirport || 'Port/Airport';
+      case 'business': return translations?.businessAddress || 'Business address';
+      case 'residential': return translations?.residentialAddress || 'Residential address';
+      default: return typeId;
+    }
+  }, []);
+  
+  const getLocationTypeDescription = useCallback((typeId: string, userLang: string) => {
+    const translations = (I18N_TEXT as any)[userLang];
+    switch (typeId) {
+      case 'factory': return translations?.factoryWarehouseDesc || 'Factory, distribution center, warehouse';
+      case 'port': return translations?.portAirportDesc || 'Direct to port/airport pickup';
+      case 'business': return translations?.businessAddressDesc || 'Company address, office building';
+      case 'residential': return translations?.residentialAddressDesc || 'House, apartment, personal address';
+      default: return '';
+    }
+  }, []);
+  
+  const getTranslatedPortNameLocal = useCallback((port: any, userLang: string) => {
+    // Smart translation system using patterns and fallbacks
+    const portCode = port.code;
+    const portName = port.name;
+    
+    // Manual translations for specific important ports
+    const manualTranslations: Record<string, Record<string, string>> = {
+      // Major German ports
+      'DEHAM': { en: 'Port of Hamburg', de: 'Hafen Hamburg', fr: 'Port de Hambourg', es: 'Puerto de Hamburgo', it: 'Porto di Amburgo', nl: 'Haven van Hamburg', pt: 'Porto de Hamburgo', tr: 'Hamburg Limanı', ru: 'Порт Гамбург', zh: '汉堡港', ar: 'ميناء هامبورغ' },
+      'DEBRE': { en: 'Port of Bremen', de: 'Hafen Bremen', fr: 'Port de Brême', es: 'Puerto de Bremen', it: 'Porto di Brema', nl: 'Haven van Bremen', pt: 'Porto de Bremen', tr: 'Bremen Limanı', ru: 'Порт Бремен', zh: '不来梅港', ar: 'ميناء بريمن' },
+      'DEFRA': { en: 'Frankfurt Airport', de: 'Flughafen Frankfurt', fr: 'Aéroport de Francfort', es: 'Aeropuerto de Fráncfort', it: 'Aeroporto di Francoforte', nl: 'Luchthaven Frankfurt', pt: 'Aeroporto de Frankfurt', tr: 'Frankfurt Havaalanı', ru: 'Аэропорт Франкфурт', zh: '法兰克福机场', ar: 'مطار فرانكفورت' },
+      'DEMUC': { en: 'Munich Airport', de: 'Flughafen München', fr: 'Aéroport de Munich', es: 'Aeropuerto de Múnich', it: 'Aeroporto di Monaco', nl: 'Luchthaven München', pt: 'Aeroporto de Munique', tr: 'Münih Havaalanı', ru: 'Аэропорт Мюнхен', zh: '慕尼黑机场', ar: 'مطار ميونيخ' },
+      
+      // Major Asian ports
+      'TWKHH': { en: 'Port of Kaohsiung', fr: 'Port de Kaohsiung', de: 'Hafen Kaohsiung', es: 'Puerto de Kaohsiung', it: 'Porto di Kaohsiung', nl: 'Haven van Kaohsiung', pt: 'Porto de Kaohsiung', tr: 'Kaohsiung Limanı', ru: 'Порт Гаосюн', zh: '高雄港', ar: 'ميناء كاوشيونغ' },
+      'TWTPE_AIR': { en: 'Taipei Taoyuan Airport', fr: 'Aéroport de Taipei Taoyuan', de: 'Flughafen Taipei Taoyuan', es: 'Aeropuerto de Taipéi Taoyuan', it: 'Aeroporto di Taipei Taoyuan', nl: 'Luchthaven Taipei Taoyuan', pt: 'Aeroporto de Taipei Taoyuan', tr: 'Taipei Taoyuan Havaalanı', ru: 'Аэропорт Тайбэй Таоюань', zh: '台北桃园机场', ar: 'مطار تايبيه تاويوان' },
+      
+      // Major Middle East ports
+      'QADOH_AIR': { en: 'Doha Hamad International Airport', fr: 'Aéroport international de Doha Hamad', de: 'Internationaler Flughafen Doha Hamad', es: 'Aeropuerto Internacional de Doha Hamad', it: 'Aeroporto Internazionale di Doha Hamad', nl: 'Internationale Luchthaven Doha Hamad', pt: 'Aeroporto Internacional de Doha Hamad', tr: 'Doha Hamad Uluslararası Havaalanı', ru: 'Международный аэропорт Доха Хамад', zh: '多哈哈马德国际机场', ar: 'مطار حمد الدولي' },
+      'SAJED': { en: 'Port of Jeddah', fr: 'Port de Jeddah', de: 'Hafen Dschidda', es: 'Puerto de Jeddah', it: 'Porto di Jeddah', nl: 'Haven van Jeddah', pt: 'Porto de Jeddah', tr: 'Cidde Limanı', ru: 'Порт Джидда', zh: '吉达港', ar: 'ميناء جدة' },
+      'SARUH': { en: 'Riyadh King Khalid Airport', fr: 'Aéroport de Riyadh King Khalid', de: 'Flughafen Riad King Khalid', es: 'Aeropuerto de Riad King Khalid', it: 'Aeroporto di Riyadh King Khalid', nl: 'Luchthaven Riyadh King Khalid', pt: 'Aeroporto de Riyadh King Khalid', tr: 'Riyad Kral Halid Havaalanı', ru: 'Аэропорт Эр-Рияд имени короля Халида', zh: '利雅得哈立德国王机场', ar: 'مطار الملك خالد الدولي' },
+      
+      // New major hubs - Luxembourg
+      'LULUX': { en: 'Luxembourg Findel Airport', fr: 'Aéroport de Luxembourg Findel', de: 'Flughafen Luxemburg Findel', es: 'Aeropuerto de Luxemburgo Findel', it: 'Aeroporto di Lussemburgo Findel', nl: 'Luchthaven Luxemburg Findel', pt: 'Aeroporto de Luxemburgo Findel', tr: 'Lüksemburg Findel Havaalanı', ru: 'Аэропорт Люксембург Финдель', zh: '卢森堡芬德尔机场', ar: 'مطار لوكسمبورغ فيندل' },
+      
+      // Monaco
+      'MCMON': { en: 'Port of Monaco', fr: 'Port de Monaco', de: 'Hafen Monaco', es: 'Puerto de Mónaco', it: 'Porto di Monaco', nl: 'Haven van Monaco', pt: 'Porto do Mônaco', tr: 'Monako Limanı', ru: 'Порт Монако', zh: '摩纳哥港', ar: 'ميناء موناكو' },
+      
+      // Iceland
+      'ISKEF': { en: 'Reykjavik Keflavik Airport', fr: 'Aéroport de Reykjavik Keflavik', de: 'Flughafen Reykjavik Keflavik', es: 'Aeropuerto de Reykjavik Keflavik', it: 'Aeroporto di Reykjavik Keflavik', nl: 'Luchthaven Reykjavik Keflavik', pt: 'Aeroporto de Reykjavik Keflavik', tr: 'Reykjavik Keflavik Havaalanı', ru: 'Аэропорт Рейкьявик Кефлавик', zh: '雷克雅未克凯夫拉维克机场', ar: 'مطار ريكيافيك كيفلافيك' },
+      'ISREY': { en: 'Port of Reykjavik', fr: 'Port de Reykjavik', de: 'Hafen Reykjavik', es: 'Puerto de Reykjavik', it: 'Porto di Reykjavik', nl: 'Haven van Reykjavik', pt: 'Porto de Reykjavik', tr: 'Reykjavik Limanı', ru: 'Порт Рейкьявик', zh: '雷克雅未克港', ar: 'ميناء ريكيافيك' },
+      
+      // Malta
+      'MTMLA': { en: 'Port of Valletta', fr: 'Port de La Valette', de: 'Hafen Valletta', es: 'Puerto de La Valeta', it: 'Porto di La Valletta', nl: 'Haven van Valletta', pt: 'Porto de Valletta', tr: 'Valletta Limanı', ru: 'Порт Валлетта', zh: '瓦莱塔港', ar: 'ميناء فاليتا' },
+      'MTMRS': { en: 'Port of Marsaxlokk', fr: 'Port de Marsaxlokk', de: 'Hafen Marsaxlokk', es: 'Puerto de Marsaxlokk', it: 'Porto di Marsaxlokk', nl: 'Haven van Marsaxlokk', pt: 'Porto de Marsaxlokk', tr: 'Marsaxlokk Limanı', ru: 'Порт Марсашлокк', zh: '马尔萨什洛克港', ar: 'ميناء مارساشلوك' },
+      
+      // Cyprus
+      'CYLIM': { en: 'Port of Limassol', fr: 'Port de Limassol', de: 'Hafen Limassol', es: 'Puerto de Limassol', it: 'Porto di Limassol', nl: 'Haven van Limassol', pt: 'Porto de Limassol', tr: 'Limasol Limanı', ru: 'Порт Лимассол', zh: '利马索尔港', ar: 'ميناء ليماسول' },
+      
+      // African hubs
+      'TZDAR': { en: 'Port of Dar es Salaam', fr: 'Port de Dar es Salaam', de: 'Hafen Dar es Salaam', es: 'Puerto de Dar es Salaam', it: 'Porto di Dar es Salaam', nl: 'Haven van Dar es Salaam', pt: 'Porto de Dar es Salaam', tr: 'Dar es Salaam Limanı', ru: 'Порт Дар-эс-Салам', zh: '达累斯萨拉姆港', ar: 'ميناء دار السلام' },
+      'RWKGL': { en: 'Kigali International Airport', fr: 'Aéroport international de Kigali', de: 'Internationaler Flughafen Kigali', es: 'Aeropuerto Internacional de Kigali', it: 'Aeroporto Internazionale di Kigali', nl: 'Internationale Luchthaven Kigali', pt: 'Aeroporto Internacional de Kigali', tr: 'Kigali Uluslararası Havaalanı', ru: 'Международный аэропорт Кигали', zh: '基加利国际机场', ar: 'مطار كيغالي الدولي' },
+      'UGENT_AIR': { en: 'Entebbe International Airport', fr: 'Aéroport international d\'Entebbe', de: 'Internationaler Flughafen Entebbe', es: 'Aeropuerto Internacional de Entebbe', it: 'Aeroporto Internazionale di Entebbe', nl: 'Internationale Luchthaven Entebbe', pt: 'Aeroporto Internacional de Entebbe', tr: 'Entebbe Uluslararası Havaalanı', ru: 'Международный аэропорт Энтеббе', zh: '恩德培国际机场', ar: 'مطار عنتيبي الدولي' },
+      
+      // Pacific hubs
+      'FJNAN': { en: 'Nadi Airport', fr: 'Aéroport de Nadi', de: 'Flughafen Nadi', es: 'Aeropuerto de Nadi', it: 'Aeroporto di Nadi', nl: 'Luchthaven Nadi', pt: 'Aeroporto de Nadi', tr: 'Nadi Havaalanı', ru: 'Аэропорт Нади', zh: '楠迪机场', ar: 'مطار نادي' },
+      'FJSUV': { en: 'Port of Suva', fr: 'Port de Suva', de: 'Hafen Suva', es: 'Puerto de Suva', it: 'Porto di Suva', nl: 'Haven van Suva', pt: 'Porto de Suva', tr: 'Suva Limanı', ru: 'Порт Сува', zh: '苏瓦港', ar: 'ميناء سوفا' },
+      
+      // Indian Ocean hubs
+      'MUPTS': { en: 'Port Louis', fr: 'Port Louis', de: 'Port Louis', es: 'Puerto Louis', it: 'Port Louis', nl: 'Port Louis', pt: 'Port Louis', tr: 'Port Louis', ru: 'Порт-Луи', zh: '路易港', ar: 'بورت لويس' },
+      'MUPTS_AIR': { en: 'Mauritius Airport', fr: 'Aéroport de Maurice', de: 'Flughafen Mauritius', es: 'Aeropuerto de Mauricio', it: 'Aeroporto di Mauritius', nl: 'Luchthaven Mauritius', pt: 'Aeroporto de Maurício', tr: 'Mauritius Havaalanı', ru: 'Аэропорт Маврикий', zh: '毛里求斯机场', ar: 'مطار موريشيوس' },
+      'SCVIC': { en: 'Port of Victoria', fr: 'Port de Victoria', de: 'Hafen Victoria', es: 'Puerto de Victoria', it: 'Porto di Victoria', nl: 'Haven van Victoria', pt: 'Porto de Victoria', tr: 'Victoria Limanı', ru: 'Порт Виктория', zh: '维多利亚港', ar: 'ميناء فيكتوريا' },
+      'MVMAL_AIR': { en: 'Malé Velana Airport', fr: 'Aéroport de Malé Velana', de: 'Flughafen Malé Velana', es: 'Aeropuerto de Malé Velana', it: 'Aeroporto di Malé Velana', nl: 'Luchthaven Malé Velana', pt: 'Aeroporto de Malé Velana', tr: 'Malé Velana Havaalanı', ru: 'Аэропорт Мале Велана', zh: '马累维拉纳机场', ar: 'مطار مالي فيلانا' },
+      
+      // Romanian hubs (for the issues shown in the screenshot)
+      'ROCND': { en: 'Port of Constanta', fr: 'Port de Constanta', de: 'Hafen Konstanza', es: 'Puerto de Constanza', it: 'Porto di Costanza', nl: 'Haven van Constanta', pt: 'Porto de Constanta', tr: 'Köstence Limanı', ru: 'Порт Констанца', zh: '康斯坦察港', ar: 'ميناء كونستانتا' },
+      'ROGLT': { en: 'Port of Galati', fr: 'Port de Galati', de: 'Hafen Galați', es: 'Puerto de Galați', it: 'Porto di Galați', nl: 'Haven van Galați', pt: 'Porto de Galați', tr: 'Galați Limanı', ru: 'Порт Галац', zh: '加拉茨港', ar: 'ميناء غالاتي' },
+      'ROBUH': { en: 'Bucharest Henri Coandă Airport', fr: 'Aéroport de Bucarest Henri Coandă', de: 'Flughafen Bukarest Henri Coandă', es: 'Aeropuerto de Bucarest Henri Coandă', it: 'Aeroporto di Bucarest Henri Coandă', nl: 'Luchthaven Boekarest Henri Coandă', pt: 'Aeroporto de Bucareste Henri Coandă', tr: 'Bükreş Henri Coandă Havaalanı', ru: 'Аэропорт Бухарест Анри Коандэ', zh: '布加勒斯特亨利·科安德机场', ar: 'مطار بوخارست هنري كواندا' },
+      
+      // Other European hubs that users might see
+      'BGVAR': { en: 'Port of Varna', fr: 'Port de Varna', de: 'Hafen Warna', es: 'Puerto de Varna', it: 'Porto di Varna', nl: 'Haven van Varna', pt: 'Porto de Varna', tr: 'Varna Limanı', ru: 'Порт Варна', zh: '瓦尔纳港', ar: 'ميناء فارنا' },
+      'BGSOF': { en: 'Sofia Airport', fr: 'Aéroport de Sofia', de: 'Flughafen Sofia', es: 'Aeropuerto de Sofía', it: 'Aeroporto di Sofia', nl: 'Luchthaven Sofia', pt: 'Aeroporto de Sofia', tr: 'Sofya Havaalanı', ru: 'Аэропорт София', zh: '索菲亚机场', ar: 'مطار صوفيا' },
+      'PLWAR': { en: 'Port of Warsaw', fr: 'Port de Varsovie', de: 'Hafen Warschau', es: 'Puerto de Varsovia', it: 'Porto di Varsavia', nl: 'Haven van Warschau', pt: 'Porto de Varsóvia', tr: 'Varşova Limanı', ru: 'Порт Варшава', zh: '华沙港', ar: 'ميناء وارسو' },
+      'PLGDN': { en: 'Port of Gdansk', fr: 'Port de Gdansk', de: 'Hafen Danzig', es: 'Puerto de Gdansk', it: 'Porto di Danzica', nl: 'Haven van Gdansk', pt: 'Porto de Gdansk', tr: 'Gdansk Limanı', ru: 'Порт Гданьск', zh: '格但斯克港', ar: 'ميناء غدانسك' },
+      'CZKRK': { en: 'Port of Krakow', fr: 'Port de Cracovie', de: 'Hafen Krakau', es: 'Puerto de Cracovia', it: 'Porto di Cracovia', nl: 'Haven van Krakau', pt: 'Porto de Cracóvia', tr: 'Krakow Limanı', ru: 'Порт Краков', zh: '克拉科夫港', ar: 'ميناء كراكوف' },
+      'CZPRG_AIR': { en: 'Prague Airport', fr: 'Aéroport de Prague', de: 'Flughafen Prag', es: 'Aeropuerto de Praga', it: 'Aeroporto di Praga', nl: 'Luchthaven Praag', pt: 'Aeroporto de Praga', tr: 'Prag Havaalanı', ru: 'Аэропорт Прага', zh: '布拉格机场', ar: 'مطار براغ' },
+      
+      // === PAYS EN A - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇦🇪 UAE (Émirats Arabes Unis) - Hubs majeurs du Moyen-Orient
+      'AEJEA': { en: 'Port of Jebel Ali', fr: 'Port de Jebel Ali', de: 'Hafen Jebel Ali', es: 'Puerto de Jebel Ali', it: 'Porto di Jebel Ali', nl: 'Haven van Jebel Ali', pt: 'Porto de Jebel Ali', tr: 'Jebel Ali Limanı', ru: 'Порт Джебель-Али', zh: '杰贝阿里港', ar: 'ميناء جبل علي' },
+      'AESHJ': { en: 'Port of Sharjah', fr: 'Port de Sharjah', de: 'Hafen Schardscha', es: 'Puerto de Sharjah', it: 'Porto di Sharjah', nl: 'Haven van Sharjah', pt: 'Porto de Sharjah', tr: 'Şarjah Limanı', ru: 'Порт Шарджа', zh: '沙迦港', ar: 'ميناء الشارقة' },
+      'AEDXB': { en: 'Dubai International Airport', fr: 'Aéroport international de Dubaï', de: 'Internationaler Flughafen Dubai', es: 'Aeropuerto Internacional de Dubái', it: 'Aeroporto Internazionale di Dubai', nl: 'Internationale Luchthaven Dubai', pt: 'Aeroporto Internacional de Dubai', tr: 'Dubai Uluslararası Havaalanı', ru: 'Международный аэропорт Дубай', zh: '迪拜国际机场', ar: 'مطار دبي الدولي' },
+      'AEAUH': { en: 'Abu Dhabi International Airport', fr: 'Aéroport international d\'Abu Dhabi', de: 'Internationaler Flughafen Abu Dhabi', es: 'Aeropuerto Internacional de Abu Dhabi', it: 'Aeroporto Internazionale di Abu Dhabi', nl: 'Internationale Luchthaven Abu Dhabi', pt: 'Aeroporto Internacional de Abu Dhabi', tr: 'Abu Dabi Uluslararası Havaalanı', ru: 'Международный аэропорт Абу-Даби', zh: '阿布扎比国际机场', ar: 'مطار أبوظبي الدولي' },
+      
+      // 🇦🇺 Australia (Australie) - Hubs majeurs du Pacifique
+      'AUSYD': { en: 'Port of Sydney', fr: 'Port de Sydney', de: 'Hafen Sydney', es: 'Puerto de Sídney', it: 'Porto di Sydney', nl: 'Haven van Sydney', pt: 'Porto de Sydney', tr: 'Sidney Limanı', ru: 'Порт Сидней', zh: '悉尼港', ar: 'ميناء سيدني' },
+      'AUMEL': { en: 'Port of Melbourne', fr: 'Port de Melbourne', de: 'Hafen Melbourne', es: 'Puerto de Melbourne', it: 'Porto di Melbourne', nl: 'Haven van Melbourne', pt: 'Porto de Melbourne', tr: 'Melbourne Limanı', ru: 'Порт Мельбурн', zh: '墨尔本港', ar: 'ميناء ملبورن' },
+      'AUBNE': { en: 'Port of Brisbane', fr: 'Port de Brisbane', de: 'Hafen Brisbane', es: 'Puerto de Brisbane', it: 'Porto di Brisbane', nl: 'Haven van Brisbane', pt: 'Porto de Brisbane', tr: 'Brisbane Limanı', ru: 'Порт Брисбен', zh: '布里斯班港', ar: 'ميناء بريسبان' },
+      'AUFRE': { en: 'Port of Fremantle', fr: 'Port de Fremantle', de: 'Hafen Fremantle', es: 'Puerto de Fremantle', it: 'Porto di Fremantle', nl: 'Haven van Fremantle', pt: 'Porto de Fremantle', tr: 'Fremantle Limanı', ru: 'Порт Фримантл', zh: '弗里曼特尔港', ar: 'ميناء فريمانتل' },
+      'AUSYD_AIR': { en: 'Sydney Kingsford Smith Airport', fr: 'Aéroport de Sydney Kingsford Smith', de: 'Flughafen Sydney Kingsford Smith', es: 'Aeropuerto de Sídney Kingsford Smith', it: 'Aeroporto di Sydney Kingsford Smith', nl: 'Luchthaven Sydney Kingsford Smith', pt: 'Aeroporto de Sydney Kingsford Smith', tr: 'Sidney Kingsford Smith Havaalanı', ru: 'Аэропорт Сидней Кингсфорд Смит', zh: '悉尼金斯福德·史密斯机场', ar: 'مطار سيدني كينجسفورد سميث' },
+      'AUMEL_AIR': { en: 'Melbourne Airport', fr: 'Aéroport de Melbourne', de: 'Flughafen Melbourne', es: 'Aeropuerto de Melbourne', it: 'Aeroporto di Melbourne', nl: 'Luchthaven Melbourne', pt: 'Aeroporto de Melbourne', tr: 'Melbourne Havaalanı', ru: 'Аэропорт Мельбурн', zh: '墨尔本机场', ar: 'مطار ملبورن' },
+      'AUBNE_AIR': { en: 'Brisbane Airport', fr: 'Aéroport de Brisbane', de: 'Flughafen Brisbane', es: 'Aeropuerto de Brisbane', it: 'Aeroporto di Brisbane', nl: 'Luchthaven Brisbane', pt: 'Aeroporto de Brisbane', tr: 'Brisbane Havaalanı', ru: 'Аэропорт Брисбен', zh: '布里斯班机场', ar: 'مطار بريسبان' },
+      'AUPER_AIR': { en: 'Perth Airport', fr: 'Aéroport de Perth', de: 'Flughafen Perth', es: 'Aeropuerto de Perth', it: 'Aeroporto di Perth', nl: 'Luchthaven Perth', pt: 'Aeroporto de Perth', tr: 'Perth Havaalanı', ru: 'Аэропорт Перт', zh: '珀斯机场', ar: 'مطار بيرث' },
+      
+      // 🇦🇷 Argentina (Argentine) - Hub d'Amérique du Sud
+      'ARBUE': { en: 'Port of Buenos Aires', fr: 'Port de Buenos Aires', de: 'Hafen Buenos Aires', es: 'Puerto de Buenos Aires', it: 'Porto di Buenos Aires', nl: 'Haven van Buenos Aires', pt: 'Porto de Buenos Aires', tr: 'Buenos Aires Limanı', ru: 'Порт Буэнос-Айрес', zh: '布宜诺斯艾利斯港', ar: 'ميناء بوينس آيرس' },
+      'AREZE': { en: 'Ezeiza International Airport', fr: 'Aéroport international d\'Ezeiza', de: 'Internationaler Flughafen Ezeiza', es: 'Aeropuerto Internacional de Ezeiza', it: 'Aeroporto Internazionale di Ezeiza', nl: 'Internationale Luchthaven Ezeiza', pt: 'Aeroporto Internacional de Ezeiza', tr: 'Ezeiza Uluslararası Havaalanı', ru: 'Международный аэропорт Эсейса', zh: '埃塞萨国际机场', ar: 'مطار إيزيزا الدولي' },
+      
+      // 🇦🇹 Austria (Autriche) - Hub européen central
+      'ATVIE': { en: 'Vienna International Airport', fr: 'Aéroport international de Vienne', de: 'Flughafen Wien-Schwechat', es: 'Aeropuerto Internacional de Viena', it: 'Aeroporto Internazionale di Vienna', nl: 'Internationale Luchthaven Wenen', pt: 'Aeroporto Internacional de Viena', tr: 'Viyana Uluslararası Havaalanı', ru: 'Международный аэропорт Вена', zh: '维也纳国际机场', ar: 'مطار فيينا الدولي' },
+      'ATVIE_RAIL': { en: 'Vienna Central Station', fr: 'Gare centrale de Vienne', de: 'Wien Hauptbahnhof', es: 'Estación Central de Viena', it: 'Stazione Centrale di Vienna', nl: 'Centraal Station Wenen', pt: 'Estação Central de Viena', tr: 'Viyana Merkez İstasyonu', ru: 'Центральный вокзал Вены', zh: '维也纳中央火车站', ar: 'محطة فيينا المركزية' },
+      
+      // 🇦🇴 Angola - Hub d'Afrique australe
+      'AOLAD': { en: 'Port of Luanda', fr: 'Port de Luanda', de: 'Hafen Luanda', es: 'Puerto de Luanda', it: 'Porto di Luanda', nl: 'Haven van Luanda', pt: 'Porto de Luanda', tr: 'Luanda Limanı', ru: 'Порт Луанда', zh: '罗安达港', ar: 'ميناء لواندا' },
+      'AOLOS': { en: 'Port of Lobito', fr: 'Port de Lobito', de: 'Hafen Lobito', es: 'Puerto de Lobito', it: 'Porto di Lobito', nl: 'Haven van Lobito', pt: 'Porto do Lobito', tr: 'Lobito Limanı', ru: 'Порт Лобито', zh: '洛比托港', ar: 'ميناء لوبيتو' },
+      'AOLAD_AIR': { en: 'Luanda Quatro de Fevereiro Airport', fr: 'Aéroport de Luanda Quatro de Fevereiro', de: 'Flughafen Luanda Quatro de Fevereiro', es: 'Aeropuerto de Luanda Quatro de Fevereiro', it: 'Aeroporto di Luanda Quatro de Fevereiro', nl: 'Luchthaven Luanda Quatro de Fevereiro', pt: 'Aeroporto de Luanda Quatro de Fevereiro', tr: 'Luanda Quatro de Fevereiro Havaalanı', ru: 'Аэропорт Луанда Куатро-де-Февереиру', zh: '罗安达二月四日机场', ar: 'مطار لواندا كواترو دي فيفيريرو' },
+      'AOLAD_RAIL': { en: 'Luanda Railway Station', fr: 'Gare ferroviaire de Luanda', de: 'Bahnhof Luanda', es: 'Estación de Ferrocarril de Luanda', it: 'Stazione Ferroviaria di Luanda', nl: 'Treinstation Luanda', pt: 'Estação Ferroviária de Luanda', tr: 'Luanda Tren İstasyonu', ru: 'Железнодорожная станция Луанда', zh: '罗安达火车站', ar: 'محطة لواندا للسكك الحديدية' },
+      
+      // === PAYS EN B - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇧🇪 Belgium (Belgique) - Hub européen majeur
+      'BEANR': { en: 'Port of Antwerp', fr: 'Port d\'Anvers', de: 'Hafen Antwerpen', es: 'Puerto de Amberes', it: 'Porto di Anversa', nl: 'Haven van Antwerpen', pt: 'Porto de Antuérpia', tr: 'Anvers Limanı', ru: 'Порт Антверпен', zh: '安特卫普港', ar: 'ميناء أنتويرب' },
+      'BEZEE': { en: 'Port of Zeebrugge', fr: 'Port de Zeebruges', de: 'Hafen Zeebrügge', es: 'Puerto de Zeebrugge', it: 'Porto di Zeebrugge', nl: 'Haven van Zeebrugge', pt: 'Porto de Zeebrugge', tr: 'Zeebrugge Limanı', ru: 'Порт Зебрюгге', zh: '泽布吕赫港', ar: 'ميناء زيبروج' },
+      'BEBRU': { en: 'Brussels Airport', fr: 'Aéroport de Bruxelles', de: 'Flughafen Brüssel', es: 'Aeropuerto de Bruselas', it: 'Aeroporto di Bruxelles', nl: 'Luchthaven Brussel', pt: 'Aeroporto de Bruxelas', tr: 'Brüksel Havaalanı', ru: 'Аэропорт Брюссель', zh: '布鲁塞尔机场', ar: 'مطار بروكسل' },
+      'BELIE': { en: 'Liège Airport', fr: 'Aéroport de Liège', de: 'Flughafen Lüttich', es: 'Aeropuerto de Lieja', it: 'Aeroporto di Liegi', nl: 'Luchthaven Luik', pt: 'Aeroporto de Liège', tr: 'Liège Havaalanı', ru: 'Аэропорт Льеж', zh: '列日机场', ar: 'مطار لييج' },
+      'BEBRU_RAIL': { en: 'Brussels Central Station', fr: 'Gare centrale de Bruxelles', de: 'Brüssel-Zentral', es: 'Estación Central de Bruselas', it: 'Stazione Centrale di Bruxelles', nl: 'Brussel-Centraal', pt: 'Estação Central de Bruxelas', tr: 'Brüksel Merkez İstasyonu', ru: 'Центральный вокзал Брюсселя', zh: '布鲁塞尔中央车站', ar: 'محطة بروكسل المركزية' },
+      'BEANR_RAIL': { en: 'Antwerp Central Station', fr: 'Gare centrale d\'Anvers', de: 'Antwerpen-Zentral', es: 'Estación Central de Amberes', it: 'Stazione Centrale di Anversa', nl: 'Antwerpen-Centraal', pt: 'Estação Central de Antuérpia', tr: 'Anvers Merkez İstasyonu', ru: 'Центральный вокзал Антверпена', zh: '安特卫普中央车站', ar: 'محطة أنتويرب المركزية' },
+      
+      // 🇧🇷 Brazil (Brésil) - Hub d'Amérique du Sud
+      'BRSFS': { en: 'Port of Santos', fr: 'Port de Santos', de: 'Hafen Santos', es: 'Puerto de Santos', it: 'Porto di Santos', nl: 'Haven van Santos', pt: 'Porto de Santos', tr: 'Santos Limanı', ru: 'Порт Сантос', zh: '桑托斯港', ar: 'ميناء سانتوس' },
+      'BRRIO': { en: 'Port of Rio de Janeiro', fr: 'Port de Rio de Janeiro', de: 'Hafen Rio de Janeiro', es: 'Puerto de Río de Janeiro', it: 'Porto di Rio de Janeiro', nl: 'Haven van Rio de Janeiro', pt: 'Porto do Rio de Janeiro', tr: 'Rio de Janeiro Limanı', ru: 'Порт Рио-де-Жанейро', zh: '里约热内卢港', ar: 'ميناء ريو دي جانيرو' },
+      'BRPAR': { en: 'Port of Paranaguá', fr: 'Port de Paranaguá', de: 'Hafen Paranaguá', es: 'Puerto de Paranaguá', it: 'Porto di Paranaguá', nl: 'Haven van Paranaguá', pt: 'Porto de Paranaguá', tr: 'Paranaguá Limanı', ru: 'Порт Паранагуа', zh: '巴拉那瓜港', ar: 'ميناء باراناغوا' },
+      'BRGRU': { en: 'São Paulo Guarulhos International Airport', fr: 'Aéroport international de São Paulo Guarulhos', de: 'Internationaler Flughafen São Paulo Guarulhos', es: 'Aeropuerto Internacional de São Paulo Guarulhos', it: 'Aeroporto Internazionale di São Paulo Guarulhos', nl: 'Internationale Luchthaven São Paulo Guarulhos', pt: 'Aeroporto Internacional de São Paulo Guarulhos', tr: 'São Paulo Guarulhos Uluslararası Havaalanı', ru: 'Международный аэропорт Сан-Паулу Гуарульос', zh: '圣保罗瓜鲁柳斯国际机场', ar: 'مطار ساو باولو غواروليوس الدولي' },
+      'BRRIO_AIR': { en: 'Rio de Janeiro Galeão International Airport', fr: 'Aéroport international de Rio de Janeiro Galeão', de: 'Internationaler Flughafen Rio de Janeiro Galeão', es: 'Aeropuerto Internacional de Río de Janeiro Galeão', it: 'Aeroporto Internazionale di Rio de Janeiro Galeão', nl: 'Internationale Luchthaven Rio de Janeiro Galeão', pt: 'Aeroporto Internacional do Rio de Janeiro Galeão', tr: 'Rio de Janeiro Galeão Uluslararası Havaalanı', ru: 'Международный аэропорт Рио-де-Жанейро Галеао', zh: '里约热内卢加利昂国际机场', ar: 'مطار ريو دي جانيرو غالياو الدولي' },
+      'BRBSB': { en: 'Brasília International Airport', fr: 'Aéroport international de Brasília', de: 'Internationaler Flughafen Brasília', es: 'Aeropuerto Internacional de Brasilia', it: 'Aeroporto Internazionale di Brasília', nl: 'Internationale Luchthaven Brasília', pt: 'Aeroporto Internacional de Brasília', tr: 'Brasília Uluslararası Havaalanı', ru: 'Международный аэропорт Бразилиа', zh: '巴西利亚国际机场', ar: 'مطار برازيليا الدولي' },
+      
+      // 🇧🇩 Bangladesh - Hub d'Asie du Sud
+      'BDCGP': { en: 'Port of Chittagong', fr: 'Port de Chittagong', de: 'Hafen Chittagong', es: 'Puerto de Chittagong', it: 'Porto di Chittagong', nl: 'Haven van Chittagong', pt: 'Porto de Chittagong', tr: 'Chittagong Limanı', ru: 'Порт Читтагонг', zh: '吉大港港', ar: 'ميناء شيتاغونغ' },
+      'BDDHA': { en: 'Port of Dhaka', fr: 'Port de Dhaka', de: 'Hafen Dhaka', es: 'Puerto de Daca', it: 'Porto di Dhaka', nl: 'Haven van Dhaka', pt: 'Porto de Dhaka', tr: 'Dakka Limanı', ru: 'Порт Дакка', zh: '达卡港', ar: 'ميناء دكا' },
+      'BDMGL': { en: 'Port of Mongla', fr: 'Port de Mongla', de: 'Hafen Mongla', es: 'Puerto de Mongla', it: 'Porto di Mongla', nl: 'Haven van Mongla', pt: 'Porto de Mongla', tr: 'Mongla Limanı', ru: 'Порт Монгла', zh: '蒙格拉港', ar: 'ميناء مونغلا' },
+      'BDDAC': { en: 'Dhaka Hazrat Shahjalal International Airport', fr: 'Aéroport international de Dhaka Hazrat Shahjalal', de: 'Internationaler Flughafen Dhaka Hazrat Shahjalal', es: 'Aeropuerto Internacional de Daca Hazrat Shahjalal', it: 'Aeroporto Internazionale di Dhaka Hazrat Shahjalal', nl: 'Internationale Luchthaven Dhaka Hazrat Shahjalal', pt: 'Aeroporto Internacional de Dhaka Hazrat Shahjalal', tr: 'Dakka Hazrat Shahjalal Uluslararası Havaalanı', ru: 'Международный аэропорт Дакка Хазрат Шахджалал', zh: '达卡哈兹拉特·沙贾拉勒国际机场', ar: 'مطار دكا حضرة شاه جلال الدولي' },
+      'BDCGP_AIR': { en: 'Chittagong Shah Amanat International Airport', fr: 'Aéroport international de Chittagong Shah Amanat', de: 'Internationaler Flughafen Chittagong Shah Amanat', es: 'Aeropuerto Internacional de Chittagong Shah Amanat', it: 'Aeroporto Internazionale di Chittagong Shah Amanat', nl: 'Internationale Luchthaven Chittagong Shah Amanat', pt: 'Aeroporto Internacional de Chittagong Shah Amanat', tr: 'Chittagong Shah Amanat Uluslararası Havaalanı', ru: 'Международный аэропорт Читтагонг Шах Аманат', zh: '吉大港沙阿马纳特国际机场', ar: 'مطار شيتاغونغ شاه أمانات الدولي' },
+      'BDDHA_RAIL': { en: 'Dhaka Railway Station', fr: 'Gare ferroviaire de Dhaka', de: 'Bahnhof Dhaka', es: 'Estación de Ferrocarril de Daca', it: 'Stazione Ferroviaria di Dhaka', nl: 'Treinstation Dhaka', pt: 'Estação Ferroviária de Dhaka', tr: 'Dakka Tren İstasyonu', ru: 'Железнодорожная станция Дакка', zh: '达卡火车站', ar: 'محطة دكا للسكك الحديدية' },
+      'BDCGP_RAIL': { en: 'Chittagong Railway Station', fr: 'Gare ferroviaire de Chittagong', de: 'Bahnhof Chittagong', es: 'Estación de Ferrocarril de Chittagong', it: 'Stazione Ferroviaria di Chittagong', nl: 'Treinstation Chittagong', pt: 'Estação Ferroviária de Chittagong', tr: 'Chittagong Tren İstasyonu', ru: 'Железнодорожная станция Читтагонг', zh: '吉大港火车站', ar: 'محطة شيتاغونغ للسكك الحديدية' },
+      
+      // 🇧🇬 Bulgaria (Bulgarie) - Hub des Balkans
+      'BGBOJ': { en: 'Port of Bourgas', fr: 'Port de Bourgas', de: 'Hafen Burgas', es: 'Puerto de Burgas', it: 'Porto di Burgas', nl: 'Haven van Burgas', pt: 'Porto de Burgas', tr: 'Burgas Limanı', ru: 'Порт Бургас', zh: '布尔加斯港', ar: 'ميناء بورغاس' },
+      'BGVAR_AIR': { en: 'Varna Airport', fr: 'Aéroport de Varna', de: 'Flughafen Warna', es: 'Aeropuerto de Varna', it: 'Aeroporto di Varna', nl: 'Luchthaven Varna', pt: 'Aeroporto de Varna', tr: 'Varna Havaalanı', ru: 'Аэропорт Варна', zh: '瓦尔纳机场', ar: 'مطار فارنا' },
+      'BGSOF_RAIL': { en: 'Sofia Central Station', fr: 'Gare centrale de Sofia', de: 'Sofia Hauptbahnhof', es: 'Estación Central de Sofía', it: 'Stazione Centrale di Sofia', nl: 'Centraal Station Sofia', pt: 'Estação Central de Sofia', tr: 'Sofya Merkez İstasyonu', ru: 'Центральный вокзал Софии', zh: '索菲亚中央车站', ar: 'محطة صوفيا المركزية' },
+      
+      // === PAYS EN C - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇨🇦 Canada - Hub nord-américain majeur
+      'CAVAN': { en: 'Port of Vancouver', fr: 'Port de Vancouver', de: 'Hafen Vancouver', es: 'Puerto de Vancouver', it: 'Porto di Vancouver', nl: 'Haven van Vancouver', pt: 'Porto de Vancouver', tr: 'Vancouver Limanı', ru: 'Порт Ванкувер', zh: '温哥华港', ar: 'ميناء فانكوفر' },
+      'CAMON': { en: 'Port of Montreal', fr: 'Port de Montréal', de: 'Hafen Montreal', es: 'Puerto de Montreal', it: 'Porto di Montreal', nl: 'Haven van Montreal', pt: 'Porto de Montreal', tr: 'Montreal Limanı', ru: 'Порт Монреаль', zh: '蒙特利尔港', ar: 'ميناء مونتريال' },
+      'CAHAL': { en: 'Port of Halifax', fr: 'Port de Halifax', de: 'Hafen Halifax', es: 'Puerto de Halifax', it: 'Porto di Halifax', nl: 'Haven van Halifax', pt: 'Porto de Halifax', tr: 'Halifax Limanı', ru: 'Порт Галифакс', zh: '哈利法克斯港', ar: 'ميناء هاليفاكس' },
+      'CAYVR': { en: 'Vancouver International Airport', fr: 'Aéroport international de Vancouver', de: 'Internationaler Flughafen Vancouver', es: 'Aeropuerto Internacional de Vancouver', it: 'Aeroporto Internazionale di Vancouver', nl: 'Internationale Luchthaven Vancouver', pt: 'Aeroporto Internacional de Vancouver', tr: 'Vancouver Uluslararası Havaalanı', ru: 'Международный аэропорт Ванкувер', zh: '温哥华国际机场', ar: 'مطار فانكوفر الدولي' },
+      'CAYYZ': { en: 'Toronto Pearson International Airport', fr: 'Aéroport international de Toronto Pearson', de: 'Internationaler Flughafen Toronto Pearson', es: 'Aeropuerto Internacional de Toronto Pearson', it: 'Aeroporto Internazionale di Toronto Pearson', nl: 'Internationale Luchthaven Toronto Pearson', pt: 'Aeroporto Internacional de Toronto Pearson', tr: 'Toronto Pearson Uluslararası Havaalanı', ru: 'Международный аэропорт Торонто Пирсон', zh: '多伦多皮尔逊国际机场', ar: 'مطار تورونتو بيرسون الدولي' },
+      'CAYMQ': { en: 'Montreal Pierre Elliott Trudeau International Airport', fr: 'Aéroport international de Montréal Pierre Elliott Trudeau', de: 'Internationaler Flughafen Montreal Pierre Elliott Trudeau', es: 'Aeropuerto Internacional de Montreal Pierre Elliott Trudeau', it: 'Aeroporto Internazionale di Montreal Pierre Elliott Trudeau', nl: 'Internationale Luchthaven Montreal Pierre Elliott Trudeau', pt: 'Aeroporto Internacional de Montreal Pierre Elliott Trudeau', tr: 'Montreal Pierre Elliott Trudeau Uluslararası Havaalanı', ru: 'Международный аэропорт Монреаль Пьер Эллиот Трюдо', zh: '蒙特利尔皮埃尔·埃利奥特·特鲁多国际机场', ar: 'مطار مونتريال بيير إليوت ترودو الدولي' },
+      'CAYYC': { en: 'Calgary International Airport', fr: 'Aéroport international de Calgary', de: 'Internationaler Flughafen Calgary', es: 'Aeropuerto Internacional de Calgary', it: 'Aeroporto Internazionale di Calgary', nl: 'Internationale Luchthaven Calgary', pt: 'Aeroporto Internacional de Calgary', tr: 'Calgary Uluslararası Havaalanı', ru: 'Международный аэропорт Калгари', zh: '卡尔加里国际机场', ar: 'مطار كالغاري الدولي' },
+      'CAVAN_RAIL': { en: 'Vancouver Pacific Central Station', fr: 'Gare centrale du Pacifique de Vancouver', de: 'Vancouver Pacific Central Bahnhof', es: 'Estación Central del Pacífico de Vancouver', it: 'Stazione Centrale del Pacifico di Vancouver', nl: 'Vancouver Pacific Centraal Station', pt: 'Estação Central do Pacífico de Vancouver', tr: 'Vancouver Pasifik Merkez İstasyonu', ru: 'Центральная тихоокеанская станция Ванкувера', zh: '温哥华太平洋中央车站', ar: 'محطة فانكوفر المركزية للمحيط الهادئ' },
+      'CATOR_RAIL': { en: 'Toronto Union Station', fr: 'Gare Union de Toronto', de: 'Toronto Union Station', es: 'Estación Union de Toronto', it: 'Stazione Union di Toronto', nl: 'Toronto Union Station', pt: 'Estação Union de Toronto', tr: 'Toronto Union İstasyonu', ru: 'Юнион Стейшн Торонто', zh: '多伦多联合车站', ar: 'محطة تورونتو يونيون' },
+      
+      // 🇨🇳 China (Chine) - Superpuissance logistique mondiale
+      'CNSHA': { en: 'Port of Shanghai', fr: 'Port de Shanghai', de: 'Hafen Shanghai', es: 'Puerto de Shanghái', it: 'Porto di Shanghai', nl: 'Haven van Shanghai', pt: 'Porto de Xangai', tr: 'Şanghay Limanı', ru: 'Порт Шанхай', zh: '上海港', ar: 'ميناء شنغهاي' },
+      'CNSZX': { en: 'Port of Shenzhen', fr: 'Port de Shenzhen', de: 'Hafen Shenzhen', es: 'Puerto de Shenzhen', it: 'Porto di Shenzhen', nl: 'Haven van Shenzhen', pt: 'Porto de Shenzhen', tr: 'Shenzhen Limanı', ru: 'Порт Шэньчжэнь', zh: '深圳港', ar: 'ميناء شنتشن' },
+      'CNNGB': { en: 'Port of Ningbo-Zhoushan', fr: 'Port de Ningbo-Zhoushan', de: 'Hafen Ningbo-Zhoushan', es: 'Puerto de Ningbo-Zhoushan', it: 'Porto di Ningbo-Zhoushan', nl: 'Haven van Ningbo-Zhoushan', pt: 'Porto de Ningbo-Zhoushan', tr: 'Ningbo-Zhoushan Limanı', ru: 'Порт Нинбо-Чжоушань', zh: '宁波舟山港', ar: 'ميناء نينغبو-تشوشان' },
+      'CNQIN': { en: 'Port of Qingdao', fr: 'Port de Qingdao', de: 'Hafen Qingdao', es: 'Puerto de Qingdao', it: 'Porto di Qingdao', nl: 'Haven van Qingdao', pt: 'Porto de Qingdao', tr: 'Qingdao Limanı', ru: 'Порт Циндао', zh: '青岛港', ar: 'ميناء تشينغداو' },
+      'CNGUA': { en: 'Port of Guangzhou', fr: 'Port de Guangzhou', de: 'Hafen Guangzhou', es: 'Puerto de Guangzhou', it: 'Porto di Guangzhou', nl: 'Haven van Guangzhou', pt: 'Porto de Guangzhou', tr: 'Guangzhou Limanı', ru: 'Порт Гуанчжоу', zh: '广州港', ar: 'ميناء غوانغتشو' },
+      'CNTIA': { en: 'Port of Tianjin', fr: 'Port de Tianjin', de: 'Hafen Tianjin', es: 'Puerto de Tianjin', it: 'Porto di Tianjin', nl: 'Haven van Tianjin', pt: 'Porto de Tianjin', tr: 'Tianjin Limanı', ru: 'Порт Тяньцзинь', zh: '天津港', ar: 'ميناء تيانجين' },
+      'CNPVG': { en: 'Shanghai Pudong International Airport', fr: 'Aéroport international de Shanghai Pudong', de: 'Internationaler Flughafen Shanghai Pudong', es: 'Aeropuerto Internacional de Shanghái Pudong', it: 'Aeroporto Internazionale di Shanghai Pudong', nl: 'Internationale Luchthaven Shanghai Pudong', pt: 'Aeroporto Internacional de Xangai Pudong', tr: 'Şanghay Pudong Uluslararası Havaalanı', ru: 'Международный аэропорт Шанхай Пудун', zh: '上海浦东国际机场', ar: 'مطار شنغهاي بودونغ الدولي' },
+      'CNPEK': { en: 'Beijing Capital International Airport', fr: 'Aéroport international de Pékin Capital', de: 'Internationaler Flughafen Peking Capital', es: 'Aeropuerto Internacional de Pekín Capital', it: 'Aeroporto Internazionale di Pechino Capital', nl: 'Internationale Luchthaven Beijing Capital', pt: 'Aeroporto Internacional de Pequim Capital', tr: 'Pekin Capital Uluslararası Havaalanı', ru: 'Международный аэропорт Пекин Столичный', zh: '北京首都国际机场', ar: 'مطار بكين العاصمة الدولي' },
+      'CNCAN': { en: 'Guangzhou Baiyun International Airport', fr: 'Aéroport international de Guangzhou Baiyun', de: 'Internationaler Flughafen Guangzhou Baiyun', es: 'Aeropuerto Internacional de Guangzhou Baiyun', it: 'Aeroporto Internazionale di Guangzhou Baiyun', nl: 'Internationale Luchthaven Guangzhou Baiyun', pt: 'Aeroporto Internacional de Guangzhou Baiyun', tr: 'Guangzhou Baiyun Uluslararası Havaalanı', ru: 'Международный аэропорт Гуанчжоу Байюнь', zh: '广州白云国际机场', ar: 'مطار غوانغتشو بايون الدولي' },
+      'CNSZX_AIR': { en: 'Shenzhen Bao\'an International Airport', fr: 'Aéroport international de Shenzhen Bao\'an', de: 'Internationaler Flughafen Shenzhen Bao\'an', es: 'Aeropuerto Internacional de Shenzhen Bao\'an', it: 'Aeroporto Internazionale di Shenzhen Bao\'an', nl: 'Internationale Luchthaven Shenzhen Bao\'an', pt: 'Aeroporto Internacional de Shenzhen Bao\'an', tr: 'Shenzhen Bao\'an Uluslararası Havaalanı', ru: 'Международный аэропорт Шэньчжэнь Баоань', zh: '深圳宝安国际机场', ar: 'مطار شنتشن باوآن الدولي' },
+      'CNHGH': { en: 'Hangzhou Xiaoshan International Airport', fr: 'Aéroport international de Hangzhou Xiaoshan', de: 'Internationaler Flughafen Hangzhou Xiaoshan', es: 'Aeropuerto Internacional de Hangzhou Xiaoshan', it: 'Aeroporto Internazionale di Hangzhou Xiaoshan', nl: 'Internationale Luchthaven Hangzhou Xiaoshan', pt: 'Aeroporto Internacional de Hangzhou Xiaoshan', tr: 'Hangzhou Xiaoshan Uluslararası Havaalanı', ru: 'Международный аэропорт Ханчжоу Сяошань', zh: '杭州萧山国际机场', ar: 'مطار هانغتشو شياوشان الدولي' },
+      'CNBEI_RAIL': { en: 'Beijing Railway Station', fr: 'Gare ferroviaire de Pékin', de: 'Bahnhof Peking', es: 'Estación de Ferrocarril de Pekín', it: 'Stazione Ferroviaria di Pechino', nl: 'Treinstation Beijing', pt: 'Estação Ferroviária de Pequim', tr: 'Pekin Tren İstasyonu', ru: 'Железнодорожная станция Пекин', zh: '北京火车站', ar: 'محطة بكين للسكك الحديدية' },
+      'CNSHA_RAIL': { en: 'Shanghai Railway Station', fr: 'Gare ferroviaire de Shanghai', de: 'Bahnhof Shanghai', es: 'Estación de Ferrocarril de Shanghái', it: 'Stazione Ferroviaria di Shanghai', nl: 'Treinstation Shanghai', pt: 'Estação Ferroviária de Xangai', tr: 'Şanghay Tren İstasyonu', ru: 'Железнодорожная станция Шанхай', zh: '上海火车站', ar: 'محطة شنغهاي للسكك الحديدية' },
+      'CNGUA_RAIL': { en: 'Guangzhou Railway Station', fr: 'Gare ferroviaire de Guangzhou', de: 'Bahnhof Guangzhou', es: 'Estación de Ferrocarril de Guangzhou', it: 'Stazione Ferroviaria di Guangzhou', nl: 'Treinstation Guangzhou', pt: 'Estação Ferroviária de Guangzhou', tr: 'Guangzhou Tren İstasyonu', ru: 'Железнодорожная станция Гуанчжоу', zh: '广州火车站', ar: 'محطة غوانغتشو للسكك الحديدية' },
+      
+      // 🇨🇱 Chile (Chili) - Hub du Pacifique Sud
+      'CLVAP': { en: 'Port of Valparaíso', fr: 'Port de Valparaíso', de: 'Hafen Valparaíso', es: 'Puerto de Valparaíso', it: 'Porto di Valparaíso', nl: 'Haven van Valparaíso', pt: 'Porto de Valparaíso', tr: 'Valparaíso Limanı', ru: 'Порт Вальпараисо', zh: '瓦尔帕莱索港', ar: 'ميناء فالبارايسو' },
+      'CLSAI': { en: 'Port of San Antonio', fr: 'Port de San Antonio', de: 'Hafen San Antonio', es: 'Puerto de San Antonio', it: 'Porto di San Antonio', nl: 'Haven van San Antonio', pt: 'Porto de San Antonio', tr: 'San Antonio Limanı', ru: 'Порт Сан-Антонио', zh: '圣安东尼奥港', ar: 'ميناء سان أنطونيو' },
+      'CLSCL': { en: 'Santiago International Airport', fr: 'Aéroport international de Santiago', de: 'Internationaler Flughafen Santiago', es: 'Aeropuerto Internacional de Santiago', it: 'Aeroporto Internazionale di Santiago', nl: 'Internationale Luchthaven Santiago', pt: 'Aeroporto Internacional de Santiago', tr: 'Santiago Uluslararası Havaalanı', ru: 'Международный аэропорт Сантьяго', zh: '圣地亚哥国际机场', ar: 'مطار سانتياغو الدولي' },
+      
+      // 🇨🇴 Colombia (Colombie) - Hub d'Amérique du Sud
+      'COCTG': { en: 'Port of Cartagena', fr: 'Port de Cartagena', de: 'Hafen Cartagena', es: 'Puerto de Cartagena', it: 'Porto di Cartagena', nl: 'Haven van Cartagena', pt: 'Porto de Cartagena', tr: 'Cartagena Limanı', ru: 'Порт Картахена', zh: '卡塔赫纳港', ar: 'ميناء قرطاجنة' },
+      'COBAR': { en: 'Port of Barranquilla', fr: 'Port de Barranquilla', de: 'Hafen Barranquilla', es: 'Puerto de Barranquilla', it: 'Porto di Barranquilla', nl: 'Haven van Barranquilla', pt: 'Porto de Barranquilla', tr: 'Barranquilla Limanı', ru: 'Порт Барранкилья', zh: '巴兰基亚港', ar: 'ميناء بارانكيا' },
+      'COBOG': { en: 'Bogotá El Dorado International Airport', fr: 'Aéroport international de Bogotá El Dorado', de: 'Internationaler Flughafen Bogotá El Dorado', es: 'Aeropuerto Internacional de Bogotá El Dorado', it: 'Aeroporto Internazionale di Bogotá El Dorado', nl: 'Internationale Luchthaven Bogotá El Dorado', pt: 'Aeroporto Internacional de Bogotá El Dorado', tr: 'Bogotá El Dorado Uluslararası Havaalanı', ru: 'Международный аэропорт Богота Эль-Дорадо', zh: '波哥大埃尔多拉多国际机场', ar: 'مطار بوغوتا إل دورادو الدولي' },
+      
+      // 🇨🇿 Czech Republic (République tchèque) - Hub d'Europe centrale
+      'CZPRG': { en: 'Prague Václav Havel Airport', fr: 'Aéroport de Prague Václav Havel', de: 'Flughafen Prag Václav Havel', es: 'Aeropuerto de Praga Václav Havel', it: 'Aeroporto di Praga Václav Havel', nl: 'Luchthaven Praag Václav Havel', pt: 'Aeroporto de Praga Václav Havel', tr: 'Prag Václav Havel Havaalanı', ru: 'Аэропорт Прага Вацлав Гавел', zh: '布拉格瓦茨拉夫·哈维尔机场', ar: 'مطار براغ فاتسلاف هافيل' },
+      'CZPRG_RAIL': { en: 'Prague Central Station', fr: 'Gare centrale de Prague', de: 'Prag Hauptbahnhof', es: 'Estación Central de Praga', it: 'Stazione Centrale di Praga', nl: 'Centraal Station Praag', pt: 'Estação Central de Praga', tr: 'Prag Merkez İstasyonu', ru: 'Центральный вокзал Праги', zh: '布拉格中央车站', ar: 'محطة براغ المركزية' },
+      
+      // 🇨🇭 Switzerland (Suisse) - Hub alpin européen
+      'CHZUR': { en: 'Zurich Airport', fr: 'Aéroport de Zürich', de: 'Flughafen Zürich', es: 'Aeropuerto de Zúrich', it: 'Aeroporto di Zurigo', nl: 'Luchthaven Zürich', pt: 'Aeroporto de Zurique', tr: 'Zürih Havaalanı', ru: 'Аэропорт Цюрих', zh: '苏黎世机场', ar: 'مطار زيورخ' },
+      'CHGVA': { en: 'Geneva Airport', fr: 'Aéroport de Genève', de: 'Flughafen Genf', es: 'Aeropuerto de Ginebra', it: 'Aeroporto di Ginevra', nl: 'Luchthaven Genève', pt: 'Aeroporto de Genebra', tr: 'Cenevre Havaalanı', ru: 'Аэропорт Женева', zh: '日内瓦机场', ar: 'مطار جنيف' },
+      'CHZUR_RAIL': { en: 'Zurich Central Station', fr: 'Gare centrale de Zürich', de: 'Zürich Hauptbahnhof', es: 'Estación Central de Zúrich', it: 'Stazione Centrale di Zurigo', nl: 'Centraal Station Zürich', pt: 'Estação Central de Zurique', tr: 'Zürih Merkez İstasyonu', ru: 'Центральный вокзал Цюриха', zh: '苏黎世中央车站', ar: 'محطة زيورخ المركزية' },
+      'CHGVA_RAIL': { en: 'Geneva Cornavin Station', fr: 'Gare de Genève-Cornavin', de: 'Bahnhof Genf Cornavin', es: 'Estación de Ginebra Cornavin', it: 'Stazione di Ginevra Cornavin', nl: 'Station Genève-Cornavin', pt: 'Estação de Genebra Cornavin', tr: 'Cenevre Cornavin İstasyonu', ru: 'Вокзал Женева Корнавен', zh: '日内瓦科尔纳万车站', ar: 'محطة جنيف كورنافين' },
+      
+      // 🇨🇮 Ivory Coast (Côte d'Ivoire) - Hub d'Afrique de l'Ouest
+      'CIABJ': { en: 'Port of Abidjan', fr: 'Port d\'Abidjan', de: 'Hafen Abidjan', es: 'Puerto de Abiyán', it: 'Porto di Abidjan', nl: 'Haven van Abidjan', pt: 'Porto de Abidjan', tr: 'Abidjan Limanı', ru: 'Порт Абиджан', zh: '阿比让港', ar: 'ميناء أبيدجان' },
+      'CISAN': { en: 'Port of San-Pédro', fr: 'Port de San-Pédro', de: 'Hafen San-Pédro', es: 'Puerto de San-Pédro', it: 'Porto di San-Pédro', nl: 'Haven van San-Pédro', pt: 'Porto de San-Pédro', tr: 'San-Pédro Limanı', ru: 'Порт Сан-Педро', zh: '圣佩德罗港', ar: 'ميناء سان بيدرو' },
+      'CIABJ_AIR': { en: 'Abidjan Félix Houphouët-Boigny International Airport', fr: 'Aéroport international d\'Abidjan Félix Houphouët-Boigny', de: 'Internationaler Flughafen Abidjan Félix Houphouët-Boigny', es: 'Aeropuerto Internacional de Abiyán Félix Houphouët-Boigny', it: 'Aeroporto Internazionale di Abidjan Félix Houphouët-Boigny', nl: 'Internationale Luchthaven Abidjan Félix Houphouët-Boigny', pt: 'Aeroporto Internacional de Abidjan Félix Houphouët-Boigny', tr: 'Abidjan Félix Houphouët-Boigny Uluslararası Havaalanı', ru: 'Международный аэропорт Абиджан Феликс Уфуэ-Буаньи', zh: '阿比让费利克斯·乌弗埃-博瓦尼国际机场', ar: 'مطار أبيدجان فيليكس هوفويت بوانيي الدولي' },
+      
+      // 🇨🇷 Costa Rica - Hub d'Amérique centrale
+      'CRLIM': { en: 'Port of Limón', fr: 'Port de Limón', de: 'Hafen Limón', es: 'Puerto de Limón', it: 'Porto di Limón', nl: 'Haven van Limón', pt: 'Porto de Limón', tr: 'Limón Limanı', ru: 'Порт Лимон', zh: '利蒙港', ar: 'ميناء ليمون' },
+      'CRPUN': { en: 'Port of Puntarenas', fr: 'Port de Puntarenas', de: 'Hafen Puntarenas', es: 'Puerto de Puntarenas', it: 'Porto di Puntarenas', nl: 'Haven van Puntarenas', pt: 'Porto de Puntarenas', tr: 'Puntarenas Limanı', ru: 'Порт Пунтаренас', zh: '蓬塔雷纳斯港', ar: 'ميناء بونتاريناس' },
+      'CRSJO': { en: 'Juan Santamaría International Airport', fr: 'Aéroport international Juan Santamaría', de: 'Internationaler Flughafen Juan Santamaría', es: 'Aeropuerto Internacional Juan Santamaría', it: 'Aeroporto Internazionale Juan Santamaría', nl: 'Internationale Luchthaven Juan Santamaría', pt: 'Aeroporto Internacional Juan Santamaría', tr: 'Juan Santamaría Uluslararası Havaalanı', ru: 'Международный аэропорт Хуан Сантамария', zh: '胡安·圣玛丽亚国际机场', ar: 'مطار خوان سانتاماريا الدولي' },
+      
+      // 🇨🇾 Cyprus (Chypre) - Hub méditerranéen
+      'CYLCA': { en: 'Port of Larnaca', fr: 'Port de Larnaca', de: 'Hafen Larnaka', es: 'Puerto de Lárnaca', it: 'Porto di Larnaca', nl: 'Haven van Larnaca', pt: 'Porto de Larnaca', tr: 'Larnaka Limanı', ru: 'Порт Ларнака', zh: '拉纳卡港', ar: 'ميناء لارنكا' },
+      'CYPAF': { en: 'Port of Paphos', fr: 'Port de Paphos', de: 'Hafen Paphos', es: 'Puerto de Pafos', it: 'Porto di Pafo', nl: 'Haven van Paphos', pt: 'Porto de Pafos', tr: 'Baf Limanı', ru: 'Порт Пафос', zh: '帕福斯港', ar: 'ميناء بافوس' },
+      'CYLCA_AIR': { en: 'Larnaca International Airport', fr: 'Aéroport international de Larnaca', de: 'Internationaler Flughafen Larnaka', es: 'Aeropuerto Internacional de Lárnaca', it: 'Aeroporto Internazionale di Larnaca', nl: 'Internationale Luchthaven Larnaca', pt: 'Aeroporto Internacional de Larnaca', tr: 'Larnaka Uluslararası Havaalanı', ru: 'Международный аэропорт Ларнака', zh: '拉纳卡国际机场', ar: 'مطار لارنكا الدولي' },
+      'CYPAF_AIR': { en: 'Paphos International Airport', fr: 'Aéroport international de Paphos', de: 'Internationaler Flughafen Paphos', es: 'Aeropuerto Internacional de Pafos', it: 'Aeroporto Internazionale di Pafo', nl: 'Internationale Luchthaven Paphos', pt: 'Aeroporto Internacional de Pafos', tr: 'Baf Uluslararası Havaalanı', ru: 'Международный аэропорт Пафос', zh: '帕福斯国际机场', ar: 'مطار بافوس الدولي' },
+      
+      // === PAYS EN E - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇪🇸 Spain (Espagne) - Hub européen majeur
+      'ESALG': { en: 'Port of Algeciras', fr: 'Port d\'Algésiras', de: 'Hafen Algeciras', es: 'Puerto de Algeciras', it: 'Porto di Algeciras', nl: 'Haven van Algeciras', pt: 'Porto de Algeciras', tr: 'Algeciras Limanı', ru: 'Порт Альхесирас', zh: '阿尔赫西拉斯港', ar: 'ميناء الجزيرة الخضراء' },
+      'ESVLC': { en: 'Port of Valencia', fr: 'Port de Valence', de: 'Hafen Valencia', es: 'Puerto de Valencia', it: 'Porto di Valencia', nl: 'Haven van Valencia', pt: 'Porto de Valência', tr: 'Valencia Limanı', ru: 'Порт Валенсия', zh: '瓦伦西亚港', ar: 'ميناء بلنسية' },
+      'ESBCN': { en: 'Port of Barcelona', fr: 'Port de Barcelone', de: 'Hafen Barcelona', es: 'Puerto de Barcelona', it: 'Porto di Barcellona', nl: 'Haven van Barcelona', pt: 'Porto de Barcelona', tr: 'Barselona Limanı', ru: 'Порт Барселона', zh: '巴塞罗那港', ar: 'ميناء برشلونة' },
+      'ESBIL': { en: 'Port of Bilbao', fr: 'Port de Bilbao', de: 'Hafen Bilbao', es: 'Puerto de Bilbao', it: 'Porto di Bilbao', nl: 'Haven van Bilbao', pt: 'Porto de Bilbau', tr: 'Bilbao Limanı', ru: 'Порт Бильбао', zh: '毕尔巴鄂港', ar: 'ميناء بلباو' },
+      'ESLAS': { en: 'Port of Las Palmas', fr: 'Port de Las Palmas', de: 'Hafen Las Palmas', es: 'Puerto de Las Palmas', it: 'Porto di Las Palmas', nl: 'Haven van Las Palmas', pt: 'Porto de Las Palmas', tr: 'Las Palmas Limanı', ru: 'Порт Лас-Пальмас', zh: '拉斯帕尔马斯港', ar: 'ميناء لاس بالماس' },
+      'ESMAD': { en: 'Madrid-Barajas Airport', fr: 'Aéroport de Madrid-Barajas', de: 'Flughafen Madrid-Barajas', es: 'Aeropuerto de Madrid-Barajas', it: 'Aeroporto di Madrid-Barajas', nl: 'Luchthaven Madrid-Barajas', pt: 'Aeroporto de Madrid-Barajas', tr: 'Madrid-Barajas Havaalanı', ru: 'Аэропорт Мадрид-Барахас', zh: '马德里-巴拉哈斯机场', ar: 'مطار مدريد-باراخاس' },
+      'ESBCN_AIR': { en: 'Barcelona Airport', fr: 'Aéroport de Barcelone', de: 'Flughafen Barcelona', es: 'Aeropuerto de Barcelona', it: 'Aeroporto di Barcellona', nl: 'Luchthaven Barcelona', pt: 'Aeroporto de Barcelona', tr: 'Barselona Havaalanı', ru: 'Аэропорт Барселона', zh: '巴塞罗那机场', ar: 'مطار برشلونة' },
+      'ESVLC_AIR': { en: 'Valencia Airport', fr: 'Aéroport de Valence', de: 'Flughafen Valencia', es: 'Aeropuerto de Valencia', it: 'Aeroporto di Valencia', nl: 'Luchthaven Valencia', pt: 'Aeroporto de Valência', tr: 'Valencia Havaalanı', ru: 'Аэропорт Валенсия', zh: '瓦伦西亚机场', ar: 'مطار بلنسية' },
+      'ESBIL_AIR': { en: 'Bilbao Airport', fr: 'Aéroport de Bilbao', de: 'Flughafen Bilbao', es: 'Aeropuerto de Bilbao', it: 'Aeroporto di Bilbao', nl: 'Luchthaven Bilbao', pt: 'Aeroporto de Bilbau', tr: 'Bilbao Havaalanı', ru: 'Аэропорт Бильбао', zh: '毕尔巴鄂机场', ar: 'مطار بلباو' },
+      'ESMAD_RAIL': { en: 'Madrid Atocha Station', fr: 'Gare de Madrid Atocha', de: 'Bahnhof Madrid Atocha', es: 'Estación de Madrid Atocha', it: 'Stazione di Madrid Atocha', nl: 'Station Madrid Atocha', pt: 'Estação de Madrid Atocha', tr: 'Madrid Atocha İstasyonu', ru: 'Вокзал Мадрид Аточа', zh: '马德里阿托查车站', ar: 'محطة مدريد أتوتشا' },
+      'ESBCN_RAIL': { en: 'Barcelona Sants Station', fr: 'Gare de Barcelona Sants', de: 'Bahnhof Barcelona Sants', es: 'Estación de Barcelona Sants', it: 'Stazione di Barcelona Sants', nl: 'Station Barcelona Sants', pt: 'Estação de Barcelona Sants', tr: 'Barcelona Sants İstasyonu', ru: 'Вокзал Барселона Сантс', zh: '巴塞罗那桑茨车站', ar: 'محطة برشلونة سانتس' },
+      'ESVLC_RAIL': { en: 'Valencia Joaquín Sorolla Station', fr: 'Gare de Valencia Joaquín Sorolla', de: 'Bahnhof Valencia Joaquín Sorolla', es: 'Estación de Valencia Joaquín Sorolla', it: 'Stazione di Valencia Joaquín Sorolla', nl: 'Station Valencia Joaquín Sorolla', pt: 'Estação de Valencia Joaquín Sorolla', tr: 'Valencia Joaquín Sorolla İstasyonu', ru: 'Вокзал Валенсия Хоакин Сорола', zh: '瓦伦西亚华金·索罗拉车站', ar: 'محطة بلنسية خواكين سورولا' },
+      
+      // 🇪🇬 Egypt (Égypte) - Hub du canal de Suez
+      'EGALY': { en: 'Port of Alexandria', fr: 'Port d\'Alexandrie', de: 'Hafen Alexandria', es: 'Puerto de Alejandría', it: 'Porto di Alessandria', nl: 'Haven van Alexandrië', pt: 'Porto de Alexandria', tr: 'İskenderiye Limanı', ru: 'Порт Александрия', zh: '亚历山大港', ar: 'ميناء الإسكندرية' },
+      'EGDKH': { en: 'Port of Damietta', fr: 'Port de Damiette', de: 'Hafen Damiette', es: 'Puerto de Damieta', it: 'Porto di Damietta', nl: 'Haven van Damietta', pt: 'Porto de Damieta', tr: 'Dimyat Limanı', ru: 'Порт Дамиетта', zh: '达米埃塔港', ar: 'ميناء دمياط' },
+      'EGSEZ': { en: 'Port of Suez', fr: 'Port de Suez', de: 'Hafen Suez', es: 'Puerto de Suez', it: 'Porto di Suez', nl: 'Haven van Suez', pt: 'Porto de Suez', tr: 'Süveyş Limanı', ru: 'Порт Суэц', zh: '苏伊士港', ar: 'ميناء السويس' },
+      'EGCAI': { en: 'Cairo International Airport', fr: 'Aéroport international du Caire', de: 'Internationaler Flughafen Kairo', es: 'Aeropuerto Internacional de El Cairo', it: 'Aeroporto Internazionale del Cairo', nl: 'Internationale Luchthaven Caïro', pt: 'Aeroporto Internacional do Cairo', tr: 'Kahire Uluslararası Havaalanı', ru: 'Международный аэропорт Каир', zh: '开罗国际机场', ar: 'مطار القاهرة الدولي' },
+      
+      // 🇪🇪 Estonia (Estonie) - Hub balte
+      'EETLL': { en: 'Port of Tallinn', fr: 'Port de Tallinn', de: 'Hafen Tallinn', es: 'Puerto de Tallin', it: 'Porto di Tallinn', nl: 'Haven van Tallinn', pt: 'Porto de Tallinn', tr: 'Tallinn Limanı', ru: 'Порт Таллинн', zh: '塔林港', ar: 'ميناء تالين' },
+      'EETLL_AIR': { en: 'Tallinn Lennart Meri Airport', fr: 'Aéroport de Tallinn Lennart Meri', de: 'Flughafen Tallinn Lennart Meri', es: 'Aeropuerto de Tallin Lennart Meri', it: 'Aeroporto di Tallinn Lennart Meri', nl: 'Luchthaven Tallinn Lennart Meri', pt: 'Aeroporto de Tallinn Lennart Meri', tr: 'Tallinn Lennart Meri Havaalanı', ru: 'Аэропорт Таллинн Леннарт Мери', zh: '塔林伦纳特·梅里机场', ar: 'مطار تالين لينارت ميري' },
+      'EETLL_RAIL': { en: 'Tallinn Railway Station', fr: 'Gare ferroviaire de Tallinn', de: 'Bahnhof Tallinn', es: 'Estación de Ferrocarril de Tallin', it: 'Stazione Ferroviaria di Tallinn', nl: 'Treinstation Tallinn', pt: 'Estação Ferroviária de Tallinn', tr: 'Tallinn Tren İstasyonu', ru: 'Железнодорожная станция Таллинн', zh: '塔林火车站', ar: 'محطة تالين للسكك الحديدية' },
+      
+      // 🇪🇹 Ethiopia (Éthiopie) - Hub de la Corne de l'Afrique
+      'ETADD': { en: 'Addis Ababa Bole International Airport', fr: 'Aéroport international d\'Addis-Abeba Bole', de: 'Internationaler Flughafen Addis Abeba Bole', es: 'Aeropuerto Internacional de Addis Abeba Bole', it: 'Aeroporto Internazionale di Addis Abeba Bole', nl: 'Internationale Luchthaven Addis Abeba Bole', pt: 'Aeroporto Internacional de Addis Abeba Bole', tr: 'Addis Ababa Bole Uluslararası Havaalanı', ru: 'Международный аэропорт Аддис-Абеба Боле', zh: '亚的斯亚贝巴博莱国际机场', ar: 'مطار أديس أبابا بولي الدولي' },
+      'ETADD_RAIL': { en: 'Addis Ababa Railway Station', fr: 'Gare ferroviaire d\'Addis-Abeba', de: 'Bahnhof Addis Abeba', es: 'Estación de Ferrocarril de Addis Abeba', it: 'Stazione Ferroviaria di Addis Abeba', nl: 'Treinstation Addis Abeba', pt: 'Estação Ferroviária de Addis Abeba', tr: 'Addis Ababa Tren İstasyonu', ru: 'Железнодорожная станция Аддис-Абеба', zh: '亚的斯亚贝巴火车站', ar: 'محطة أديس أبابا للسكك الحديدية' },
+      
+      // 🇪🇨 Ecuador (Équateur) - Hub du Pacifique
+      'ECGYE': { en: 'Port of Guayaquil', fr: 'Port de Guayaquil', de: 'Hafen Guayaquil', es: 'Puerto de Guayaquil', it: 'Porto di Guayaquil', nl: 'Haven van Guayaquil', pt: 'Porto de Guayaquil', tr: 'Guayaquil Limanı', ru: 'Порт Гуаякиль', zh: '瓜亚基尔港', ar: 'ميناء غواياكيل' },
+      'ECMNT': { en: 'Port of Manta', fr: 'Port de Manta', de: 'Hafen Manta', es: 'Puerto de Manta', it: 'Porto di Manta', nl: 'Haven van Manta', pt: 'Porto de Manta', tr: 'Manta Limanı', ru: 'Порт Манта', zh: '曼塔港', ar: 'ميناء مانتا' },
+      'ECUIO': { en: 'Quito Mariscal Sucre International Airport', fr: 'Aéroport international de Quito Mariscal Sucre', de: 'Internationaler Flughafen Quito Mariscal Sucre', es: 'Aeropuerto Internacional de Quito Mariscal Sucre', it: 'Aeroporto Internazionale di Quito Mariscal Sucre', nl: 'Internationale Luchthaven Quito Mariscal Sucre', pt: 'Aeroporto Internacional de Quito Mariscal Sucre', tr: 'Quito Mariscal Sucre Uluslararası Havaalanı', ru: 'Международный аэропорт Кито Марискаль Сукре', zh: '基多马里斯卡尔苏克雷国际机场', ar: 'مطار كيتو ماريسكال سوكري الدولي' },
+      'ECGYE_AIR': { en: 'Guayaquil José Joaquín de Olmedo International Airport', fr: 'Aéroport international de Guayaquil José Joaquín de Olmedo', de: 'Internationaler Flughafen Guayaquil José Joaquín de Olmedo', es: 'Aeropuerto Internacional de Guayaquil José Joaquín de Olmedo', it: 'Aeroporto Internazionale di Guayaquil José Joaquín de Olmedo', nl: 'Internationale Luchthaven Guayaquil José Joaquín de Olmedo', pt: 'Aeroporto Internacional de Guayaquil José Joaquín de Olmedo', tr: 'Guayaquil José Joaquín de Olmedo Uluslararası Havaalanı', ru: 'Международный аэропорт Гуаякиль Хосе Хоакин де Ольмедо', zh: '瓜亚基尔何塞·华金·德·奥尔梅多国际机场', ar: 'مطار غواياكيل خوسيه خواكين دي أولميدو الدولي' },
+      'ECUIO_RAIL': { en: 'Quito Railway Station', fr: 'Gare ferroviaire de Quito', de: 'Bahnhof Quito', es: 'Estación de Ferrocarril de Quito', it: 'Stazione Ferroviaria di Quito', nl: 'Treinstation Quito', pt: 'Estação Ferroviária de Quito', tr: 'Quito Tren İstasyonu', ru: 'Железнодорожная станция Кито', zh: '基多火车站', ar: 'محطة كيتو للسكك الحديدية' },
+      
+      // === PAYS EN F - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇫🇷 France - Hub européen majeur
+      'FRMRS': { en: 'Port of Marseille-Fos', fr: 'Port de Marseille-Fos', de: 'Hafen Marseille-Fos', es: 'Puerto de Marsella-Fos', it: 'Porto di Marsiglia-Fos', nl: 'Haven van Marseille-Fos', pt: 'Porto de Marselha-Fos', tr: 'Marsilya-Fos Limanı', ru: 'Порт Марсель-Фос', zh: '马赛-福斯港', ar: 'ميناء مرسيليا-فوس' },
+      'FRLEH': { en: 'Port of Le Havre', fr: 'Port du Havre', de: 'Hafen Le Havre', es: 'Puerto de Le Havre', it: 'Porto di Le Havre', nl: 'Haven van Le Havre', pt: 'Porto de Le Havre', tr: 'Le Havre Limanı', ru: 'Порт Гавр', zh: '勒阿弗尔港', ar: 'ميناء لو هافر' },
+      'FRDKK': { en: 'Port of Dunkirk', fr: 'Port de Dunkerque', de: 'Hafen Dünkirchen', es: 'Puerto de Dunkerque', it: 'Porto di Dunkerque', nl: 'Haven van Duinkerke', pt: 'Porto de Dunquerque', tr: 'Dunkerque Limanı', ru: 'Порт Дюнкерк', zh: '敦刻尔克港', ar: 'ميناء دونكيرك' },
+      'FRLRT': { en: 'Port of La Rochelle', fr: 'Port de La Rochelle', de: 'Hafen La Rochelle', es: 'Puerto de La Rochelle', it: 'Porto di La Rochelle', nl: 'Haven van La Rochelle', pt: 'Porto de La Rochelle', tr: 'La Rochelle Limanı', ru: 'Порт Ла-Рошель', zh: '拉罗谢尔港', ar: 'ميناء لا روشيل' },
+      'FRNTS': { en: 'Port of Nantes Saint-Nazaire', fr: 'Port de Nantes Saint-Nazaire', de: 'Hafen Nantes Saint-Nazaire', es: 'Puerto de Nantes Saint-Nazaire', it: 'Porto di Nantes Saint-Nazaire', nl: 'Haven van Nantes Saint-Nazaire', pt: 'Porto de Nantes Saint-Nazaire', tr: 'Nantes Saint-Nazaire Limanı', ru: 'Порт Нант Сен-Назер', zh: '南特圣纳泽尔港', ar: 'ميناء نانت سان نازير' },
+      'FRBOD': { en: 'Port of Bordeaux', fr: 'Port de Bordeaux', de: 'Hafen Bordeaux', es: 'Puerto de Burdeos', it: 'Porto di Bordeaux', nl: 'Haven van Bordeaux', pt: 'Porto de Bordéus', tr: 'Bordeaux Limanı', ru: 'Порт Бордо', zh: '波尔多港', ar: 'ميناء بوردو' },
+      'FRCDG': { en: 'Charles de Gaulle Airport', fr: 'Aéroport Charles de Gaulle', de: 'Flughafen Charles de Gaulle', es: 'Aeropuerto Charles de Gaulle', it: 'Aeroporto Charles de Gaulle', nl: 'Luchthaven Charles de Gaulle', pt: 'Aeroporto Charles de Gaulle', tr: 'Charles de Gaulle Havaalanı', ru: 'Аэропорт Шарль де Голль', zh: '戴高乐机场', ar: 'مطار شارل ديغول' },
+      'FRORY': { en: 'Paris-Orly Airport', fr: 'Aéroport Paris-Orly', de: 'Flughafen Paris-Orly', es: 'Aeropuerto París-Orly', it: 'Aeroporto Parigi-Orly', nl: 'Luchthaven Parijs-Orly', pt: 'Aeroporto Paris-Orly', tr: 'Paris-Orly Havaalanı', ru: 'Аэропорт Париж-Орли', zh: '巴黎-奥利机场', ar: 'مطار باريس-أورلي' },
+      'FRLYS': { en: 'Lyon Saint-Exupéry Airport', fr: 'Aéroport Lyon Saint-Exupéry', de: 'Flughafen Lyon Saint-Exupéry', es: 'Aeropuerto Lyon Saint-Exupéry', it: 'Aeroporto Lione Saint-Exupéry', nl: 'Luchthaven Lyon Saint-Exupéry', pt: 'Aeroporto Lyon Saint-Exupéry', tr: 'Lyon Saint-Exupéry Havaalanı', ru: 'Аэропорт Лион Сент-Экзюпери', zh: '里昂圣埃克苏佩里机场', ar: 'مطار ليون سان إكزوبيري' },
+      'FRMRS_AIR': { en: 'Marseille Provence Airport', fr: 'Aéroport Marseille Provence', de: 'Flughafen Marseille Provence', es: 'Aeropuerto Marsella Provenza', it: 'Aeroporto Marsiglia Provenza', nl: 'Luchthaven Marseille Provence', pt: 'Aeroporto Marselha Provence', tr: 'Marsilya Provence Havaalanı', ru: 'Аэропорт Марсель Прованс', zh: '马赛普罗旺斯机场', ar: 'مطار مرسيليا بروفانس' },
+      'FRNTE': { en: 'Nice Côte d\'Azur Airport', fr: 'Aéroport Nice Côte d\'Azur', de: 'Flughafen Nizza Côte d\'Azur', es: 'Aeropuerto Niza Costa Azul', it: 'Aeroporto Nizza Costa Azzurra', nl: 'Luchthaven Nice Côte d\'Azur', pt: 'Aeroporto Nice Côte d\'Azur', tr: 'Nice Côte d\'Azur Havaalanı', ru: 'Аэропорт Ницца Лазурный Берег', zh: '尼斯蓝色海岸机场', ar: 'مطار نيس كوت دازور' },
+      'FRTLS': { en: 'Toulouse-Blagnac Airport', fr: 'Aéroport Toulouse-Blagnac', de: 'Flughafen Toulouse-Blagnac', es: 'Aeropuerto Toulouse-Blagnac', it: 'Aeroporto Tolosa-Blagnac', nl: 'Luchthaven Toulouse-Blagnac', pt: 'Aeroporto Toulouse-Blagnac', tr: 'Toulouse-Blagnac Havaalanı', ru: 'Аэропорт Тулуза-Бланьяк', zh: '图卢兹-布拉尼亚克机场', ar: 'مطار تولوز-بلانياك' },
+      'FRPARIS_RAIL': { en: 'Paris Railway Terminals', fr: 'Gares de Paris', de: 'Bahnhöfe Paris', es: 'Estaciones de París', it: 'Stazioni di Parigi', nl: 'Stations Parijs', pt: 'Estações de Paris', tr: 'Paris Tren İstasyonları', ru: 'Железнодорожные вокзалы Парижа', zh: '巴黎火车站', ar: 'محطات باريس للسكك الحديدية' },
+      'FRLYON_RAIL': { en: 'Lyon Part-Dieu Station', fr: 'Gare de Lyon Part-Dieu', de: 'Bahnhof Lyon Part-Dieu', es: 'Estación de Lyon Part-Dieu', it: 'Stazione di Lione Part-Dieu', nl: 'Station Lyon Part-Dieu', pt: 'Estação de Lyon Part-Dieu', tr: 'Lyon Part-Dieu İstasyonu', ru: 'Вокзал Лион Пар-Дьё', zh: '里昂帕丢车站', ar: 'محطة ليون بارت ديو' },
+      'FRMARS_RAIL': { en: 'Marseille Saint-Charles Station', fr: 'Gare de Marseille Saint-Charles', de: 'Bahnhof Marseille Saint-Charles', es: 'Estación de Marsella Saint-Charles', it: 'Stazione di Marsiglia Saint-Charles', nl: 'Station Marseille Saint-Charles', pt: 'Estação de Marselha Saint-Charles', tr: 'Marsilya Saint-Charles İstasyonu', ru: 'Вокзал Марсель Сен-Шарль', zh: '马赛圣夏尔车站', ar: 'محطة مرسيليا سان شارل' },
+      
+      // 🇫🇮 Finland (Finlande) - Hub nordique
+      'FIHAM': { en: 'Port of Hamina-Kotka', fr: 'Port de Hamina-Kotka', de: 'Hafen Hamina-Kotka', es: 'Puerto de Hamina-Kotka', it: 'Porto di Hamina-Kotka', nl: 'Haven van Hamina-Kotka', pt: 'Porto de Hamina-Kotka', tr: 'Hamina-Kotka Limanı', ru: 'Порт Хамина-Котка', zh: '哈米纳-科特卡港', ar: 'ميناء هامينا-كوتكا' },
+      'FIHEL': { en: 'Port of Helsinki', fr: 'Port d\'Helsinki', de: 'Hafen Helsinki', es: 'Puerto de Helsinki', it: 'Porto di Helsinki', nl: 'Haven van Helsinki', pt: 'Porto de Helsinki', tr: 'Helsinki Limanı', ru: 'Порт Хельсинки', zh: '赫尔辛基港', ar: 'ميناء هلسنكي' },
+      'FIHEL_AIR': { en: 'Helsinki-Vantaa Airport', fr: 'Aéroport d\'Helsinki-Vantaa', de: 'Flughafen Helsinki-Vantaa', es: 'Aeropuerto de Helsinki-Vantaa', it: 'Aeroporto di Helsinki-Vantaa', nl: 'Luchthaven Helsinki-Vantaa', pt: 'Aeroporto de Helsinki-Vantaa', tr: 'Helsinki-Vantaa Havaalanı', ru: 'Аэропорт Хельсинки-Вантаа', zh: '赫尔辛基-万塔机场', ar: 'مطار هلسنكي-فانتا' },
+      'FIHEL_RAIL': { en: 'Helsinki Central Station', fr: 'Gare centrale d\'Helsinki', de: 'Hauptbahnhof Helsinki', es: 'Estación Central de Helsinki', it: 'Stazione Centrale di Helsinki', nl: 'Centraal Station Helsinki', pt: 'Estação Central de Helsinki', tr: 'Helsinki Merkez İstasyonu', ru: 'Центральный вокзал Хельсинки', zh: '赫尔辛基中央车站', ar: 'محطة هلسنكي المركزية' },
+      
+      // 🇫🇯 Fiji (Fidji) - Hub du Pacifique Sud
+      'FJLAU': { en: 'Port of Lautoka', fr: 'Port de Lautoka', de: 'Hafen Lautoka', es: 'Puerto de Lautoka', it: 'Porto di Lautoka', nl: 'Haven van Lautoka', pt: 'Porto de Lautoka', tr: 'Lautoka Limanı', ru: 'Порт Лаутока', zh: '劳托卡港', ar: 'ميناء لاوتوكا' },
+      'FJSUV_AIR': { en: 'Suva Nausori Airport', fr: 'Aéroport de Suva Nausori', de: 'Flughafen Suva Nausori', es: 'Aeropuerto de Suva Nausori', it: 'Aeroporto di Suva Nausori', nl: 'Luchthaven Suva Nausori', pt: 'Aeroporto de Suva Nausori', tr: 'Suva Nausori Havaalanı', ru: 'Аэропорт Сува Наусори', zh: '苏瓦瑙索里机场', ar: 'مطار سوفا ناوسوري' },
+      
+      // === PAYS EN G - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇬🇧 United Kingdom (Royaume-Uni) - Hub européen majeur
+      'GBFXT': { en: 'Port of Felixstowe', fr: 'Port de Felixstowe', de: 'Hafen Felixstowe', es: 'Puerto de Felixstowe', it: 'Porto di Felixstowe', nl: 'Haven van Felixstowe', pt: 'Porto de Felixstowe', tr: 'Felixstowe Limanı', ru: 'Порт Феликстоу', zh: '费利克斯托港', ar: 'ميناء فيليكستو' },
+      'GBSOU': { en: 'Port of Southampton', fr: 'Port de Southampton', de: 'Hafen Southampton', es: 'Puerto de Southampton', it: 'Porto di Southampton', nl: 'Haven van Southampton', pt: 'Porto de Southampton', tr: 'Southampton Limanı', ru: 'Порт Саутгемптон', zh: '南安普敦港', ar: 'ميناء ساوثهامبتون' },
+      'GBLIV': { en: 'Port of Liverpool', fr: 'Port de Liverpool', de: 'Hafen Liverpool', es: 'Puerto de Liverpool', it: 'Porto di Liverpool', nl: 'Haven van Liverpool', pt: 'Porto de Liverpool', tr: 'Liverpool Limanı', ru: 'Порт Ливерпуль', zh: '利物浦港', ar: 'ميناء ليفربول' },
+      'GBLOND': { en: 'Port of London', fr: 'Port de Londres', de: 'Hafen London', es: 'Puerto de Londres', it: 'Porto di Londra', nl: 'Haven van Londen', pt: 'Porto de Londres', tr: 'Londra Limanı', ru: 'Порт Лондон', zh: '伦敦港', ar: 'ميناء لندن' },
+      'GBIMM': { en: 'Port of Immingham', fr: 'Port d\'Immingham', de: 'Hafen Immingham', es: 'Puerto de Immingham', it: 'Porto di Immingham', nl: 'Haven van Immingham', pt: 'Porto de Immingham', tr: 'Immingham Limanı', ru: 'Порт Иммингем', zh: '伊明汉姆港', ar: 'ميناء إيمنغهام' },
+      'GBDOV': { en: 'Port of Dover', fr: 'Port de Douvres', de: 'Hafen Dover', es: 'Puerto de Dover', it: 'Porto di Dover', nl: 'Haven van Dover', pt: 'Porto de Dover', tr: 'Dover Limanı', ru: 'Порт Дувр', zh: '多佛港', ar: 'ميناء دوفر' },
+      'GBLHR': { en: 'London Heathrow Airport', fr: 'Aéroport de Londres Heathrow', de: 'Flughafen London Heathrow', es: 'Aeropuerto de Londres Heathrow', it: 'Aeroporto di Londra Heathrow', nl: 'Luchthaven Londen Heathrow', pt: 'Aeroporto de Londres Heathrow', tr: 'Londra Heathrow Havaalanı', ru: 'Аэропорт Лондон Хитроу', zh: '伦敦希思罗机场', ar: 'مطار لندن هيثرو' },
+      'GBLGW': { en: 'London Gatwick Airport', fr: 'Aéroport de Londres Gatwick', de: 'Flughafen London Gatwick', es: 'Aeropuerto de Londres Gatwick', it: 'Aeroporto di Londra Gatwick', nl: 'Luchthaven Londen Gatwick', pt: 'Aeroporto de Londres Gatwick', tr: 'Londra Gatwick Havaalanı', ru: 'Аэропорт Лондон Гатвик', zh: '伦敦盖特威克机场', ar: 'مطار لندن غاتويك' },
+      'GBSTN': { en: 'London Stansted Airport', fr: 'Aéroport de Londres Stansted', de: 'Flughafen London Stansted', es: 'Aeropuerto de Londres Stansted', it: 'Aeroporto di Londra Stansted', nl: 'Luchthaven Londen Stansted', pt: 'Aeroporto de Londres Stansted', tr: 'Londra Stansted Havaalanı', ru: 'Аэропорт Лондон Станстед', zh: '伦敦斯坦斯特德机场', ar: 'مطار لندن ستانستيد' },
+      'GBLUTON': { en: 'London Luton Airport', fr: 'Aéroport de Londres Luton', de: 'Flughafen London Luton', es: 'Aeropuerto de Londres Luton', it: 'Aeroporto di Londra Luton', nl: 'Luchthaven Londen Luton', pt: 'Aeroporto de Londres Luton', tr: 'Londra Luton Havaalanı', ru: 'Аэропорт Лондон Лутон', zh: '伦敦卢顿机场', ar: 'مطار لندن لوتون' },
+      'GBMAN': { en: 'Manchester Airport', fr: 'Aéroport de Manchester', de: 'Flughafen Manchester', es: 'Aeropuerto de Manchester', it: 'Aeroporto di Manchester', nl: 'Luchthaven Manchester', pt: 'Aeroporto de Manchester', tr: 'Manchester Havaalanı', ru: 'Аэропорт Манчестер', zh: '曼彻斯特机场', ar: 'مطار مانشستر' },
+      'GBEDI': { en: 'Edinburgh Airport', fr: 'Aéroport d\'Édimbourg', de: 'Flughafen Edinburgh', es: 'Aeropuerto de Edimburgo', it: 'Aeroporto di Edimburgo', nl: 'Luchthaven Edinburgh', pt: 'Aeroporto de Edimburgo', tr: 'Edinburgh Havaalanı', ru: 'Аэропорт Эдинбург', zh: '爱丁堡机场', ar: 'مطار إدنبرة' },
+      'GBBHM': { en: 'Birmingham Airport', fr: 'Aéroport de Birmingham', de: 'Flughafen Birmingham', es: 'Aeropuerto de Birmingham', it: 'Aeroporto di Birmingham', nl: 'Luchthaven Birmingham', pt: 'Aeroporto de Birmingham', tr: 'Birmingham Havaalanı', ru: 'Аэропорт Бирмингем', zh: '伯明翰机场', ar: 'مطار برمنغهام' },
+      'GBLOND_RAIL': { en: 'London St Pancras International', fr: 'Gare de Londres St Pancras International', de: 'Bahnhof London St Pancras International', es: 'Estación de Londres St Pancras International', it: 'Stazione di Londra St Pancras International', nl: 'Station Londen St Pancras International', pt: 'Estação de Londres St Pancras International', tr: 'Londra St Pancras International İstasyonu', ru: 'Вокзал Лондон Сент-Панкрас Интернешнл', zh: '伦敦圣潘克拉斯国际车站', ar: 'محطة لندن سانت بانكراس الدولية' },
+      'GBMAN_RAIL': { en: 'Manchester Piccadilly Station', fr: 'Gare de Manchester Piccadilly', de: 'Bahnhof Manchester Piccadilly', es: 'Estación de Manchester Piccadilly', it: 'Stazione di Manchester Piccadilly', nl: 'Station Manchester Piccadilly', pt: 'Estação de Manchester Piccadilly', tr: 'Manchester Piccadilly İstasyonu', ru: 'Вокзал Манчестер Пикадилли', zh: '曼彻斯特皮卡迪利车站', ar: 'محطة مانشستر بيكاديلي' },
+      'GBBHM_RAIL': { en: 'Birmingham New Street Station', fr: 'Gare de Birmingham New Street', de: 'Bahnhof Birmingham New Street', es: 'Estación de Birmingham New Street', it: 'Stazione di Birmingham New Street', nl: 'Station Birmingham New Street', pt: 'Estação de Birmingham New Street', tr: 'Birmingham New Street İstasyonu', ru: 'Вокзал Бирмингем Нью-Стрит', zh: '伯明翰新街车站', ar: 'محطة برمنغهام نيو ستريت' },
+      
+      // 🇬🇷 Greece (Grèce) - Hub méditerranéen
+      'GRPIR': { en: 'Port of Piraeus', fr: 'Port du Pirée', de: 'Hafen Piräus', es: 'Puerto del Pireo', it: 'Porto del Pireo', nl: 'Haven van Piraeus', pt: 'Porto do Pireu', tr: 'Pire Limanı', ru: 'Порт Пирей', zh: '比雷埃夫斯港', ar: 'ميناء بيريوس' },
+      'GRTHE': { en: 'Port of Thessaloniki', fr: 'Port de Thessalonique', de: 'Hafen Thessaloniki', es: 'Puerto de Tesalónica', it: 'Porto di Salonicco', nl: 'Haven van Thessaloniki', pt: 'Porto de Tessalônica', tr: 'Selanik Limanı', ru: 'Порт Салоники', zh: '塞萨洛尼基港', ar: 'ميناء سالونيك' },
+      'GRATH': { en: 'Athens Eleftherios Venizelos Airport', fr: 'Aéroport d\'Athènes Elefthérios Venizélos', de: 'Flughafen Athen Eleftherios Venizelos', es: 'Aeropuerto de Atenas Eleftherios Venizelos', it: 'Aeroporto di Atene Eleftherios Venizelos', nl: 'Luchthaven Athene Eleftherios Venizelos', pt: 'Aeroporto de Atenas Eleftherios Venizelos', tr: 'Atina Eleftherios Venizelos Havaalanı', ru: 'Аэропорт Афины Элефтериос Венизелос', zh: '雅典埃莱夫塞里奥斯·韦尼泽洛斯机场', ar: 'مطار أثينا إليفثيريوس فينيزيلوس' },
+      'GRATH_RAIL': { en: 'Athens Railway Station', fr: 'Gare d\'Athènes', de: 'Bahnhof Athen', es: 'Estación de Atenas', it: 'Stazione di Atene', nl: 'Station Athene', pt: 'Estação de Atenas', tr: 'Atina Tren İstasyonu', ru: 'Железнодорожная станция Афины', zh: '雅典火车站', ar: 'محطة أثينا للسكك الحديدية' },
+      
+      // 🇬🇭 Ghana - Hub ouest-africain
+      'GHTEM': { en: 'Port of Tema', fr: 'Port de Tema', de: 'Hafen Tema', es: 'Puerto de Tema', it: 'Porto di Tema', nl: 'Haven van Tema', pt: 'Porto de Tema', tr: 'Tema Limanı', ru: 'Порт Тема', zh: '特马港', ar: 'ميناء تيما' },
+      'GHTKO': { en: 'Port of Takoradi', fr: 'Port de Takoradi', de: 'Hafen Takoradi', es: 'Puerto de Takoradi', it: 'Porto di Takoradi', nl: 'Haven van Takoradi', pt: 'Porto de Takoradi', tr: 'Takoradi Limanı', ru: 'Порт Такоради', zh: '塔科拉迪港', ar: 'ميناء تاكورادي' },
+      'GHACC': { en: 'Accra Kotoka International Airport', fr: 'Aéroport international d\'Accra Kotoka', de: 'Internationaler Flughafen Accra Kotoka', es: 'Aeropuerto Internacional de Accra Kotoka', it: 'Aeroporto Internazionale di Accra Kotoka', nl: 'Internationale Luchthaven Accra Kotoka', pt: 'Aeroporto Internacional de Accra Kotoka', tr: 'Accra Kotoka Uluslararası Havaalanı', ru: 'Международный аэропорт Аккра Котока', zh: '阿克拉科托卡国际机场', ar: 'مطار أكرا كوتوكا الدولي' },
+      
+      // 🇬🇹 Guatemala - Hub centraméricain
+      'GTGUA': { en: 'Port of Guatemala', fr: 'Port de Guatemala', de: 'Hafen Guatemala', es: 'Puerto de Guatemala', it: 'Porto di Guatemala', nl: 'Haven van Guatemala', pt: 'Porto da Guatemala', tr: 'Guatemala Limanı', ru: 'Порт Гватемала', zh: '危地马拉港', ar: 'ميناء غواتيمالا' },
+      'GTPAC': { en: 'Port Quetzal', fr: 'Port Quetzal', de: 'Hafen Quetzal', es: 'Puerto Quetzal', it: 'Porto Quetzal', nl: 'Haven Quetzal', pt: 'Porto Quetzal', tr: 'Quetzal Limanı', ru: 'Порт Кетсаль', zh: '克萨尔港', ar: 'ميناء كيتزال' },
+      'GTGUA_AIR': { en: 'Guatemala City La Aurora International Airport', fr: 'Aéroport international de Guatemala City La Aurora', de: 'Internationaler Flughafen Guatemala City La Aurora', es: 'Aeropuerto Internacional La Aurora de Ciudad de Guatemala', it: 'Aeroporto Internazionale La Aurora di Città del Guatemala', nl: 'Internationale Luchthaven Guatemala City La Aurora', pt: 'Aeroporto Internacional de Guatemala City La Aurora', tr: 'Guatemala City La Aurora Uluslararası Havaalanı', ru: 'Международный аэропорт Гватемала Сити Ла Аурора', zh: '危地马拉城拉奥罗拉国际机场', ar: 'مطار مدينة غواتيمالا لا أورورا الدولي' },
+      
+      // === PAYS EN H - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇭🇰 Hong Kong - Hub asiatique majeur
+      'HKHKG_AIR': { en: 'Hong Kong International Airport', fr: 'Aéroport international de Hong Kong', de: 'Internationaler Flughafen Hongkong', es: 'Aeropuerto Internacional de Hong Kong', it: 'Aeroporto Internazionale di Hong Kong', nl: 'Internationale Luchthaven Hong Kong', pt: 'Aeroporto Internacional de Hong Kong', tr: 'Hong Kong Uluslararası Havaalanı', ru: 'Международный аэропорт Гонконг', zh: '香港国际机场', ar: 'مطار هونغ كونغ الدولي' },
+      
+      // 🇭🇷 Croatia (Croatie) - Hub adriatique
+      'HRRJK': { en: 'Port of Rijeka', fr: 'Port de Rijeka', de: 'Hafen Rijeka', es: 'Puerto de Rijeka', it: 'Porto di Rijeka', nl: 'Haven van Rijeka', pt: 'Porto de Rijeka', tr: 'Rijeka Limanı', ru: 'Порт Риека', zh: '里耶卡港', ar: 'ميناء رييكا' },
+      'HRSPT': { en: 'Port of Split', fr: 'Port de Split', de: 'Hafen Split', es: 'Puerto de Split', it: 'Porto di Spalato', nl: 'Haven van Split', pt: 'Porto de Split', tr: 'Split Limanı', ru: 'Порт Сплит', zh: '斯普利特港', ar: 'ميناء سبليت' },
+      'HRZAG': { en: 'Port of Zadar', fr: 'Port de Zadar', de: 'Hafen Zadar', es: 'Puerto de Zadar', it: 'Porto di Zara', nl: 'Haven van Zadar', pt: 'Porto de Zadar', tr: 'Zadar Limanı', ru: 'Порт Задар', zh: '扎达尔港', ar: 'ميناء زادار' },
+      'HRZAG_AIR': { en: 'Zagreb Franjo Tuđman Airport', fr: 'Aéroport de Zagreb Franjo Tuđman', de: 'Flughafen Zagreb Franjo Tuđman', es: 'Aeropuerto de Zagreb Franjo Tuđman', it: 'Aeroporto di Zagabria Franjo Tuđman', nl: 'Luchthaven Zagreb Franjo Tuđman', pt: 'Aeroporto de Zagreb Franjo Tuđman', tr: 'Zagreb Franjo Tuđman Havaalanı', ru: 'Аэропорт Загреб Франьо Туджман', zh: '萨格勒布弗拉尼奥·图季曼机场', ar: 'مطار زغرب فرانيو توجمان' },
+      'HRSPT_AIR': { en: 'Split Airport', fr: 'Aéroport de Split', de: 'Flughafen Split', es: 'Aeropuerto de Split', it: 'Aeroporto di Spalato', nl: 'Luchthaven Split', pt: 'Aeroporto de Split', tr: 'Split Havaalanı', ru: 'Аэропорт Сплит', zh: '斯普利特机场', ar: 'مطار سبليت' },
+      'HRZAG_RAIL': { en: 'Zagreb Central Station', fr: 'Gare centrale de Zagreb', de: 'Hauptbahnhof Zagreb', es: 'Estación Central de Zagreb', it: 'Stazione Centrale di Zagabria', nl: 'Centraal Station Zagreb', pt: 'Estação Central de Zagreb', tr: 'Zagreb Merkez İstasyonu', ru: 'Центральный вокзал Загреб', zh: '萨格勒布中央车站', ar: 'محطة زغرب المركزية' },
+      
+      // 🇭🇺 Hungary (Hongrie) - Hub fluvial
+      'HUBUD': { en: 'Port of Budapest', fr: 'Port de Budapest', de: 'Hafen Budapest', es: 'Puerto de Budapest', it: 'Porto di Budapest', nl: 'Haven van Boedapest', pt: 'Porto de Budapeste', tr: 'Budapeşte Limanı', ru: 'Порт Будапешт', zh: '布达佩斯港', ar: 'ميناء بودابست' },
+      'HUBUD_AIR': { en: 'Budapest Liszt Ferenc International Airport', fr: 'Aéroport international de Budapest Liszt Ferenc', de: 'Internationaler Flughafen Budapest Liszt Ferenc', es: 'Aeropuerto Internacional de Budapest Liszt Ferenc', it: 'Aeroporto Internazionale di Budapest Liszt Ferenc', nl: 'Internationale Luchthaven Budapest Liszt Ferenc', pt: 'Aeroporto Internacional de Budapeste Liszt Ferenc', tr: 'Budapeşte Liszt Ferenc Uluslararası Havaalanı', ru: 'Международный аэропорт Будапешт Лист Ференц', zh: '布达佩斯李斯特·费伦茨国际机场', ar: 'مطار بودابست ليست فيرينتس الدولي' },
+      'HUBUD_RAIL': { en: 'Budapest Keleti Railway Station', fr: 'Gare de Budapest Keleti', de: 'Bahnhof Budapest Keleti', es: 'Estación de Budapest Keleti', it: 'Stazione di Budapest Keleti', nl: 'Station Budapest Keleti', pt: 'Estação de Budapeste Keleti', tr: 'Budapeşte Keleti İstasyonu', ru: 'Вокзал Будапешт Келети', zh: '布达佩斯东站', ar: 'محطة بودابست كيليتي' },
+      
+      // === PAYS EN I - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇮🇹 Italy (Italie) - Hub méditerranéen majeur
+      'ITGOA': { en: 'Port of Genoa', fr: 'Port de Gênes', de: 'Hafen Genua', es: 'Puerto de Génova', it: 'Porto di Genova', nl: 'Haven van Genua', pt: 'Porto de Gênova', tr: 'Cenova Limanı', ru: 'Порт Генуя', zh: '热那亚港', ar: 'ميناء جنوة' },
+      'ITLSP': { en: 'Port of La Spezia', fr: 'Port de La Spezia', de: 'Hafen La Spezia', es: 'Puerto de La Spezia', it: 'Porto della Spezia', nl: 'Haven van La Spezia', pt: 'Porto de La Spezia', tr: 'La Spezia Limanı', ru: 'Порт Ла-Специя', zh: '拉斯佩齐亚港', ar: 'ميناء لا سبيتسيا' },
+      'ITLIV': { en: 'Port of Livorno', fr: 'Port de Livourne', de: 'Hafen Livorno', es: 'Puerto de Livorno', it: 'Porto di Livorno', nl: 'Haven van Livorno', pt: 'Porto de Livorno', tr: 'Livorno Limanı', ru: 'Порт Ливорно', zh: '里窝那港', ar: 'ميناء ليفورنو' },
+      'ITNAS': { en: 'Port of Naples', fr: 'Port de Naples', de: 'Hafen Neapel', es: 'Puerto de Nápoles', it: 'Porto di Napoli', nl: 'Haven van Napels', pt: 'Porto de Nápoles', tr: 'Napoli Limanı', ru: 'Порт Неаполь', zh: '那不勒斯港', ar: 'ميناء نابولي' },
+      'ITVEN': { en: 'Port of Venice', fr: 'Port de Venise', de: 'Hafen Venedig', es: 'Puerto de Venecia', it: 'Porto di Venezia', nl: 'Haven van Venetië', pt: 'Porto de Veneza', tr: 'Venedik Limanı', ru: 'Порт Венеция', zh: '威尼斯港', ar: 'ميناء البندقية' },
+      'ITROM': { en: 'Rome Fiumicino Airport', fr: 'Aéroport de Rome Fiumicino', de: 'Flughafen Rom Fiumicino', es: 'Aeropuerto de Roma Fiumicino', it: 'Aeroporto di Roma Fiumicino', nl: 'Luchthaven Rome Fiumicino', pt: 'Aeroporto de Roma Fiumicino', tr: 'Roma Fiumicino Havaalanı', ru: 'Аэропорт Рим Фьюмичино', zh: '罗马菲乌米奇诺机场', ar: 'مطار روما فيوميتشينو' },
+      'ITMIL': { en: 'Milan Malpensa Airport', fr: 'Aéroport de Milan Malpensa', de: 'Flughafen Mailand Malpensa', es: 'Aeropuerto de Milán Malpensa', it: 'Aeroporto di Milano Malpensa', nl: 'Luchthaven Milaan Malpensa', pt: 'Aeroporto de Milão Malpensa', tr: 'Milano Malpensa Havaalanı', ru: 'Аэропорт Милан Мальпенса', zh: '米兰马尔彭萨机场', ar: 'مطار ميلان مالبينسا' },
+      'ITVEN_AIR': { en: 'Venice Marco Polo Airport', fr: 'Aéroport de Venise Marco Polo', de: 'Flughafen Venedig Marco Polo', es: 'Aeropuerto de Venecia Marco Polo', it: 'Aeroporto di Venezia Marco Polo', nl: 'Luchthaven Venetië Marco Polo', pt: 'Aeroporto de Veneza Marco Polo', tr: 'Venedik Marco Polo Havaalanı', ru: 'Аэропорт Венеция Марко Поло', zh: '威尼斯马可波罗机场', ar: 'مطار البندقية ماركو بولو' },
+      'ITNAS_AIR': { en: 'Naples Airport', fr: 'Aéroport de Naples', de: 'Flughafen Neapel', es: 'Aeropuerto de Nápoles', it: 'Aeroporto di Napoli', nl: 'Luchthaven Napels', pt: 'Aeroporto de Nápoles', tr: 'Napoli Havaalanı', ru: 'Аэропорт Неаполь', zh: '那不勒斯机场', ar: 'مطار نابولي' },
+      'ITROM_RAIL': { en: 'Roma Termini Station', fr: 'Gare de Roma Termini', de: 'Bahnhof Roma Termini', es: 'Estación Roma Termini', it: 'Stazione Roma Termini', nl: 'Station Roma Termini', pt: 'Estação Roma Termini', tr: 'Roma Termini İstasyonu', ru: 'Вокзал Рома Термини', zh: '罗马特米尼车站', ar: 'محطة روما تيرميني' },
+      'ITMIL_RAIL': { en: 'Milano Centrale Station', fr: 'Gare Milano Centrale', de: 'Bahnhof Milano Centrale', es: 'Estación Milano Centrale', it: 'Stazione Milano Centrale', nl: 'Station Milano Centrale', pt: 'Estação Milano Centrale', tr: 'Milano Centrale İstasyonu', ru: 'Вокзал Милано Чентрале', zh: '米兰中央车站', ar: 'محطة ميلانو تشنترالي' },
+      'ITVEN_RAIL': { en: 'Venezia Santa Lucia Station', fr: 'Gare Venezia Santa Lucia', de: 'Bahnhof Venezia Santa Lucia', es: 'Estación Venezia Santa Lucia', it: 'Stazione Venezia Santa Lucia', nl: 'Station Venezia Santa Lucia', pt: 'Estação Venezia Santa Lucia', tr: 'Venezia Santa Lucia İstasyonu', ru: 'Вокзал Венеция Санта-Лючия', zh: '威尼斯圣露西亚车站', ar: 'محطة البندقية سانتا لوتشيا' },
+      
+      // 🇮🇳 India (Inde) - Hub asiatique majeur
+      'INJNP': { en: 'Jawaharlal Nehru Port', fr: 'Port de Jawaharlal Nehru', de: 'Hafen Jawaharlal Nehru', es: 'Puerto de Jawaharlal Nehru', it: 'Porto di Jawaharlal Nehru', nl: 'Haven van Jawaharlal Nehru', pt: 'Porto de Jawaharlal Nehru', tr: 'Jawaharlal Nehru Limanı', ru: 'Порт Джавахарлал Неру', zh: '贾瓦哈拉尔尼赫鲁港', ar: 'ميناء جواهرلال نهرو' },
+      'INMUN': { en: 'Port of Mumbai', fr: 'Port de Mumbai', de: 'Hafen Mumbai', es: 'Puerto de Mumbai', it: 'Porto di Mumbai', nl: 'Haven van Mumbai', pt: 'Porto de Mumbai', tr: 'Mumbai Limanı', ru: 'Порт Мумбаи', zh: '孟买港', ar: 'ميناء مومباي' },
+      'INCHE': { en: 'Port of Chennai', fr: 'Port de Chennai', de: 'Hafen Chennai', es: 'Puerto de Chennai', it: 'Porto di Chennai', nl: 'Haven van Chennai', pt: 'Porto de Chennai', tr: 'Chennai Limanı', ru: 'Порт Ченнаи', zh: '钦奈港', ar: 'ميناء تشيناي' },
+      'INCOK': { en: 'Port of Cochin', fr: 'Port de Cochin', de: 'Hafen Cochin', es: 'Puerto de Cochín', it: 'Porto di Cochin', nl: 'Haven van Cochin', pt: 'Porto de Cochim', tr: 'Cochin Limanı', ru: 'Порт Кочин', zh: '科钦港', ar: 'ميناء كوتشين' },
+      'INDEL': { en: 'Delhi Indira Gandhi International Airport', fr: 'Aéroport international de Delhi Indira Gandhi', de: 'Internationaler Flughafen Delhi Indira Gandhi', es: 'Aeropuerto Internacional de Delhi Indira Gandhi', it: 'Aeroporto Internazionale di Delhi Indira Gandhi', nl: 'Internationale Luchthaven Delhi Indira Gandhi', pt: 'Aeroporto Internacional de Delhi Indira Gandhi', tr: 'Delhi Indira Gandhi Uluslararası Havaalanı', ru: 'Международный аэропорт Дели Индира Ганди', zh: '德里英迪拉·甘地国际机场', ar: 'مطار دلهي إنديرا غاندي الدولي' },
+      'INMUN_AIR': { en: 'Mumbai Chhatrapati Shivaji Maharaj International Airport', fr: 'Aéroport international de Mumbai Chhatrapati Shivaji Maharaj', de: 'Internationaler Flughafen Mumbai Chhatrapati Shivaji Maharaj', es: 'Aeropuerto Internacional de Mumbai Chhatrapati Shivaji Maharaj', it: 'Aeroporto Internazionale di Mumbai Chhatrapati Shivaji Maharaj', nl: 'Internationale Luchthaven Mumbai Chhatrapati Shivaji Maharaj', pt: 'Aeroporto Internacional de Mumbai Chhatrapati Shivaji Maharaj', tr: 'Mumbai Chhatrapati Shivaji Maharaj Uluslararası Havaalanı', ru: 'Международный аэропорт Мумбаи Чхатрапати Шиваджи Махарадж', zh: '孟买贾特拉帕蒂·希瓦吉·马哈拉杰国际机场', ar: 'مطار مومباي تشاتراباتي شيفاجي ماهاراج الدولي' },
+      'INBLR': { en: 'Bangalore Kempegowda International Airport', fr: 'Aéroport international de Bangalore Kempegowda', de: 'Internationaler Flughafen Bangalore Kempegowda', es: 'Aeropuerto Internacional de Bangalore Kempegowda', it: 'Aeroporto Internazionale di Bangalore Kempegowda', nl: 'Internationale Luchthaven Bangalore Kempegowda', pt: 'Aeroporto Internacional de Bangalore Kempegowda', tr: 'Bangalore Kempegowda Uluslararası Havaalanı', ru: 'Международный аэропорт Бангалор Кемпегоуда', zh: '班加罗尔肯佩戈达国际机场', ar: 'مطار بنغالور كيمبيغودا الدولي' },
+      'INCHE_AIR': { en: 'Chennai International Airport', fr: 'Aéroport international de Chennai', de: 'Internationaler Flughafen Chennai', es: 'Aeropuerto Internacional de Chennai', it: 'Aeroporto Internazionale di Chennai', nl: 'Internationale Luchthaven Chennai', pt: 'Aeroporto Internacional de Chennai', tr: 'Chennai Uluslararası Havaalanı', ru: 'Международный аэропорт Ченнаи', zh: '钦奈国际机场', ar: 'مطار تشيناي الدولي' },
+      
+      // 🇮🇪 Ireland (Irlande) - Hub européen
+      'IEDUB': { en: 'Port of Dublin', fr: 'Port de Dublin', de: 'Hafen Dublin', es: 'Puerto de Dublín', it: 'Porto di Dublino', nl: 'Haven van Dublin', pt: 'Porto de Dublin', tr: 'Dublin Limanı', ru: 'Порт Дублин', zh: '都柏林港', ar: 'ميناء دبلن' },
+      'IECOR': { en: 'Port of Cork', fr: 'Port de Cork', de: 'Hafen Cork', es: 'Puerto de Cork', it: 'Porto di Cork', nl: 'Haven van Cork', pt: 'Porto de Cork', tr: 'Cork Limanı', ru: 'Порт Корк', zh: '科克港', ar: 'ميناء كورك' },
+      'IEDUB_AIR': { en: 'Dublin Airport', fr: 'Aéroport de Dublin', de: 'Flughafen Dublin', es: 'Aeropuerto de Dublín', it: 'Aeroporto di Dublino', nl: 'Luchthaven Dublin', pt: 'Aeroporto de Dublin', tr: 'Dublin Havaalanı', ru: 'Аэропорт Дублин', zh: '都柏林机场', ar: 'مطار دبلن' },
+      'IECOR_AIR': { en: 'Cork Airport', fr: 'Aéroport de Cork', de: 'Flughafen Cork', es: 'Aeropuerto de Cork', it: 'Aeroporto di Cork', nl: 'Luchthaven Cork', pt: 'Aeroporto de Cork', tr: 'Cork Havaalanı', ru: 'Аэропорт Корк', zh: '科克机场', ar: 'مطار كورك' },
+      'IEDUB_RAIL': { en: 'Dublin Heuston Station', fr: 'Gare de Dublin Heuston', de: 'Bahnhof Dublin Heuston', es: 'Estación de Dublín Heuston', it: 'Stazione di Dublino Heuston', nl: 'Station Dublin Heuston', pt: 'Estação de Dublin Heuston', tr: 'Dublin Heuston İstasyonu', ru: 'Вокзал Дублин Хьюстон', zh: '都柏林休斯顿车站', ar: 'محطة دبلن هيوستن' },
+      
+      // 🇮🇩 Indonesia (Indonésie) - Hub du Sud-Est asiatique
+      'IDJKT': { en: 'Jakarta Tanjung Priok Port', fr: 'Port de Jakarta Tanjung Priok', de: 'Hafen Jakarta Tanjung Priok', es: 'Puerto de Jakarta Tanjung Priok', it: 'Porto di Jakarta Tanjung Priok', nl: 'Haven van Jakarta Tanjung Priok', pt: 'Porto de Jakarta Tanjung Priok', tr: 'Jakarta Tanjung Priok Limanı', ru: 'Порт Джакарта Танджунг Приок', zh: '雅加达丹戎不碌港', ar: 'ميناء جاكرتا تانجونغ بريوك' },
+      'IDSUB': { en: 'Port of Surabaya', fr: 'Port de Surabaya', de: 'Hafen Surabaya', es: 'Puerto de Surabaya', it: 'Porto di Surabaya', nl: 'Haven van Surabaya', pt: 'Porto de Surabaya', tr: 'Surabaya Limanı', ru: 'Порт Сурабая', zh: '泗水港', ar: 'ميناء سورابايا' },
+      'IDBLW': { en: 'Belawan Medan Port', fr: 'Port de Belawan Medan', de: 'Hafen Belawan Medan', es: 'Puerto de Belawan Medan', it: 'Porto di Belawan Medan', nl: 'Haven van Belawan Medan', pt: 'Porto de Belawan Medan', tr: 'Belawan Medan Limanı', ru: 'Порт Белаван Медан', zh: '勿拉湾棉兰港', ar: 'ميناء بيلاوان ميدان' },
+      'IDJKT_AIR': { en: 'Jakarta Soekarno-Hatta International Airport', fr: 'Aéroport international de Jakarta Soekarno-Hatta', de: 'Internationaler Flughafen Jakarta Soekarno-Hatta', es: 'Aeropuerto Internacional de Jakarta Soekarno-Hatta', it: 'Aeroporto Internazionale di Jakarta Soekarno-Hatta', nl: 'Internationale Luchthaven Jakarta Soekarno-Hatta', pt: 'Aeroporto Internacional de Jakarta Soekarno-Hatta', tr: 'Jakarta Soekarno-Hatta Uluslararası Havaalanı', ru: 'Международный аэропорт Джакарта Сукарно-Хатта', zh: '雅加达苏加诺-哈达国际机场', ar: 'مطار جاكرتا سوكارنو-هاتا الدولي' },
+      'IDSUB_AIR': { en: 'Surabaya Juanda International Airport', fr: 'Aéroport international de Surabaya Juanda', de: 'Internationaler Flughafen Surabaya Juanda', es: 'Aeropuerto Internacional de Surabaya Juanda', it: 'Aeroporto Internazionale di Surabaya Juanda', nl: 'Internationale Luchthaven Surabaya Juanda', pt: 'Aeroporto Internacional de Surabaya Juanda', tr: 'Surabaya Juanda Uluslararası Havaalanı', ru: 'Международный аэропорт Сурабая Джуанда', zh: '泗水朱安达国际机场', ar: 'مطار سورابايا جواندا الدولي' },
+      'IDMED_AIR': { en: 'Medan Kualanamu International Airport', fr: 'Aéroport international de Medan Kualanamu', de: 'Internationaler Flughafen Medan Kualanamu', es: 'Aeropuerto Internacional de Medan Kualanamu', it: 'Aeroporto Internazionale di Medan Kualanamu', nl: 'Internationale Luchthaven Medan Kualanamu', pt: 'Aeroporto Internacional de Medan Kualanamu', tr: 'Medan Kualanamu Uluslararası Havaalanı', ru: 'Международный аэропорт Медан Куаланаму', zh: '棉兰瓜拉纳木国际机场', ar: 'مطار ميدان كوالانامو الدولي' },
+      
+      // 🇮🇱 Israel (Israël) - Hub du Moyen-Orient
+      'ILHFA': { en: 'Port of Haifa', fr: 'Port de Haïfa', de: 'Hafen Haifa', es: 'Puerto de Haifa', it: 'Porto di Haifa', nl: 'Haven van Haifa', pt: 'Porto de Haifa', tr: 'Hayfa Limanı', ru: 'Порт Хайфа', zh: '海法港', ar: 'ميناء حيفا' },
+      'ILASD': { en: 'Port of Ashdod', fr: 'Port d\'Ashdod', de: 'Hafen Ashdod', es: 'Puerto de Ashdod', it: 'Porto di Ashdod', nl: 'Haven van Ashdod', pt: 'Porto de Ashdod', tr: 'Aşdod Limanı', ru: 'Порт Ашдод', zh: '阿什杜德港', ar: 'ميناء أشدود' },
+      'ILEIL': { en: 'Port of Eilat', fr: 'Port d\'Eilat', de: 'Hafen Eilat', es: 'Puerto de Eilat', it: 'Porto di Eilat', nl: 'Haven van Eilat', pt: 'Porto de Eilat', tr: 'Eylat Limanı', ru: 'Порт Эйлат', zh: '埃拉特港', ar: 'ميناء إيلات' },
+      'ILTLV': { en: 'Tel Aviv Ben Gurion Airport', fr: 'Aéroport de Tel Aviv Ben Gurion', de: 'Flughafen Tel Aviv Ben Gurion', es: 'Aeropuerto de Tel Aviv Ben Gurion', it: 'Aeroporto di Tel Aviv Ben Gurion', nl: 'Luchthaven Tel Aviv Ben Gurion', pt: 'Aeroporto de Tel Aviv Ben Gurion', tr: 'Tel Aviv Ben Gurion Havaalanı', ru: 'Аэропорт Тель-Авив Бен-Гурион', zh: '特拉维夫本-古里安机场', ar: 'مطار تل أبيب بن غوريون' },
+      'ILHFA_AIR': { en: 'Haifa Airport', fr: 'Aéroport de Haïfa', de: 'Flughafen Haifa', es: 'Aeropuerto de Haifa', it: 'Aeroporto di Haifa', nl: 'Luchthaven Haifa', pt: 'Aeroporto de Haifa', tr: 'Hayfa Havaalanı', ru: 'Аэропорт Хайфа', zh: '海法机场', ar: 'مطار حيفا' },
+      
+      // 🇮🇷 Iran (Iran) - Hub du Golfe Persique
+      'IRBND': { en: 'Port of Bandar Abbas', fr: 'Port de Bandar Abbas', de: 'Hafen Bandar Abbas', es: 'Puerto de Bandar Abbas', it: 'Porto di Bandar Abbas', nl: 'Haven van Bandar Abbas', pt: 'Porto de Bandar Abbas', tr: 'Bandar Abbas Limanı', ru: 'Порт Бендер-Аббас', zh: '阿巴斯港', ar: 'ميناء بندر عباس' },
+      'IRIMAM': { en: 'Imam Khomeini Port', fr: 'Port d\'Imam Khomeini', de: 'Hafen Imam Khomeini', es: 'Puerto de Imam Jomeini', it: 'Porto di Imam Khomeini', nl: 'Haven van Imam Khomeini', pt: 'Porto de Imam Khomeini', tr: 'İmam Humeyni Limanı', ru: 'Порт Имам Хомейни', zh: '伊玛目霍梅尼港', ar: 'ميناء الإمام الخميني' },
+      'IRBZG': { en: 'Port of Bushehr', fr: 'Port de Bushehr', de: 'Hafen Bushehr', es: 'Puerto de Bushehr', it: 'Porto di Bushehr', nl: 'Haven van Bushehr', pt: 'Porto de Bushehr', tr: 'Buşehr Limanı', ru: 'Порт Бушер', zh: '布什尔港', ar: 'ميناء بوشهر' },
+      'IRIKU': { en: 'Tehran Imam Khomeini International Airport', fr: 'Aéroport international de Téhéran Imam Khomeini', de: 'Internationaler Flughafen Teheran Imam Khomeini', es: 'Aeropuerto Internacional de Teherán Imam Jomeini', it: 'Aeroporto Internazionale di Teheran Imam Khomeini', nl: 'Internationale Luchthaven Teheran Imam Khomeini', pt: 'Aeroporto Internacional de Teerã Imam Khomeini', tr: 'Tahran İmam Humeyni Uluslararası Havaalanı', ru: 'Международный аэропорт Тегеран Имам Хомейни', zh: '德黑兰伊玛目霍梅尼国际机场', ar: 'مطار طهران الإمام الخميني الدولي' },
+      'IRMHD': { en: 'Mashhad Airport', fr: 'Aéroport de Mashhad', de: 'Flughafen Mashhad', es: 'Aeropuerto de Mashhad', it: 'Aeroporto di Mashhad', nl: 'Luchthaven Mashhad', pt: 'Aeroporto de Mashhad', tr: 'Meşhed Havaalanı', ru: 'Аэропорт Мешхед', zh: '马什哈德机场', ar: 'مطار مشهد' },
+      'IRTEH_RAIL': { en: 'Tehran Railway Station', fr: 'Gare de Téhéran', de: 'Bahnhof Teheran', es: 'Estación de Teherán', it: 'Stazione di Teheran', nl: 'Station Teheran', pt: 'Estação de Teerã', tr: 'Tahran Tren İstasyonu', ru: 'Железнодорожная станция Тегеран', zh: '德黑兰火车站', ar: 'محطة طهران للسكك الحديدية' },
+      'IRISF_RAIL': { en: 'Isfahan Railway Station', fr: 'Gare d\'Isfahan', de: 'Bahnhof Isfahan', es: 'Estación de Isfahan', it: 'Stazione di Isfahan', nl: 'Station Isfahan', pt: 'Estação de Isfahan', tr: 'Isfahan Tren İstasyonu', ru: 'Железнодорожная станция Исфахан', zh: '伊斯法罕火车站', ar: 'محطة أصفهان للسكك الحديدية' },
+      
+      // 🇮🇸 Iceland (Islande) - Hub nordique (mis à jour)
+      'ISAKR': { en: 'Port of Akranes', fr: 'Port d\'Akranes', de: 'Hafen Akranes', es: 'Puerto de Akranes', it: 'Porto di Akranes', nl: 'Haven van Akranes', pt: 'Porto de Akranes', tr: 'Akranes Limanı', ru: 'Порт Акранес', zh: '阿克拉内斯港', ar: 'ميناء أكرانيس' },
+      'ISREY_AIR': { en: 'Reykjavik Airport', fr: 'Aéroport de Reykjavik', de: 'Flughafen Reykjavik', es: 'Aeropuerto de Reykjavik', it: 'Aeroporto di Reykjavik', nl: 'Luchthaven Reykjavik', pt: 'Aeroporto de Reykjavik', tr: 'Reykjavik Havaalanı', ru: 'Аэропорт Рейкьявик', zh: '雷克雅未克机场', ar: 'مطار ريكيافيك' },
+      
+      // === PAYS EN J - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇯🇵 Japan (Japon) - Puissance asiatique majeure
+      'JPTYO': { en: 'Port of Tokyo', fr: 'Port de Tokyo', de: 'Hafen Tokio', es: 'Puerto de Tokio', it: 'Porto di Tokyo', nl: 'Haven van Tokyo', pt: 'Porto de Tóquio', tr: 'Tokyo Limanı', ru: 'Порт Токио', zh: '东京港', ar: 'ميناء طوكيو' },
+      'JPYOK': { en: 'Port of Yokohama', fr: 'Port de Yokohama', de: 'Hafen Yokohama', es: 'Puerto de Yokohama', it: 'Porto di Yokohama', nl: 'Haven van Yokohama', pt: 'Porto de Yokohama', tr: 'Yokohama Limanı', ru: 'Порт Йокогама', zh: '横滨港', ar: 'ميناء يوكوهاما' },
+      'JPOSA': { en: 'Port of Osaka', fr: 'Port d\'Osaka', de: 'Hafen Osaka', es: 'Puerto de Osaka', it: 'Porto di Osaka', nl: 'Haven van Osaka', pt: 'Porto de Osaka', tr: 'Osaka Limanı', ru: 'Порт Осака', zh: '大阪港', ar: 'ميناء أوساكا' },
+      'JPNGO': { en: 'Port of Nagoya', fr: 'Port de Nagoya', de: 'Hafen Nagoya', es: 'Puerto de Nagoya', it: 'Porto di Nagoya', nl: 'Haven van Nagoya', pt: 'Porto de Nagoya', tr: 'Nagoya Limanı', ru: 'Порт Нагоя', zh: '名古屋港', ar: 'ميناء ناغويا' },
+      'JPKOB': { en: 'Port of Kobe', fr: 'Port de Kobe', de: 'Hafen Kobe', es: 'Puerto de Kobe', it: 'Porto di Kobe', nl: 'Haven van Kobe', pt: 'Porto de Kobe', tr: 'Kobe Limanı', ru: 'Порт Кобе', zh: '神户港', ar: 'ميناء كوبي' },
+      'JPNRT': { en: 'Tokyo Narita International Airport', fr: 'Aéroport international de Tokyo Narita', de: 'Internationaler Flughafen Tokyo Narita', es: 'Aeropuerto Internacional de Tokio Narita', it: 'Aeroporto Internazionale di Tokyo Narita', nl: 'Internationale Luchthaven Tokyo Narita', pt: 'Aeroporto Internacional de Tóquio Narita', tr: 'Tokyo Narita Uluslararası Havaalanı', ru: 'Международный аэропорт Токио Нарита', zh: '东京成田国际机场', ar: 'مطار طوكيو ناريتا الدولي' },
+      'JPHND': { en: 'Tokyo Haneda Airport', fr: 'Aéroport de Tokyo Haneda', de: 'Flughafen Tokyo Haneda', es: 'Aeropuerto de Tokio Haneda', it: 'Aeroporto di Tokyo Haneda', nl: 'Luchthaven Tokyo Haneda', pt: 'Aeroporto de Tóquio Haneda', tr: 'Tokyo Haneda Havaalanı', ru: 'Аэропорт Токио Ханеда', zh: '东京羽田机场', ar: 'مطار طوكيو هانيدا' },
+      'JPKIX': { en: 'Osaka Kansai International Airport', fr: 'Aéroport international d\'Osaka Kansai', de: 'Internationaler Flughafen Osaka Kansai', es: 'Aeropuerto Internacional de Osaka Kansai', it: 'Aeroporto Internazionale di Osaka Kansai', nl: 'Internationale Luchthaven Osaka Kansai', pt: 'Aeroporto Internacional de Osaka Kansai', tr: 'Osaka Kansai Uluslararası Havaalanı', ru: 'Международный аэропорт Осака Кансай', zh: '大阪关西国际机场', ar: 'مطار أوساكا كانساي الدولي' },
+      'JPNGO_AIR': { en: 'Nagoya Chubu Centrair International Airport', fr: 'Aéroport international de Nagoya Chubu Centrair', de: 'Internationaler Flughafen Nagoya Chubu Centrair', es: 'Aeropuerto Internacional de Nagoya Chubu Centrair', it: 'Aeroporto Internazionale di Nagoya Chubu Centrair', nl: 'Internationale Luchthaven Nagoya Chubu Centrair', pt: 'Aeroporto Internacional de Nagoya Chubu Centrair', tr: 'Nagoya Chubu Centrair Uluslararası Havaalanı', ru: 'Международный аэропорт Нагоя Чубу Центрэйр', zh: '名古屋中部国际机场', ar: 'مطار ناغويا تشوبو سنترير الدولي' },
+      'JPTYO_RAIL': { en: 'Tokyo Station', fr: 'Gare de Tokyo', de: 'Bahnhof Tokyo', es: 'Estación de Tokio', it: 'Stazione di Tokyo', nl: 'Station Tokyo', pt: 'Estação de Tóquio', tr: 'Tokyo İstasyonu', ru: 'Вокзал Токио', zh: '东京站', ar: 'محطة طوكيو' },
+      'JPOSA_RAIL': { en: 'Osaka Station', fr: 'Gare d\'Osaka', de: 'Bahnhof Osaka', es: 'Estación de Osaka', it: 'Stazione di Osaka', nl: 'Station Osaka', pt: 'Estação de Osaka', tr: 'Osaka İstasyonu', ru: 'Вокзал Осака', zh: '大阪站', ar: 'محطة أوساكا' },
+      'JPNGO_RAIL': { en: 'Nagoya Station', fr: 'Gare de Nagoya', de: 'Bahnhof Nagoya', es: 'Estación de Nagoya', it: 'Stazione di Nagoya', nl: 'Station Nagoya', pt: 'Estação de Nagoya', tr: 'Nagoya İstasyonu', ru: 'Вокзал Нагоя', zh: '名古屋站', ar: 'محطة ناغويا' },
+      
+      // 🇯🇴 Jordan (Jordanie) - Hub du Moyen-Orient
+      'JOAQJ': { en: 'Port of Aqaba', fr: 'Port d\'Aqaba', de: 'Hafen Aqaba', es: 'Puerto de Aqaba', it: 'Porto di Aqaba', nl: 'Haven van Aqaba', pt: 'Porto de Aqaba', tr: 'Akabe Limanı', ru: 'Порт Акаба', zh: '亚喀巴港', ar: 'ميناء العقبة' },
+      'JOAMM': { en: 'Amman Queen Alia International Airport', fr: 'Aéroport international d\'Amman Queen Alia', de: 'Internationaler Flughafen Amman Queen Alia', es: 'Aeropuerto Internacional de Ammán Queen Alia', it: 'Aeroporto Internazionale di Amman Queen Alia', nl: 'Internationale Luchthaven Amman Queen Alia', pt: 'Aeroporto Internacional de Amã Queen Alia', tr: 'Amman Queen Alia Uluslararası Havaalanı', ru: 'Международный аэропорт Амман имени королевы Алии', zh: '安曼阿丽娅王后国际机场', ar: 'مطار عمان الملكة علياء الدولي' },
+      'JOAQJ_AIR': { en: 'Aqaba King Hussein International Airport', fr: 'Aéroport international d\'Aqaba King Hussein', de: 'Internationaler Flughafen Aqaba King Hussein', es: 'Aeropuerto Internacional de Aqaba King Hussein', it: 'Aeroporto Internazionale di Aqaba King Hussein', nl: 'Internationale Luchthaven Aqaba King Hussein', pt: 'Aeroporto Internacional de Aqaba King Hussein', tr: 'Akabe King Hussein Uluslararası Havaalanı', ru: 'Международный аэропорт Акаба имени короля Хусейна', zh: '亚喀巴胡塞因国王国际机场', ar: 'مطار العقبة الملك الحسين الدولي' },
+      
+      // 🇯🇲 Jamaica (Jamaïque) - Hub des Caraïbes
+      'JMKIN': { en: 'Port of Kingston', fr: 'Port de Kingston', de: 'Hafen Kingston', es: 'Puerto de Kingston', it: 'Porto di Kingston', nl: 'Haven van Kingston', pt: 'Porto de Kingston', tr: 'Kingston Limanı', ru: 'Порт Кингстон', zh: '金斯敦港', ar: 'ميناء كينغستون' },
+      'JMMBY': { en: 'Port of Montego Bay', fr: 'Port de Montego Bay', de: 'Hafen Montego Bay', es: 'Puerto de Montego Bay', it: 'Porto di Montego Bay', nl: 'Haven van Montego Bay', pt: 'Porto de Montego Bay', tr: 'Montego Bay Limanı', ru: 'Порт Монтего-Бей', zh: '蒙特哥贝港', ar: 'ميناء مونتيغو باي' },
+      'JMKIN_AIR': { en: 'Kingston Norman Manley International Airport', fr: 'Aéroport international de Kingston Norman Manley', de: 'Internationaler Flughafen Kingston Norman Manley', es: 'Aeropuerto Internacional de Kingston Norman Manley', it: 'Aeroporto Internazionale di Kingston Norman Manley', nl: 'Internationale Luchthaven Kingston Norman Manley', pt: 'Aeroporto Internacional de Kingston Norman Manley', tr: 'Kingston Norman Manley Uluslararası Havaalanı', ru: 'Международный аэропорт Кингстон Норман Мэнли', zh: '金斯敦诺曼·曼利国际机场', ar: 'مطار كينغستون نورمان مانلي الدولي' },
+      'JMMBY_AIR': { en: 'Montego Bay Sangster International Airport', fr: 'Aéroport international de Montego Bay Sangster', de: 'Internationaler Flughafen Montego Bay Sangster', es: 'Aeropuerto Internacional de Montego Bay Sangster', it: 'Aeroporto Internazionale di Montego Bay Sangster', nl: 'Internationale Luchthaven Montego Bay Sangster', pt: 'Aeroporto Internacional de Montego Bay Sangster', tr: 'Montego Bay Sangster Uluslararası Havaalanı', ru: 'Международный аэропорт Монтего-Бей Сангстер', zh: '蒙特哥贝桑斯特国际机场', ar: 'مطار مونتيغو باي سانغستر الدولي' },
+      
+      // === PAYS EN K - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇰🇷 South Korea (Corée du Sud) - Tigre asiatique
+      'KRPUS': { en: 'Port of Busan', fr: 'Port de Busan', de: 'Hafen Busan', es: 'Puerto de Busan', it: 'Porto di Busan', nl: 'Haven van Busan', pt: 'Porto de Busan', tr: 'Busan Limanı', ru: 'Порт Пусан', zh: '釜山港', ar: 'ميناء بوسان' },
+      'KRICN': { en: 'Port of Incheon', fr: 'Port d\'Incheon', de: 'Hafen Incheon', es: 'Puerto de Incheon', it: 'Porto di Incheon', nl: 'Haven van Incheon', pt: 'Porto de Incheon', tr: 'Incheon Limanı', ru: 'Порт Инчхон', zh: '仁川港', ar: 'ميناء إنشيون' },
+      'KRULZ': { en: 'Port of Ulsan', fr: 'Port d\'Ulsan', de: 'Hafen Ulsan', es: 'Puerto de Ulsan', it: 'Porto di Ulsan', nl: 'Haven van Ulsan', pt: 'Porto de Ulsan', tr: 'Ulsan Limanı', ru: 'Порт Ульсан', zh: '蔚山港', ar: 'ميناء أولسان' },
+      'KRICN_AIR': { en: 'Incheon International Airport', fr: 'Aéroport international d\'Incheon', de: 'Internationaler Flughafen Incheon', es: 'Aeropuerto Internacional de Incheon', it: 'Aeroporto Internazionale di Incheon', nl: 'Internationale Luchthaven Incheon', pt: 'Aeroporto Internacional de Incheon', tr: 'Incheon Uluslararası Havaalanı', ru: 'Международный аэропорт Инчхон', zh: '仁川国际机场', ar: 'مطار إنشيون الدولي' },
+      'KRGMP': { en: 'Gimpo Airport', fr: 'Aéroport de Gimpo', de: 'Flughafen Gimpo', es: 'Aeropuerto de Gimpo', it: 'Aeroporto di Gimpo', nl: 'Luchthaven Gimpo', pt: 'Aeroporto de Gimpo', tr: 'Gimpo Havaalanı', ru: 'Аэропорт Кимпо', zh: '金浦机场', ar: 'مطار جيمبو' },
+      'KRPUS_AIR': { en: 'Busan Gimhae International Airport', fr: 'Aéroport international de Busan Gimhae', de: 'Internationaler Flughafen Busan Gimhae', es: 'Aeropuerto Internacional de Busan Gimhae', it: 'Aeroporto Internazionale di Busan Gimhae', nl: 'Internationale Luchthaven Busan Gimhae', pt: 'Aeroporto Internacional de Busan Gimhae', tr: 'Busan Gimhae Uluslararası Havaalanı', ru: 'Международный аэропорт Пусан Кимхэ', zh: '釜山金海国际机场', ar: 'مطار بوسان جيمهاي الدولي' },
+      'KRSEO_RAIL': { en: 'Seoul Station', fr: 'Gare de Séoul', de: 'Bahnhof Seoul', es: 'Estación de Seúl', it: 'Stazione di Seoul', nl: 'Station Seoul', pt: 'Estação de Seul', tr: 'Seoul İstasyonu', ru: 'Вокзал Сеул', zh: '首尔站', ar: 'محطة سيول' },
+      'KRPUS_RAIL': { en: 'Busan Station', fr: 'Gare de Busan', de: 'Bahnhof Busan', es: 'Estación de Busan', it: 'Stazione di Busan', nl: 'Station Busan', pt: 'Estação de Busan', tr: 'Busan İstasyonu', ru: 'Вокзал Пусан', zh: '釜山站', ar: 'محطة بوسان' },
+      
+      // 🇰🇿 Kazakhstan (Kazakhstan) - Hub eurasiatique
+      'KZAKT': { en: 'Port of Aktau', fr: 'Port d\'Aktau', de: 'Hafen Aktau', es: 'Puerto de Aktau', it: 'Porto di Aktau', nl: 'Haven van Aktau', pt: 'Porto de Aktau', tr: 'Aktau Limanı', ru: 'Порт Актау', zh: '阿克套港', ar: 'ميناء أكتاو' },
+      'KZALA': { en: 'Almaty International Airport', fr: 'Aéroport international d\'Almaty', de: 'Internationaler Flughafen Almaty', es: 'Aeropuerto Internacional de Almaty', it: 'Aeroporto Internazionale di Almaty', nl: 'Internationale Luchthaven Almaty', pt: 'Aeroporto Internacional de Almaty', tr: 'Almatı Uluslararası Havaalanı', ru: 'Международный аэропорт Алматы', zh: '阿拉木图国际机场', ar: 'مطار آلماتي الدولي' },
+      'KZNUR': { en: 'Nur-Sultan Nazarbayev International Airport', fr: 'Aéroport international de Nur-Sultan Nazarbayev', de: 'Internationaler Flughafen Nur-Sultan Nazarbayev', es: 'Aeropuerto Internacional de Nur-Sultan Nazarbayev', it: 'Aeroporto Internazionale di Nur-Sultan Nazarbayev', nl: 'Internationale Luchthaven Nur-Sultan Nazarbayev', pt: 'Aeroporto Internacional de Nur-Sultan Nazarbayev', tr: 'Nur-Sultan Nazarbayev Uluslararası Havaalanı', ru: 'Международный аэропорт Нур-Султан Назарбаев', zh: '努尔苏丹纳扎尔巴耶夫国际机场', ar: 'مطار نور سلطان نزارباييف الدولي' },
+      'KZALA_RAIL': { en: 'Almaty Railway Station', fr: 'Gare d\'Almaty', de: 'Bahnhof Almaty', es: 'Estación de Almaty', it: 'Stazione di Almaty', nl: 'Station Almaty', pt: 'Estação de Almaty', tr: 'Almatı Tren İstasyonu', ru: 'Железнодорожная станция Алматы', zh: '阿拉木图火车站', ar: 'محطة آلماتي للسكك الحديدية' },
+      'KZNUR_RAIL': { en: 'Nur-Sultan Railway Station', fr: 'Gare de Nur-Sultan', de: 'Bahnhof Nur-Sultan', es: 'Estación de Nur-Sultan', it: 'Stazione di Nur-Sultan', nl: 'Station Nur-Sultan', pt: 'Estação de Nur-Sultan', tr: 'Nur-Sultan Tren İstasyonu', ru: 'Железнодорожная станция Нур-Султан', zh: '努尔苏丹火车站', ar: 'محطة نور سلطان للسكك الحديدية' },
+      
+      // 🇰🇼 Kuwait (Koweït) - Hub du Golfe Persique
+      'KWKWI': { en: 'Port of Kuwait', fr: 'Port de Koweït', de: 'Hafen Kuwait', es: 'Puerto de Kuwait', it: 'Porto del Kuwait', nl: 'Haven van Koeweit', pt: 'Porto do Kuwait', tr: 'Kuveyt Limanı', ru: 'Порт Кувейт', zh: '科威特港', ar: 'ميناء الكويت' },
+      'KWSHU': { en: 'Port of Shuwaikh', fr: 'Port de Shuwaikh', de: 'Hafen Shuwaikh', es: 'Puerto de Shuwaikh', it: 'Porto di Shuwaikh', nl: 'Haven van Shuwaikh', pt: 'Porto de Shuwaikh', tr: 'Şuveyh Limanı', ru: 'Порт Шувайх', zh: '舒瓦伊赫港', ar: 'ميناء الشويخ' },
+      'KWKWI_AIR': { en: 'Kuwait International Airport', fr: 'Aéroport international du Koweït', de: 'Internationaler Flughafen Kuwait', es: 'Aeropuerto Internacional de Kuwait', it: 'Aeroporto Internazionale del Kuwait', nl: 'Internationale Luchthaven Koeweit', pt: 'Aeroporto Internacional do Kuwait', tr: 'Kuveyt Uluslararası Havaalanı', ru: 'Международный аэропорт Кувейт', zh: '科威特国际机场', ar: 'مطار الكويت الدولي' },
+      
+      // 🇰🇪 Kenya (Kenya) - Hub de l'Afrique de l'Est
+      'KEMSA': { en: 'Port of Mombasa', fr: 'Port de Mombasa', de: 'Hafen Mombasa', es: 'Puerto de Mombasa', it: 'Porto di Mombasa', nl: 'Haven van Mombasa', pt: 'Porto de Mombasa', tr: 'Mombasa Limanı', ru: 'Порт Момбаса', zh: '蒙巴萨港', ar: 'ميناء مومباسا' },
+      'KEKIS': { en: 'Port of Kisumu', fr: 'Port de Kisumu', de: 'Hafen Kisumu', es: 'Puerto de Kisumu', it: 'Porto di Kisumu', nl: 'Haven van Kisumu', pt: 'Porto de Kisumu', tr: 'Kisumu Limanı', ru: 'Порт Кисуму', zh: '基苏木港', ar: 'ميناء كيسومو' },
+      'KENBO': { en: 'Nairobi Jomo Kenyatta International Airport', fr: 'Aéroport international de Nairobi Jomo Kenyatta', de: 'Internationaler Flughafen Nairobi Jomo Kenyatta', es: 'Aeropuerto Internacional de Nairobi Jomo Kenyatta', it: 'Aeroporto Internazionale di Nairobi Jomo Kenyatta', nl: 'Internationale Luchthaven Nairobi Jomo Kenyatta', pt: 'Aeroporto Internacional de Nairobi Jomo Kenyatta', tr: 'Nairobi Jomo Kenyatta Uluslararası Havaalanı', ru: 'Международный аэропорт Найроби Джомо Кениата', zh: '内罗毕乔莫·肯雅塔国际机场', ar: 'مطار نيروبي جومو كينياتا الدولي' },
+      'KEMSA_AIR': { en: 'Mombasa Moi International Airport', fr: 'Aéroport international de Mombasa Moi', de: 'Internationaler Flughafen Mombasa Moi', es: 'Aeropuerto Internacional de Mombasa Moi', it: 'Aeroporto Internazionale di Mombasa Moi', nl: 'Internationale Luchthaven Mombasa Moi', pt: 'Aeroporto Internacional de Mombasa Moi', tr: 'Mombasa Moi Uluslararası Havaalanı', ru: 'Международный аэропорт Момбаса Мои', zh: '蒙巴萨莫伊国际机场', ar: 'مطار مومباسا موي الدولي' },
+      'KENBO_RAIL': { en: 'Nairobi Railway Station', fr: 'Gare de Nairobi', de: 'Bahnhof Nairobi', es: 'Estación de Nairobi', it: 'Stazione di Nairobi', nl: 'Station Nairobi', pt: 'Estação de Nairobi', tr: 'Nairobi Tren İstasyonu', ru: 'Железнодорожная станция Найроби', zh: '内罗毕火车站', ar: 'محطة نيروبي للسكك الحديدية' },
+      'KEMSA_RAIL': { en: 'Mombasa Railway Station', fr: 'Gare de Mombasa', de: 'Bahnhof Mombasa', es: 'Estación de Mombasa', it: 'Stazione di Mombasa', nl: 'Station Mombasa', pt: 'Estação de Mombasa', tr: 'Mombasa Tren İstasyonu', ru: 'Железнодорожная станция Момбаса', zh: '蒙巴萨火车站', ar: 'محطة مومباسا للسكك الحديدية' },
+      
+      // === PAYS EN L - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇱🇰 Sri Lanka (Sri Lanka) - Perle de l'Océan Indien
+      'LKCMB': { en: 'Port of Colombo', fr: 'Port de Colombo', de: 'Hafen Colombo', es: 'Puerto de Colombo', it: 'Porto di Colombo', nl: 'Haven van Colombo', pt: 'Porto de Colombo', tr: 'Kolombo Limanı', ru: 'Порт Коломбо', zh: '科伦坡港', ar: 'ميناء كولومبو' },
+      'LKHMS': { en: 'Port of Hambantota', fr: 'Port de Hambantota', de: 'Hafen Hambantota', es: 'Puerto de Hambantota', it: 'Porto di Hambantota', nl: 'Haven van Hambantota', pt: 'Porto de Hambantota', tr: 'Hambantota Limanı', ru: 'Порт Хамбантота', zh: '汉班托塔港', ar: 'ميناء هامبانتوتا' },
+      'LKCMB_AIR': { en: 'Colombo Bandaranaike International Airport', fr: 'Aéroport international de Colombo Bandaranaike', de: 'Internationaler Flughafen Colombo Bandaranaike', es: 'Aeropuerto Internacional de Colombo Bandaranaike', it: 'Aeroporto Internazionale di Colombo Bandaranaike', nl: 'Internationale Luchthaven Colombo Bandaranaike', pt: 'Aeroporto Internacional de Colombo Bandaranaike', tr: 'Kolombo Bandaranaike Uluslararası Havaalanı', ru: 'Международный аэропорт Коломбо Бандаранаике', zh: '科伦坡班达拉奈克国际机场', ar: 'مطار كولومبو بانداراناياكا الدولي' },
+      
+      // 🇱🇧 Lebanon (Liban) - Gateway du Moyen-Orient
+      'LBBEY': { en: 'Port of Beirut', fr: 'Port de Beyrouth', de: 'Hafen Beirut', es: 'Puerto de Beirut', it: 'Porto di Beirut', nl: 'Haven van Beiroet', pt: 'Porto de Beirute', tr: 'Beyrut Limanı', ru: 'Порт Бейрут', zh: '贝鲁特港', ar: 'ميناء بيروت' },
+      'LBTRI': { en: 'Port of Tripoli', fr: 'Port de Tripoli', de: 'Hafen Tripoli', es: 'Puerto de Trípoli', it: 'Porto di Tripoli', nl: 'Haven van Tripoli', pt: 'Porto de Trípoli', tr: 'Trablusşam Limanı', ru: 'Порт Триполи', zh: '的黎波里港', ar: 'ميناء طرابلس' },
+      'LBBEY_AIR': { en: 'Beirut Rafic Hariri International Airport', fr: 'Aéroport international de Beyrouth Rafic Hariri', de: 'Internationaler Flughafen Beirut Rafic Hariri', es: 'Aeropuerto Internacional de Beirut Rafic Hariri', it: 'Aeroporto Internazionale di Beirut Rafic Hariri', nl: 'Internationale Luchthaven Beiroet Rafic Hariri', pt: 'Aeroporto Internacional de Beirute Rafic Hariri', tr: 'Beyrut Refik Hariri Uluslararası Havaalanı', ru: 'Международный аэропорт Бейрут Рафика Харири', zh: '贝鲁特拉菲克·哈里里国际机场', ar: 'مطار بيروت رفيق الحريري الدولي' },
+      
+      // 🇱🇹 Lithuania (Lituanie) - Hub balte
+      'LTKLA': { en: 'Port of Klaipeda', fr: 'Port de Klaipeda', de: 'Hafen Klaipeda', es: 'Puerto de Klaipeda', it: 'Porto di Klaipeda', nl: 'Haven van Klaipeda', pt: 'Porto de Klaipeda', tr: 'Klaipeda Limanı', ru: 'Порт Клайпеда', zh: '克莱佩达港', ar: 'ميناء كلايبيدا' },
+      'LTVIL': { en: 'Vilnius Airport', fr: 'Aéroport de Vilnius', de: 'Flughafen Vilnius', es: 'Aeropuerto de Vilnius', it: 'Aeroporto di Vilnius', nl: 'Luchthaven Vilnius', pt: 'Aeroporto de Vilnius', tr: 'Vilnius Havaalanı', ru: 'Аэропорт Вильнюс', zh: '维尔纽斯机场', ar: 'مطار فيلنيوس' },
+      'LTKUN': { en: 'Kaunas Airport', fr: 'Aéroport de Kaunas', de: 'Flughafen Kaunas', es: 'Aeropuerto de Kaunas', it: 'Aeroporto di Kaunas', nl: 'Luchthaven Kaunas', pt: 'Aeroporto de Kaunas', tr: 'Kaunas Havaalanı', ru: 'Аэропорт Каунас', zh: '考纳斯机场', ar: 'مطار كاوناس' },
+      'LTVIL_RAIL': { en: 'Vilnius Railway Station', fr: 'Gare de Vilnius', de: 'Bahnhof Vilnius', es: 'Estación de Vilnius', it: 'Stazione di Vilnius', nl: 'Station Vilnius', pt: 'Estação de Vilnius', tr: 'Vilnius Tren İstasyonu', ru: 'Железнодорожная станция Вильнюс', zh: '维尔纽斯火车站', ar: 'محطة فيلنيوس للسكك الحديدية' },
+      'LTKLA_RAIL': { en: 'Klaipeda Railway Station', fr: 'Gare de Klaipeda', de: 'Bahnhof Klaipeda', es: 'Estación de Klaipeda', it: 'Stazione di Klaipeda', nl: 'Station Klaipeda', pt: 'Estação de Klaipeda', tr: 'Klaipeda Tren İstasyonu', ru: 'Железнодорожная станция Клайпеда', zh: '克莱佩达火车站', ar: 'محطة كلايبيدا للسكك الحديدية' },
+      
+      // 🇱🇻 Latvia (Lettonie) - Hub balte
+      'LVRIX': { en: 'Port of Riga', fr: 'Port de Riga', de: 'Hafen Riga', es: 'Puerto de Riga', it: 'Porto di Riga', nl: 'Haven van Riga', pt: 'Porto de Riga', tr: 'Riga Limanı', ru: 'Порт Рига', zh: '里加港', ar: 'ميناء ريغا' },
+      'LVVEN': { en: 'Port of Ventspils', fr: 'Port de Ventspils', de: 'Hafen Ventspils', es: 'Puerto de Ventspils', it: 'Porto di Ventspils', nl: 'Haven van Ventspils', pt: 'Porto de Ventspils', tr: 'Ventspils Limanı', ru: 'Порт Вентспилс', zh: '文茨皮尔斯港', ar: 'ميناء فينتسبيلس' },
+      'LVRIX_AIR': { en: 'Riga Airport', fr: 'Aéroport de Riga', de: 'Flughafen Riga', es: 'Aeropuerto de Riga', it: 'Aeroporto di Riga', nl: 'Luchthaven Riga', pt: 'Aeroporto de Riga', tr: 'Riga Havaalanı', ru: 'Аэропорт Рига', zh: '里加机场', ar: 'مطار ريغا' },
+      'LVRIX_RAIL': { en: 'Riga Central Station', fr: 'Gare centrale de Riga', de: 'Hauptbahnhof Riga', es: 'Estación Central de Riga', it: 'Stazione Centrale di Riga', nl: 'Centraal Station Riga', pt: 'Estação Central de Riga', tr: 'Riga Merkez İstasyonu', ru: 'Центральный вокзал Рига', zh: '里加中央车站', ar: 'محطة ريغا المركزية' },
+      
+      // 🇱🇺 Luxembourg (Luxembourg) - Hub financier européen (mis à jour)
+      'LULUX_RAIL': { en: 'Luxembourg Central Station', fr: 'Gare centrale de Luxembourg', de: 'Hauptbahnhof Luxemburg', es: 'Estación Central de Luxemburgo', it: 'Stazione Centrale di Lussemburgo', nl: 'Centraal Station Luxemburg', pt: 'Estação Central de Luxemburgo', tr: 'Lüksemburg Merkez İstasyonu', ru: 'Центральный вокзал Люксембург', zh: '卢森堡中央车站', ar: 'محطة لوكسمبورغ المركزية' },
+      
+      // 🇱🇮 Liechtenstein (Liechtenstein) - Principauté alpine
+      'LIVAD_RAIL': { en: 'Vaduz Railway Connection', fr: 'Connexion ferroviaire de Vaduz', de: 'Bahnverbindung Vaduz', es: 'Conexión ferroviaria de Vaduz', it: 'Collegamento ferroviario di Vaduz', nl: 'Spoorverbinding Vaduz', pt: 'Conexão ferroviária de Vaduz', tr: 'Vaduz Demiryolu Bağlantısı', ru: 'Железнодорожное соединение Вадуц', zh: '瓦杜兹铁路连接', ar: 'اتصال السكك الحديدية في فادوتس' },
+      
+      // === PAYS EN M - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇲🇾 Malaysia (Malaisie) - Tigre asiatique
+      'MYPKG': { en: 'Port Klang', fr: 'Port Klang', de: 'Hafen Klang', es: 'Puerto Klang', it: 'Porto Klang', nl: 'Haven van Klang', pt: 'Porto Klang', tr: 'Klang Limanı', ru: 'Порт Кланг', zh: '巴生港', ar: 'ميناء كلانغ' },
+      'MYTPP': { en: 'Port of Tanjung Pelepas', fr: 'Port de Tanjung Pelepas', de: 'Hafen Tanjung Pelepas', es: 'Puerto de Tanjung Pelepas', it: 'Porto di Tanjung Pelepas', nl: 'Haven van Tanjung Pelepas', pt: 'Porto de Tanjung Pelepas', tr: 'Tanjung Pelepas Limanı', ru: 'Порт Танджунг Пелепас', zh: '丹戎帕拉帕斯港', ar: 'ميناء تانجونغ بيليباس' },
+      'MYKUL': { en: 'Kuala Lumpur International Airport', fr: 'Aéroport international de Kuala Lumpur', de: 'Internationaler Flughafen Kuala Lumpur', es: 'Aeropuerto Internacional de Kuala Lumpur', it: 'Aeroporto Internazionale di Kuala Lumpur', nl: 'Internationale Luchthaven Kuala Lumpur', pt: 'Aeroporto Internacional de Kuala Lumpur', tr: 'Kuala Lumpur Uluslararası Havaalanı', ru: 'Международный аэропорт Куала-Лумпур', zh: '吉隆坡国际机场', ar: 'مطار كوالالمبور الدولي' },
+      
+      // 🇲🇽 Mexico (Mexique) - Giant latino-américain
+      'MXMAN': { en: 'Port of Manzanillo', fr: 'Port de Manzanillo', de: 'Hafen Manzanillo', es: 'Puerto de Manzanillo', it: 'Porto di Manzanillo', nl: 'Haven van Manzanillo', pt: 'Porto de Manzanillo', tr: 'Manzanillo Limanı', ru: 'Порт Мансанильо', zh: '曼萨尼约港', ar: 'ميناء مانزانيلو' },
+      'MXLAZ': { en: 'Port of Lázaro Cárdenas', fr: 'Port de Lázaro Cárdenas', de: 'Hafen Lázaro Cárdenas', es: 'Puerto de Lázaro Cárdenas', it: 'Porto di Lázaro Cárdenas', nl: 'Haven van Lázaro Cárdenas', pt: 'Porto de Lázaro Cárdenas', tr: 'Lázaro Cárdenas Limanı', ru: 'Порт Ласаро Карденас', zh: '拉萨罗卡德纳斯港', ar: 'ميناء لازارو كارديناس' },
+      'MXVER': { en: 'Port of Veracruz', fr: 'Port de Veracruz', de: 'Hafen Veracruz', es: 'Puerto de Veracruz', it: 'Porto di Veracruz', nl: 'Haven van Veracruz', pt: 'Porto de Veracruz', tr: 'Veracruz Limanı', ru: 'Порт Веракрус', zh: '韦拉克鲁斯港', ar: 'ميناء فيراكروز' },
+      'MXMEX': { en: 'Mexico City International Airport', fr: 'Aéroport international de Mexico', de: 'Internationaler Flughafen Mexiko-Stadt', es: 'Aeropuerto Internacional de la Ciudad de México', it: 'Aeroporto Internazionale di Città del Messico', nl: 'Internationale Luchthaven Mexico-Stad', pt: 'Aeroporto Internacional da Cidade do México', tr: 'Mexico City Uluslararası Havaalanı', ru: 'Международный аэропорт Мехико', zh: '墨西哥城国际机场', ar: 'مطار مكسيكو سيتي الدولي' },
+      'MXCUN': { en: 'Cancún International Airport', fr: 'Aéroport international de Cancún', de: 'Internationaler Flughafen Cancún', es: 'Aeropuerto Internacional de Cancún', it: 'Aeroporto Internazionale di Cancún', nl: 'Internationale Luchthaven Cancún', pt: 'Aeroporto Internacional de Cancún', tr: 'Cancún Uluslararası Havaalanı', ru: 'Международный аэропорт Канкун', zh: '坎昆国际机场', ar: 'مطار كانكون الدولي' },
+      
+      // 🇲🇦 Morocco (Maroc) - Gateway maghrébin
+      'MACAS': { en: 'Port of Casablanca', fr: 'Port de Casablanca', de: 'Hafen Casablanca', es: 'Puerto de Casablanca', it: 'Porto di Casablanca', nl: 'Haven van Casablanca', pt: 'Porto de Casablanca', tr: 'Kazablanka Limanı', ru: 'Порт Касабланка', zh: '卡萨布兰卡港', ar: 'ميناء الدار البيضاء' },
+      'MATAN': { en: 'Port of Tanger Med', fr: 'Port de Tanger Med', de: 'Hafen Tanger Med', es: 'Puerto de Tánger Med', it: 'Porto di Tangeri Med', nl: 'Haven van Tanger Med', pt: 'Porto de Tânger Med', tr: 'Tanger Med Limanı', ru: 'Порт Танжер Мед', zh: '丹吉尔地中海港', ar: 'ميناء طنجة المتوسط' },
+      'MACMN': { en: 'Casablanca Mohammed V International Airport', fr: 'Aéroport international de Casablanca Mohammed V', de: 'Internationaler Flughafen Casablanca Mohammed V', es: 'Aeropuerto Internacional de Casablanca Mohammed V', it: 'Aeroporto Internazionale di Casablanca Mohammed V', nl: 'Internationale Luchthaven Casablanca Mohammed V', pt: 'Aeroporto Internacional de Casablanca Mohammed V', tr: 'Kazablanka Mohammed V Uluslararası Havaalanı', ru: 'Международный аэропорт Касабланка Мохаммед V', zh: '卡萨布兰卡穆罕默德五世国际机场', ar: 'مطار الدار البيضاء محمد الخامس الدولي' },
+      
+      // 🇲🇿 Mozambique (Mozambique) - Gateway d'Afrique australe
+      'MZMPM': { en: 'Port of Maputo', fr: 'Port de Maputo', de: 'Hafen Maputo', es: 'Puerto de Maputo', it: 'Porto di Maputo', nl: 'Haven van Maputo', pt: 'Porto de Maputo', tr: 'Maputo Limanı', ru: 'Порт Мапуту', zh: '马普托港', ar: 'ميناء مابوتو' },
+      'MZBEI': { en: 'Port of Beira', fr: 'Port de Beira', de: 'Hafen Beira', es: 'Puerto de Beira', it: 'Porto di Beira', nl: 'Haven van Beira', pt: 'Porto da Beira', tr: 'Beira Limanı', ru: 'Порт Бейра', zh: '贝拉港', ar: 'ميناء بيرا' },
+      'MZNAC': { en: 'Port of Nacala', fr: 'Port de Nacala', de: 'Hafen Nacala', es: 'Puerto de Nacala', it: 'Porto di Nacala', nl: 'Haven van Nacala', pt: 'Porto de Nacala', tr: 'Nacala Limanı', ru: 'Порт Накала', zh: '纳卡拉港', ar: 'ميناء ناكالا' },
+      'MZMPM_AIR': { en: 'Maputo International Airport', fr: 'Aéroport international de Maputo', de: 'Internationaler Flughafen Maputo', es: 'Aeropuerto Internacional de Maputo', it: 'Aeroporto Internazionale di Maputo', nl: 'Internationale Luchthaven Maputo', pt: 'Aeroporto Internacional de Maputo', tr: 'Maputo Uluslararası Havaalanı', ru: 'Международный аэропорт Мапуту', zh: '马普托国际机场', ar: 'مطار مابوتو الدولي' },
+      'MZMPM_RAIL': { en: 'Maputo Railway Station', fr: 'Gare de Maputo', de: 'Bahnhof Maputo', es: 'Estación de Maputo', it: 'Stazione di Maputo', nl: 'Station Maputo', pt: 'Estação de Maputo', tr: 'Maputo Tren İstasyonu', ru: 'Железнодорожная станция Мапуту', zh: '马普托火车站', ar: 'محطة مابوتو للسكك الحديدية' },
+      
+      // 🇲🇨 Monaco (Monaco) - Principauté luxueuse (mis à jour)
+      'MCNCE': { en: 'Nice Côte d\'Azur Airport', fr: 'Aéroport de Nice Côte d\'Azur', de: 'Flughafen Nizza Côte d\'Azur', es: 'Aeropuerto de Niza Costa Azul', it: 'Aeroporto di Nizza Costa Azzurra', nl: 'Luchthaven Nice Côte d\'Azur', pt: 'Aeroporto de Nice Côte d\'Azur', tr: 'Nice Côte d\'Azur Havaalanı', ru: 'Аэропорт Ницца Лазурный Берег', zh: '尼斯蓝色海岸机场', ar: 'مطار نيس كوت دازور' },
+      
+      // 🇲🇹 Malta (Malte) - Hub méditerranéen (mis à jour)
+      'MTMLA_AIR': { en: 'Malta International Airport', fr: 'Aéroport international de Malte', de: 'Internationaler Flughafen Malta', es: 'Aeropuerto Internacional de Malta', it: 'Aeroporto Internazionale di Malta', nl: 'Internationale Luchthaven Malta', pt: 'Aeroporto Internacional de Malta', tr: 'Malta Uluslararası Havaalanı', ru: 'Международный аэропорт Мальта', zh: '马耳他国际机场', ar: 'مطار مالطا الدولي' },
+      
+      // 🇲🇺 Mauritius (Maurice) - Perle de l'Océan Indien (mis à jour)
+      'MUPLN': { en: 'Plaine Corail Airport', fr: 'Aéroport de Plaine Corail', de: 'Flughafen Plaine Corail', es: 'Aeropuerto de Plaine Corail', it: 'Aeroporto di Plaine Corail', nl: 'Luchthaven Plaine Corail', pt: 'Aeroporto de Plaine Corail', tr: 'Plaine Corail Havaalanı', ru: 'Аэропорт Плейн Корайл', zh: '平原珊瑚机场', ar: 'مطار بلين كورايل' },
+      
+      // 🇲🇻 Maldives (Maldives) - Archipel tropical (mis à jour)
+      'MVMAL': { en: 'Port of Malé', fr: 'Port de Malé', de: 'Hafen Malé', es: 'Puerto de Malé', it: 'Porto di Malé', nl: 'Haven van Malé', pt: 'Porto de Malé', tr: 'Male Limanı', ru: 'Порт Мале', zh: '马累港', ar: 'ميناء ماليه' },
+      'MVGAN': { en: 'Port of Gan', fr: 'Port de Gan', de: 'Hafen Gan', es: 'Puerto de Gan', it: 'Porto di Gan', nl: 'Haven van Gan', pt: 'Porto de Gan', tr: 'Gan Limanı', ru: 'Порт Ган', zh: '甘港', ar: 'ميناء غان' },
+      'MVGAN_AIR': { en: 'Gan International Airport', fr: 'Aéroport international de Gan', de: 'Internationaler Flughafen Gan', es: 'Aeropuerto Internacional de Gan', it: 'Aeroporto Internazionale di Gan', nl: 'Internationale Luchthaven Gan', pt: 'Aeroporto Internacional de Gan', tr: 'Gan Uluslararası Havaalanı', ru: 'Международный аэропорт Ган', zh: '甘国际机场', ar: 'مطار غان الدولي' },
+      
+      // === PAYS EN N - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇳🇱 Netherlands (Pays-Bas) - Hub logistique européen
+      'NLRTM': { en: 'Port of Rotterdam', fr: 'Port de Rotterdam', de: 'Hafen Rotterdam', es: 'Puerto de Rotterdam', it: 'Porto di Rotterdam', nl: 'Haven van Rotterdam', pt: 'Porto de Roterdão', tr: 'Rotterdam Limanı', ru: 'Порт Роттердам', zh: '鹿特丹港', ar: 'ميناء روتردام' },
+      'NLAMS': { en: 'Port of Amsterdam', fr: 'Port d\'Amsterdam', de: 'Hafen Amsterdam', es: 'Puerto de Ámsterdam', it: 'Porto di Amsterdam', nl: 'Haven van Amsterdam', pt: 'Porto de Amsterdã', tr: 'Amsterdam Limanı', ru: 'Порт Амстердам', zh: '阿姆斯特丹港', ar: 'ميناء أمستردام' },
+      'NLAMS_AIR': { en: 'Amsterdam Schiphol Airport', fr: 'Aéroport d\'Amsterdam Schiphol', de: 'Flughafen Amsterdam Schiphol', es: 'Aeropuerto de Ámsterdam Schiphol', it: 'Aeroporto di Amsterdam Schiphol', nl: 'Luchthaven Amsterdam Schiphol', pt: 'Aeroporto de Amsterdã Schiphol', tr: 'Amsterdam Schiphol Havaalanı', ru: 'Аэропорт Амстердам Схипхол', zh: '阿姆斯特丹史基浦机场', ar: 'مطار أمستردام شيبهول' },
+      'NLEIN': { en: 'Eindhoven Airport', fr: 'Aéroport d\'Eindhoven', de: 'Flughafen Eindhoven', es: 'Aeropuerto de Eindhoven', it: 'Aeroporto di Eindhoven', nl: 'Luchthaven Eindhoven', pt: 'Aeroporto de Eindhoven', tr: 'Eindhoven Havaalanı', ru: 'Аэропорт Эйндховен', zh: '埃因霍温机场', ar: 'مطار آيندهوفن' },
+      'NLAMS_RAIL': { en: 'Amsterdam Centraal Station', fr: 'Gare centrale d\'Amsterdam', de: 'Hauptbahnhof Amsterdam', es: 'Estación Central de Ámsterdam', it: 'Stazione Centrale di Amsterdam', nl: 'Amsterdam Centraal', pt: 'Estação Central de Amsterdã', tr: 'Amsterdam Merkez İstasyonu', ru: 'Центральный вокзал Амстердам', zh: '阿姆斯特丹中央车站', ar: 'محطة أمستردام المركزية' },
+      'NLRTM_RAIL': { en: 'Rotterdam Centraal Station', fr: 'Gare centrale de Rotterdam', de: 'Hauptbahnhof Rotterdam', es: 'Estación Central de Rotterdam', it: 'Stazione Centrale di Rotterdam', nl: 'Rotterdam Centraal', pt: 'Estação Central de Roterdão', tr: 'Rotterdam Merkez İstasyonu', ru: 'Центральный вокзал Роттердам', zh: '鹿特丹中央车站', ar: 'محطة روتردام المركزية' },
+      'NLHAG_RAIL': { en: 'Den Haag Centraal Station', fr: 'Gare centrale de La Haye', de: 'Hauptbahnhof Den Haag', es: 'Estación Central de La Haya', it: 'Stazione Centrale dell\'Aia', nl: 'Den Haag Centraal', pt: 'Estação Central de Haia', tr: 'Den Haag Merkez İstasyonu', ru: 'Центральный вокзал Гаага', zh: '海牙中央车站', ar: 'محطة لاهاي المركزية' },
+      
+      // 🇳🇬 Nigeria (Nigeria) - Giant africain
+      'NGLAG': { en: 'Port of Lagos Apapa', fr: 'Port de Lagos Apapa', de: 'Hafen Lagos Apapa', es: 'Puerto de Lagos Apapa', it: 'Porto di Lagos Apapa', nl: 'Haven van Lagos Apapa', pt: 'Porto de Lagos Apapa', tr: 'Lagos Apapa Limanı', ru: 'Порт Лагос Апапа', zh: '拉各斯阿帕帕港', ar: 'ميناء لاغوس أبابا' },
+      'NGTCR': { en: 'Port of Tin Can Island', fr: 'Port de Tin Can Island', de: 'Hafen Tin Can Island', es: 'Puerto de Tin Can Island', it: 'Porto di Tin Can Island', nl: 'Haven van Tin Can Island', pt: 'Porto de Tin Can Island', tr: 'Tin Can Island Limanı', ru: 'Порт Тин Кан Айленд', zh: '锡罐岛港', ar: 'ميناء تين كان آيلاند' },
+      'NGLOS': { en: 'Lagos Murtala Muhammed International Airport', fr: 'Aéroport international de Lagos Murtala Muhammed', de: 'Internationaler Flughafen Lagos Murtala Muhammed', es: 'Aeropuerto Internacional de Lagos Murtala Muhammed', it: 'Aeroporto Internazionale di Lagos Murtala Muhammed', nl: 'Internationale Luchthaven Lagos Murtala Muhammed', pt: 'Aeroporto Internacional de Lagos Murtala Muhammed', tr: 'Lagos Murtala Muhammed Uluslararası Havaalanı', ru: 'Международный аэропорт Лагос Муртала Мухаммед', zh: '拉各斯穆尔塔拉·穆罕默德国际机场', ar: 'مطار لاغوس مرتضى محمد الدولي' },
+      
+      // 🇳🇴 Norway (Norvège) - Hub nordique
+      'NOOSL': { en: 'Port of Oslo', fr: 'Port d\'Oslo', de: 'Hafen Oslo', es: 'Puerto de Oslo', it: 'Porto di Oslo', nl: 'Haven van Oslo', pt: 'Porto de Oslo', tr: 'Oslo Limanı', ru: 'Порт Осло', zh: '奥斯陆港', ar: 'ميناء أوسلو' },
+      'NOBERG': { en: 'Port of Bergen', fr: 'Port de Bergen', de: 'Hafen Bergen', es: 'Puerto de Bergen', it: 'Porto di Bergen', nl: 'Haven van Bergen', pt: 'Porto de Bergen', tr: 'Bergen Limanı', ru: 'Порт Берген', zh: '卑尔根港', ar: 'ميناء بيرغن' },
+      'NOOSL_AIR': { en: 'Oslo Gardermoen Airport', fr: 'Aéroport d\'Oslo Gardermoen', de: 'Flughafen Oslo Gardermoen', es: 'Aeropuerto de Oslo Gardermoen', it: 'Aeroporto di Oslo Gardermoen', nl: 'Luchthaven Oslo Gardermoen', pt: 'Aeroporto de Oslo Gardermoen', tr: 'Oslo Gardermoen Havaalanı', ru: 'Аэропорт Осло Гардермуэн', zh: '奥斯陆加勒穆恩机场', ar: 'مطار أوسلو غاردرموين' },
+      'NOOSL_RAIL': { en: 'Oslo Central Station', fr: 'Gare centrale d\'Oslo', de: 'Hauptbahnhof Oslo', es: 'Estación Central de Oslo', it: 'Stazione Centrale di Oslo', nl: 'Centraal Station Oslo', pt: 'Estação Central de Oslo', tr: 'Oslo Merkez İstasyonu', ru: 'Центральный вокзал Осло', zh: '奥斯陆中央车站', ar: 'محطة أوسلو المركزية' },
+      
+      // 🇳🇿 New Zealand (Nouvelle-Zélande) - Hub du Pacifique Sud
+      'NZAKL': { en: 'Port of Auckland', fr: 'Port d\'Auckland', de: 'Hafen Auckland', es: 'Puerto de Auckland', it: 'Porto di Auckland', nl: 'Haven van Auckland', pt: 'Porto de Auckland', tr: 'Auckland Limanı', ru: 'Порт Окленд', zh: '奥克兰港', ar: 'ميناء أوكلاند' },
+      'NZTRG': { en: 'Port of Tauranga', fr: 'Port de Tauranga', de: 'Hafen Tauranga', es: 'Puerto de Tauranga', it: 'Porto di Tauranga', nl: 'Haven van Tauranga', pt: 'Porto de Tauranga', tr: 'Tauranga Limanı', ru: 'Порт Тауранга', zh: '陶朗加港', ar: 'ميناء تاورانغا' },
+      'NZWEL': { en: 'Port of Wellington', fr: 'Port de Wellington', de: 'Hafen Wellington', es: 'Puerto de Wellington', it: 'Porto di Wellington', nl: 'Haven van Wellington', pt: 'Porto de Wellington', tr: 'Wellington Limanı', ru: 'Порт Веллингтон', zh: '惠灵顿港', ar: 'ميناء ويلينغتون' },
+      'NZAKL_AIR': { en: 'Auckland Airport', fr: 'Aéroport d\'Auckland', de: 'Flughafen Auckland', es: 'Aeropuerto de Auckland', it: 'Aeroporto di Auckland', nl: 'Luchthaven Auckland', pt: 'Aeroporto de Auckland', tr: 'Auckland Havaalanı', ru: 'Аэропорт Окленд', zh: '奥克兰机场', ar: 'مطار أوكلاند' },
+      'NZWEL_AIR': { en: 'Wellington Airport', fr: 'Aéroport de Wellington', de: 'Flughafen Wellington', es: 'Aeropuerto de Wellington', it: 'Aeroporto di Wellington', nl: 'Luchthaven Wellington', pt: 'Aeroporto de Wellington', tr: 'Wellington Havaalanı', ru: 'Аэропорт Веллингтон', zh: '惠灵顿机场', ar: 'مطار ويلينغتون' },
+      'NZCHC_AIR': { en: 'Christchurch Airport', fr: 'Aéroport de Christchurch', de: 'Flughafen Christchurch', es: 'Aeropuerto de Christchurch', it: 'Aeroporto di Christchurch', nl: 'Luchthaven Christchurch', pt: 'Aeroporto de Christchurch', tr: 'Christchurch Havaalanı', ru: 'Аэропорт Крайстчерч', zh: '基督城机场', ar: 'مطار كرايستشيرش' },
+      
+      // === PAYS EN O - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇴🇲 Oman (Oman) - Sultanat du Golfe Persique
+      'OMSAL': { en: 'Port of Salalah', fr: 'Port de Salalah', de: 'Hafen Salalah', es: 'Puerto de Salalah', it: 'Porto di Salalah', nl: 'Haven van Salalah', pt: 'Porto de Salalah', tr: 'Salalah Limanı', ru: 'Порт Салала', zh: '萨拉拉港', ar: 'ميناء صلالة' },
+      'OMMUS': { en: 'Port of Muscat', fr: 'Port de Mascate', de: 'Hafen Maskat', es: 'Puerto de Mascate', it: 'Porto di Mascate', nl: 'Haven van Muscat', pt: 'Porto de Mascate', tr: 'Maskat Limanı', ru: 'Порт Маскат', zh: '马斯喀特港', ar: 'ميناء مسقط' },
+      'OMSOH': { en: 'Port of Sohar', fr: 'Port de Sohar', de: 'Hafen Sohar', es: 'Puerto de Sohar', it: 'Porto di Sohar', nl: 'Haven van Sohar', pt: 'Porto de Sohar', tr: 'Sohar Limanı', ru: 'Порт Сохар', zh: '苏哈尔港', ar: 'ميناء صحار' },
+      'OMMUS_AIR': { en: 'Muscat International Airport', fr: 'Aéroport international de Mascate', de: 'Internationaler Flughafen Maskat', es: 'Aeropuerto Internacional de Mascate', it: 'Aeroporto Internazionale di Mascate', nl: 'Internationale Luchthaven Muscat', pt: 'Aeroporto Internacional de Mascate', tr: 'Maskat Uluslararası Havaalanı', ru: 'Международный аэропорт Маскат', zh: '马斯喀特国际机场', ar: 'مطار مسقط الدولي' },
+      'OMSAL_AIR': { en: 'Salalah Airport', fr: 'Aéroport de Salalah', de: 'Flughafen Salalah', es: 'Aeropuerto de Salalah', it: 'Aeroporto di Salalah', nl: 'Luchthaven Salalah', pt: 'Aeroporto de Salalah', tr: 'Salalah Havaalanı', ru: 'Аэропорт Салала', zh: '萨拉拉机场', ar: 'مطار صلالة' },
+      
+      // === PAYS EN Q - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇶🇦 Qatar (Qatar) - Émirat gazier du Golfe
+      'QADOH': { en: 'Port of Doha', fr: 'Port de Doha', de: 'Hafen Doha', es: 'Puerto de Doha', it: 'Porto di Doha', nl: 'Haven van Doha', pt: 'Porto de Doha', tr: 'Doha Limanı', ru: 'Порт Доха', zh: '多哈港', ar: 'ميناء الدوحة' },
+      'QAMES': { en: 'Port of Mesaieed', fr: 'Port de Mesaieed', de: 'Hafen Mesaieed', es: 'Puerto de Mesaieed', it: 'Porto di Mesaieed', nl: 'Haven van Mesaieed', pt: 'Porto de Mesaieed', tr: 'Mesaieed Limanı', ru: 'Порт Месайеед', zh: '梅赛义德港', ar: 'ميناء مسيعيد' },
+      
+      // === PAYS EN R - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇷🇺 Russia (Russie) - Géant eurasiatique
+      'RULED': { en: 'Port of Saint Petersburg', fr: 'Port de Saint-Pétersbourg', de: 'Hafen Sankt Petersburg', es: 'Puerto de San Petersburgo', it: 'Porto di San Pietroburgo', nl: 'Haven van Sint-Petersburg', pt: 'Porto de São Petersburgo', tr: 'Sankt Petersburg Limanı', ru: 'Порт Санкт-Петербург', zh: '圣彼得堡港', ar: 'ميناء سانت بطرسبرغ' },
+      'RUNVS': { en: 'Port of Novorossiysk', fr: 'Port de Novorossiysk', de: 'Hafen Noworossijsk', es: 'Puerto de Novorossiysk', it: 'Porto di Novorossiysk', nl: 'Haven van Novorossiysk', pt: 'Porto de Novorossiysk', tr: 'Novorossiysk Limanı', ru: 'Порт Новороссийск', zh: '新罗西斯克港', ar: 'ميناء نوفوروسيسك' },
+      'RUVVO': { en: 'Port of Vladivostok', fr: 'Port de Vladivostok', de: 'Hafen Wladiwostok', es: 'Puerto de Vladivostok', it: 'Porto di Vladivostok', nl: 'Haven van Vladivostok', pt: 'Porto de Vladivostok', tr: 'Vladivostok Limanı', ru: 'Порт Владивосток', zh: '符拉迪沃斯托克港', ar: 'ميناء فلاديفوستوك' },
+      'RUSVO': { en: 'Moscow Sheremetyevo International Airport', fr: 'Aéroport international de Moscou Sheremetyevo', de: 'Internationaler Flughafen Moskau Scheremetjewo', es: 'Aeropuerto Internacional de Moscú Sheremetyevo', it: 'Aeroporto Internazionale di Mosca Sheremetyevo', nl: 'Internationale Luchthaven Moskou Sheremetyevo', pt: 'Aeroporto Internacional de Moscou Sheremetyevo', tr: 'Moskova Şeremetyevo Uluslararası Havaalanı', ru: 'Международный аэропорт Москва Шереметьево', zh: '莫斯科谢列梅捷沃国际机场', ar: 'مطار موسكو شيريميتيفو الدولي' },
+      'RULED_AIR': { en: 'Saint Petersburg Pulkovo Airport', fr: 'Aéroport de Saint-Pétersbourg Pulkovo', de: 'Flughafen Sankt Petersburg Pulkowo', es: 'Aeropuerto de San Petersburgo Pulkovo', it: 'Aeroporto di San Pietroburgo Pulkovo', nl: 'Luchthaven Sint-Petersburg Pulkovo', pt: 'Aeroporto de São Petersburgo Pulkovo', tr: 'Sankt Petersburg Pulkovo Havaalanı', ru: 'Аэропорт Санкт-Петербург Пулково', zh: '圣彼得堡普尔科沃机场', ar: 'مطار سانت بطرسبرغ بولكوفو' },
+      'RUMOS_RAIL': { en: 'Moscow Kazansky Railway Station', fr: 'Gare de Moscou Kazansky', de: 'Bahnhof Moskau Kasanski', es: 'Estación de Moscú Kazansky', it: 'Stazione di Mosca Kazansky', nl: 'Station Moskou Kazansky', pt: 'Estação de Moscou Kazansky', tr: 'Moskova Kazansky Tren İstasyonu', ru: 'Казанский вокзал', zh: '莫斯科喀山火车站', ar: 'محطة موسكو كازانسكي' },
+      'RULED_RAIL': { en: 'Saint Petersburg Baltic Station', fr: 'Gare baltique de Saint-Pétersbourg', de: 'Baltischer Bahnhof Sankt Petersburg', es: 'Estación Báltica de San Petersburgo', it: 'Stazione Baltica di San Pietroburgo', nl: 'Baltisch Station Sint-Petersburg', pt: 'Estação Báltica de São Petersburgo', tr: 'Sankt Petersburg Baltık İstasyonu', ru: 'Балтийский вокзал', zh: '圣彼得堡波罗的海火车站', ar: 'محطة سانت بطرسبرغ البلطيقية' },
+      
+      // 🇷🇴 Romania (Roumanie) - Gateway des Balkans (traductions améliorées)
+      'ROCND_AIR': { en: 'Constanta Airport', fr: 'Aéroport de Constanta', de: 'Flughafen Konstanza', es: 'Aeropuerto de Constanza', it: 'Aeroporto di Costanza', nl: 'Luchthaven Constanta', pt: 'Aeroporto de Constanta', tr: 'Köstence Havaalanı', ru: 'Аэропорт Констанца', zh: '康斯坦察机场', ar: 'مطار كونستانتا' },
+      'ROBUH_RAIL': { en: 'Bucharest North Railway Station', fr: 'Gare du Nord de Bucarest', de: 'Nordbahnhof Bukarest', es: 'Estación Norte de Bucarest', it: 'Stazione Nord di Bucarest', nl: 'Noordstation Boekarest', pt: 'Estação Norte de Bucareste', tr: 'Bükreş Kuzey Tren İstasyonu', ru: 'Северный вокзал Бухарест', zh: '布加勒斯特北站', ar: 'محطة بوخارست الشمالية' },
+      'ROCND_RAIL': { en: 'Constanta Railway Station', fr: 'Gare de Constanta', de: 'Bahnhof Konstanza', es: 'Estación de Constanza', it: 'Stazione di Costanza', nl: 'Station Constanta', pt: 'Estação de Constanta', tr: 'Köstence Tren İstasyonu', ru: 'Железнодорожная станция Констанца', zh: '康斯坦察火车站', ar: 'محطة كونستانتا للسكك الحديدية' },
+      
+      // 🇷🇸 Serbia (Serbie) - Cœur des Balkans
+      'RSBEG': { en: 'Port of Belgrade', fr: 'Port de Belgrade', de: 'Hafen Belgrad', es: 'Puerto de Belgrado', it: 'Porto di Belgrado', nl: 'Haven van Belgrado', pt: 'Porto de Belgrado', tr: 'Belgrad Limanı', ru: 'Порт Белград', zh: '贝尔格莱德港', ar: 'ميناء بلغراد' },
+      'RSNOV': { en: 'Port of Novi Sad', fr: 'Port de Novi Sad', de: 'Hafen Novi Sad', es: 'Puerto de Novi Sad', it: 'Porto di Novi Sad', nl: 'Haven van Novi Sad', pt: 'Porto de Novi Sad', tr: 'Novi Sad Limanı', ru: 'Порт Нови Сад', zh: '诺维萨德港', ar: 'ميناء نوفي ساد' },
+      'RSBEG_AIR': { en: 'Belgrade Nikola Tesla Airport', fr: 'Aéroport de Belgrade Nikola Tesla', de: 'Flughafen Belgrad Nikola Tesla', es: 'Aeropuerto de Belgrado Nikola Tesla', it: 'Aeroporto di Belgrado Nikola Tesla', nl: 'Luchthaven Belgrado Nikola Tesla', pt: 'Aeroporto de Belgrado Nikola Tesla', tr: 'Belgrad Nikola Tesla Havaalanı', ru: 'Аэропорт Белград имени Николы Теслы', zh: '贝尔格莱德尼古拉·特斯拉机场', ar: 'مطار بلغراد نيكولا تيسلا' },
+      'RSBEG_RAIL': { en: 'Belgrade Central Station', fr: 'Gare centrale de Belgrade', de: 'Hauptbahnhof Belgrad', es: 'Estación Central de Belgrado', it: 'Stazione Centrale di Belgrado', nl: 'Centraal Station Belgrado', pt: 'Estação Central de Belgrado', tr: 'Belgrad Merkez İstasyonu', ru: 'Центральный вокзал Белград', zh: '贝尔格莱德中央车站', ar: 'محطة بلغراد المركزية' },
+      
+      // 🇷🇼 Rwanda (Rwanda) - Perle de l'Afrique de l'Est (traduction améliorée)
+      'RWKGL_RAIL': { en: 'Kigali Railway Station', fr: 'Gare de Kigali', de: 'Bahnhof Kigali', es: 'Estación de Kigali', it: 'Stazione di Kigali', nl: 'Station Kigali', pt: 'Estação de Kigali', tr: 'Kigali Tren İstasyonu', ru: 'Железнодорожная станция Кигали', zh: '基加利火车站', ar: 'محطة كيغالي للسكك الحديدية' },
+      
+      // === PAYS EN S - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇸🇬 Singapore (Singapour) - Cité-État du commerce mondial
+      'SGSIN': { en: 'Port of Singapore', fr: 'Port de Singapour', de: 'Hafen Singapur', es: 'Puerto de Singapur', it: 'Porto di Singapore', nl: 'Haven van Singapore', pt: 'Porto de Singapura', tr: 'Singapur Limanı', ru: 'Порт Сингапур', zh: '新加坡港', ar: 'ميناء سنغافورة' },
+      'SGSIN_AIR': { en: 'Singapore Changi Airport', fr: 'Aéroport de Singapour Changi', de: 'Flughafen Singapur Changi', es: 'Aeropuerto de Singapur Changi', it: 'Aeroporto di Singapore Changi', nl: 'Luchthaven Singapore Changi', pt: 'Aeroporto de Singapura Changi', tr: 'Singapur Changi Havaalanı', ru: 'Аэропорт Сингапур Чанги', zh: '新加坡樟宜机场', ar: 'مطار سنغافورة تشانغي' },
+      
+      // 🇸🇪 Sweden (Suède) - Royaume nordique du design
+      'SEGOT': { en: 'Port of Gothenburg', fr: 'Port de Göteborg', de: 'Hafen Göteborg', es: 'Puerto de Gotemburgo', it: 'Porto di Göteborg', nl: 'Haven van Göteborg', pt: 'Porto de Gotemburgo', tr: 'Göteborg Limanı', ru: 'Порт Гётеборг', zh: '哥德堡港', ar: 'ميناء غوتنبرغ' },
+      'SESTO': { en: 'Port of Stockholm', fr: 'Port de Stockholm', de: 'Hafen Stockholm', es: 'Puerto de Estocolmo', it: 'Porto di Stoccolma', nl: 'Haven van Stockholm', pt: 'Porto de Estocolmo', tr: 'Stockholm Limanı', ru: 'Порт Стокгольм', zh: '斯德哥尔摩港', ar: 'ميناء ستوكهولم' },
+      'SEARN': { en: 'Stockholm Arlanda Airport', fr: 'Aéroport de Stockholm Arlanda', de: 'Flughafen Stockholm Arlanda', es: 'Aeropuerto de Estocolmo Arlanda', it: 'Aeroporto di Stoccolma Arlanda', nl: 'Luchthaven Stockholm Arlanda', pt: 'Aeroporto de Estocolmo Arlanda', tr: 'Stockholm Arlanda Havaalanı', ru: 'Аэропорт Стокгольм Арланда', zh: '斯德哥尔摩阿兰达机场', ar: 'مطار ستوكهولم أرلاندا' },
+      'SEGOT_AIR': { en: 'Gothenburg Landvetter Airport', fr: 'Aéroport de Göteborg Landvetter', de: 'Flughafen Göteborg Landvetter', es: 'Aeropuerto de Gotemburgo Landvetter', it: 'Aeroporto di Göteborg Landvetter', nl: 'Luchthaven Göteborg Landvetter', pt: 'Aeroporto de Gotemburgo Landvetter', tr: 'Göteborg Landvetter Havaalanı', ru: 'Аэропорт Гётеборг Ландветтер', zh: '哥德堡兰德维特机场', ar: 'مطار غوتنبرغ لاندفيتر' },
+      'SESTO_RAIL': { en: 'Stockholm Central Station', fr: 'Gare centrale de Stockholm', de: 'Hauptbahnhof Stockholm', es: 'Estación Central de Estocolmo', it: 'Stazione Centrale di Stoccolma', nl: 'Centraal Station Stockholm', pt: 'Estação Central de Estocolmo', tr: 'Stockholm Merkez İstasyonu', ru: 'Центральный вокзал Стокгольм', zh: '斯德哥尔摩中央车站', ar: 'محطة ستوكهولم المركزية' },
+      'SEGOT_RAIL': { en: 'Gothenburg Central Station', fr: 'Gare centrale de Göteborg', de: 'Hauptbahnhof Göteborg', es: 'Estación Central de Gotemburgo', it: 'Stazione Centrale di Göteborg', nl: 'Centraal Station Göteborg', pt: 'Estação Central de Gotemburgo', tr: 'Göteborg Merkez İstasyonu', ru: 'Центральный вокзал Гётеборг', zh: '哥德堡中央车站', ar: 'محطة غوتنبرغ المركزية' },
+      
+      // 🇸🇦 Saudi Arabia (Arabie saoudite) - Royaume du pétrole (traductions améliorées)
+      'SADAM': { en: 'Port of Dammam', fr: 'Port de Dammam', de: 'Hafen Dammam', es: 'Puerto de Dammam', it: 'Porto di Dammam', nl: 'Haven van Dammam', pt: 'Porto de Dammam', tr: 'Dammam Limanı', ru: 'Порт Даммам', zh: '达曼港', ar: 'ميناء الدمام' },
+      'SAYAN': { en: 'Port of Yanbu', fr: 'Port de Yanbu', de: 'Hafen Yanbu', es: 'Puerto de Yanbu', it: 'Porto di Yanbu', nl: 'Haven van Yanbu', pt: 'Porto de Yanbu', tr: 'Yanbu Limanı', ru: 'Порт Янбу', zh: '延布港', ar: 'ميناء ينبع' },
+      'SAJED_AIR': { en: 'Jeddah King Abdulaziz International Airport', fr: 'Aéroport international de Jeddah King Abdulaziz', de: 'Internationaler Flughafen Dschidda King Abdulaziz', es: 'Aeropuerto Internacional de Jeddah King Abdulaziz', it: 'Aeroporto Internazionale di Jeddah King Abdulaziz', nl: 'Internationale Luchthaven Jeddah King Abdulaziz', pt: 'Aeroporto Internacional de Jeddah King Abdulaziz', tr: 'Cidde Kral Abdülaziz Uluslararası Havaalanı', ru: 'Международный аэропорт Джидда имени короля Абдул-Азиза', zh: '吉达阿卜杜勒-阿齐兹国王国际机场', ar: 'مطار الملك عبد العزيز الدولي' },
+      'SADAM_AIR': { en: 'Dammam King Fahd International Airport', fr: 'Aéroport international de Dammam King Fahd', de: 'Internationaler Flughafen Dammam King Fahd', es: 'Aeropuerto Internacional de Dammam King Fahd', it: 'Aeroporto Internazionale di Dammam King Fahd', nl: 'Internationale Luchthaven Dammam King Fahd', pt: 'Aeroporto Internacional de Dammam King Fahd', tr: 'Dammam Kral Fahd Uluslararası Havaalanı', ru: 'Международный аэропорт Даммам имени короля Фахда', zh: '达曼法赫德国王国际机场', ar: 'مطار الملك فهد الدولي' },
+      
+      // 🇸🇰 Slovakia (Slovaquie) - Cœur de l'Europe centrale
+      'SKBTS': { en: 'Bratislava Milan Rastislav Štefánik Airport', fr: 'Aéroport de Bratislava Milan Rastislav Štefánik', de: 'Flughafen Bratislava Milan Rastislav Štefánik', es: 'Aeropuerto de Bratislava Milan Rastislav Štefánik', it: 'Aeroporto di Bratislava Milan Rastislav Štefánik', nl: 'Luchthaven Bratislava Milan Rastislav Štefánik', pt: 'Aeroporto de Bratislava Milan Rastislav Štefánik', tr: 'Bratislava Milan Rastislav Štefánik Havaalanı', ru: 'Аэропорт Братислава имени Милана Растислава Штефаника', zh: '布拉迪斯拉发米兰·拉斯蒂斯拉夫·什捷法尼克机场', ar: 'مطار براتيسلافا ميلان راستيسلاف شتيفانيك' },
+      'SKBTS_RAIL': { en: 'Bratislava Central Station', fr: 'Gare centrale de Bratislava', de: 'Hauptbahnhof Bratislava', es: 'Estación Central de Bratislava', it: 'Stazione Centrale di Bratislava', nl: 'Centraal Station Bratislava', pt: 'Estação Central de Bratislava', tr: 'Bratislava Merkez İstasyonu', ru: 'Центральный вокзал Братислава', zh: '布拉迪斯拉发中央车站', ar: 'محطة براتيسلافا المركزية' },
+      
+      // 🇸🇮 Slovenia (Slovénie) - Perle des Alpes adriatiques
+      'SIKOP': { en: 'Port of Koper', fr: 'Port de Koper', de: 'Hafen Koper', es: 'Puerto de Koper', it: 'Porto di Koper', nl: 'Haven van Koper', pt: 'Porto de Koper', tr: 'Koper Limanı', ru: 'Порт Копер', zh: '科佩尔港', ar: 'ميناء كوبر' },
+      'SILJU': { en: 'Ljubljana Jože Pučnik Airport', fr: 'Aéroport de Ljubljana Jože Pučnik', de: 'Flughafen Ljubljana Jože Pučnik', es: 'Aeropuerto de Liubliana Jože Pučnik', it: 'Aeroporto di Lubiana Jože Pučnik', nl: 'Luchthaven Ljubljana Jože Pučnik', pt: 'Aeroporto de Ljubljana Jože Pučnik', tr: 'Ljubljana Jože Pučnik Havaalanı', ru: 'Аэропорт Любляна имени Йоже Пучника', zh: '卢布尔雅那约热·普奇尼克机场', ar: 'مطار ليوبليانا يوجي بوتشنيك' },
+      'SILJU_RAIL': { en: 'Ljubljana Railway Station', fr: 'Gare de Ljubljana', de: 'Bahnhof Ljubljana', es: 'Estación de Liubliana', it: 'Stazione di Lubiana', nl: 'Station Ljubljana', pt: 'Estação de Ljubljana', tr: 'Ljubljana Tren İstasyonu', ru: 'Железнодорожная станция Любляна', zh: '卢布尔雅那火车站', ar: 'محطة ليوبليانا للسكك الحديدية' },
+      
+      // 🇸🇳 Senegal (Sénégal) - Portail de l'Afrique de l'Ouest
+      'SNDKR': { en: 'Port of Dakar', fr: 'Port de Dakar', de: 'Hafen Dakar', es: 'Puerto de Dakar', it: 'Porto di Dakar', nl: 'Haven van Dakar', pt: 'Porto de Dakar', tr: 'Dakar Limanı', ru: 'Порт Дакар', zh: '达喀尔港', ar: 'ميناء داكار' },
+      'SNDSS': { en: 'Dakar Blaise Diagne International Airport', fr: 'Aéroport international de Dakar Blaise Diagne', de: 'Internationaler Flughafen Dakar Blaise Diagne', es: 'Aeropuerto Internacional de Dakar Blaise Diagne', it: 'Aeroporto Internazionale di Dakar Blaise Diagne', nl: 'Internationale Luchthaven Dakar Blaise Diagne', pt: 'Aeroporto Internacional de Dakar Blaise Diagne', tr: 'Dakar Blaise Diagne Uluslararası Havaalanı', ru: 'Международный аэропорт Дакар имени Блеза Диана', zh: '达喀尔布莱兹·迪亚涅国际机场', ar: 'مطار داكار بليز دياغني الدولي' },
+      'SNDKR_RAIL': { en: 'Dakar Railway Station', fr: 'Gare de Dakar', de: 'Bahnhof Dakar', es: 'Estación de Dakar', it: 'Stazione di Dakar', nl: 'Station Dakar', pt: 'Estação de Dakar', tr: 'Dakar Tren İstasyonu', ru: 'Железнодорожная станция Дакар', zh: '达喀尔火车站', ar: 'محطة داكار للسكك الحديدية' },
+      
+      // 🇸🇨 Seychelles (Seychelles) - Perle de l'océan Indien (traductions améliorées)
+      'SCPRS': { en: 'Port of Praslin', fr: 'Port de Praslin', de: 'Hafen Praslin', es: 'Puerto de Praslin', it: 'Porto di Praslin', nl: 'Haven van Praslin', pt: 'Porto de Praslin', tr: 'Praslin Limanı', ru: 'Порт Праслин', zh: '普拉兰港', ar: 'ميناء براسلين' },
+      'SCVIC_AIR': { en: 'Mahé Seychelles International Airport', fr: 'Aéroport international de Mahé Seychelles', de: 'Internationaler Flughafen Mahé Seychellen', es: 'Aeropuerto Internacional de Mahé Seychelles', it: 'Aeroporto Internazionale di Mahé Seychelles', nl: 'Internationale Luchthaven Mahé Seychellen', pt: 'Aeroporto Internacional de Mahé Seychelles', tr: 'Mahé Seyşeller Uluslararası Havaalanı', ru: 'Международный аэропорт Маэ Сейшелы', zh: '马埃塞舌尔国际机场', ar: 'مطار ماهي سيشيل الدولي' },
+      'SCPRS_AIR': { en: 'Praslin Airport', fr: 'Aéroport de Praslin', de: 'Flughafen Praslin', es: 'Aeropuerto de Praslin', it: 'Aeroporto di Praslin', nl: 'Luchthaven Praslin', pt: 'Aeroporto de Praslin', tr: 'Praslin Havaalanı', ru: 'Аэропорт Праслин', zh: '普拉兰机场', ar: 'مطار براسلين' },
+      
+      // === PAYS EN T - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇹🇭 Thailand (Thaïlande) - Royaume du sourire
+      'THLCH': { en: 'Port of Laem Chabang', fr: 'Port de Laem Chabang', de: 'Hafen Laem Chabang', es: 'Puerto de Laem Chabang', it: 'Porto di Laem Chabang', nl: 'Haven van Laem Chabang', pt: 'Porto de Laem Chabang', tr: 'Laem Chabang Limanı', ru: 'Порт Лаем Чабанг', zh: '林查班港', ar: 'ميناء ليم تشابانغ' },
+      'THBKK': { en: 'Port of Bangkok', fr: 'Port de Bangkok', de: 'Hafen Bangkok', es: 'Puerto de Bangkok', it: 'Porto di Bangkok', nl: 'Haven van Bangkok', pt: 'Porto de Bangkok', tr: 'Bangkok Limanı', ru: 'Порт Бангкок', zh: '曼谷港', ar: 'ميناء بانكوك' },
+      'THBKK_AIR': { en: 'Bangkok Suvarnabhumi Airport', fr: 'Aéroport de Bangkok Suvarnabhumi', de: 'Flughafen Bangkok Suvarnabhumi', es: 'Aeropuerto de Bangkok Suvarnabhumi', it: 'Aeroporto di Bangkok Suvarnabhumi', nl: 'Luchthaven Bangkok Suvarnabhumi', pt: 'Aeroporto de Bangkok Suvarnabhumi', tr: 'Bangkok Suvarnabhumi Havaalanı', ru: 'Аэропорт Бангкок Суварнабхуми', zh: '曼谷素万那普机场', ar: 'مطار بانكوك سوفارنابومي' },
+      
+      // 🇹🇷 Turkey (Turquie) - Pont entre l'Europe et l'Asie
+      'TRAMB': { en: 'Port of Ambarli', fr: 'Port d\'Ambarli', de: 'Hafen Ambarli', es: 'Puerto de Ambarli', it: 'Porto di Ambarli', nl: 'Haven van Ambarli', pt: 'Porto de Ambarli', tr: 'Ambarlı Limanı', ru: 'Порт Амбарлы', zh: '安巴利港', ar: 'ميناء أمبارلي' },
+      'TRIST': { en: 'Port of Istanbul', fr: 'Port d\'Istanbul', de: 'Hafen Istanbul', es: 'Puerto de Estambul', it: 'Porto di Istanbul', nl: 'Haven van Istanbul', pt: 'Porto de Istambul', tr: 'İstanbul Limanı', ru: 'Порт Стамбул', zh: '伊斯坦布尔港', ar: 'ميناء اسطنبول' },
+      'TRIZM': { en: 'Port of Izmir', fr: 'Port d\'Izmir', de: 'Hafen Izmir', es: 'Puerto de Esmirna', it: 'Porto di Smirne', nl: 'Haven van Izmir', pt: 'Porto de Esmirna', tr: 'İzmir Limanı', ru: 'Порт Измир', zh: '伊兹密尔港', ar: 'ميناء إزمير' },
+      'TRIST_AIR': { en: 'Istanbul Airport', fr: 'Aéroport d\'Istanbul', de: 'Flughafen Istanbul', es: 'Aeropuerto de Estambul', it: 'Aeroporto di Istanbul', nl: 'Luchthaven Istanbul', pt: 'Aeroporto de Istambul', tr: 'İstanbul Havaalanı', ru: 'Аэропорт Стамбул', zh: '伊斯坦布尔机场', ar: 'مطار اسطنبول' },
+      'TRSAW': { en: 'Sabiha Gökçen Airport', fr: 'Aéroport de Sabiha Gökçen', de: 'Flughafen Sabiha Gökçen', es: 'Aeropuerto de Sabiha Gökçen', it: 'Aeroporto di Sabiha Gökçen', nl: 'Luchthaven Sabiha Gökçen', pt: 'Aeroporto de Sabiha Gökçen', tr: 'Sabiha Gökçen Havaalanı', ru: 'Аэропорт Сабиха Гёкчен', zh: '萨比哈·格克琴机场', ar: 'مطار صبيحة غوكتشين' },
+      'TRIZM_AIR': { en: 'Izmir Adnan Menderes Airport', fr: 'Aéroport d\'Izmir Adnan Menderes', de: 'Flughafen Izmir Adnan Menderes', es: 'Aeropuerto de Esmirna Adnan Menderes', it: 'Aeroporto di Smirne Adnan Menderes', nl: 'Luchthaven Izmir Adnan Menderes', pt: 'Aeroporto de Esmirna Adnan Menderes', tr: 'İzmir Adnan Menderes Havaalanı', ru: 'Аэропорт Измир имени Аднана Мендереса', zh: '伊兹密尔阿德南·门德雷斯机场', ar: 'مطار إزمير عدنان مندريس' },
+      
+      // 🇹🇼 Taiwan (Taïwan) - Formose asiatique (traductions améliorées)
+      'TWTPE': { en: 'Port of Taipei', fr: 'Port de Taipei', de: 'Hafen Taipei', es: 'Puerto de Taipéi', it: 'Porto di Taipei', nl: 'Haven van Taipei', pt: 'Porto de Taipei', tr: 'Taipei Limanı', ru: 'Порт Тайбэй', zh: '台北港', ar: 'ميناء تايبيه' },
+      'TWTCG': { en: 'Port of Taichung', fr: 'Port de Taichung', de: 'Hafen Taichung', es: 'Puerto de Taichung', it: 'Porto di Taichung', nl: 'Haven van Taichung', pt: 'Porto de Taichung', tr: 'Taichung Limanı', ru: 'Порт Тайчжун', zh: '台中港', ar: 'ميناء تايتشونغ' },
+      'TWKHH_AIR': { en: 'Kaohsiung International Airport', fr: 'Aéroport international de Kaohsiung', de: 'Internationaler Flughafen Kaohsiung', es: 'Aeropuerto Internacional de Kaohsiung', it: 'Aeroporto Internazionale di Kaohsiung', nl: 'Internationale Luchthaven Kaohsiung', pt: 'Aeroporto Internacional de Kaohsiung', tr: 'Kaohsiung Uluslararası Havaalanı', ru: 'Международный аэропорт Гаосюн', zh: '高雄国际机场', ar: 'مطار كاوهسيونغ الدولي' },
+      'TWTPE_RAIL': { en: 'Taipei Main Station', fr: 'Gare principale de Taipei', de: 'Hauptbahnhof Taipei', es: 'Estación Principal de Taipéi', it: 'Stazione Principale di Taipei', nl: 'Hoofdstation Taipei', pt: 'Estação Principal de Taipei', tr: 'Taipei Ana İstasyonu', ru: 'Главный вокзал Тайбэй', zh: '台北车站', ar: 'محطة تايبيه الرئيسية' },
+      'TWKHH_RAIL': { en: 'Kaohsiung Railway Station', fr: 'Gare de Kaohsiung', de: 'Bahnhof Kaohsiung', es: 'Estación de Kaohsiung', it: 'Stazione di Kaohsiung', nl: 'Station Kaohsiung', pt: 'Estação de Kaohsiung', tr: 'Kaohsiung Tren İstasyonu', ru: 'Железнодорожная станция Гаосюн', zh: '高雄车站', ar: 'محطة كاوهسيونغ للسكك الحديدية' },
+      
+      // 🇹🇳 Tunisia (Tunisie) - Perle du Maghreb
+      'TNTU1': { en: 'Port of Tunis', fr: 'Port de Tunis', de: 'Hafen Tunis', es: 'Puerto de Túnez', it: 'Porto di Tunisi', nl: 'Haven van Tunis', pt: 'Porto de Tunes', tr: 'Tunus Limanı', ru: 'Порт Тунис', zh: '突尼斯港', ar: 'ميناء تونس' },
+      'TNSFA': { en: 'Port of Sfax', fr: 'Port de Sfax', de: 'Hafen Sfax', es: 'Puerto de Sfax', it: 'Porto di Sfax', nl: 'Haven van Sfax', pt: 'Porto de Sfax', tr: 'Sfaks Limanı', ru: 'Порт Сфакс', zh: '斯法克斯港', ar: 'ميناء صفاقس' },
+      'TNRAD': { en: 'Port of Radès', fr: 'Port de Radès', de: 'Hafen Radès', es: 'Puerto de Radès', it: 'Porto di Radès', nl: 'Haven van Radès', pt: 'Porto de Radès', tr: 'Radès Limanı', ru: 'Порт Радес', zh: '拉代斯港', ar: 'ميناء رادس' },
+      'TNTU1_AIR': { en: 'Tunis-Carthage Airport', fr: 'Aéroport de Tunis-Carthage', de: 'Flughafen Tunis-Karthago', es: 'Aeropuerto de Túnez-Cartago', it: 'Aeroporto di Tunisi-Cartagine', nl: 'Luchthaven Tunis-Carthago', pt: 'Aeroporto de Tunes-Cartago', tr: 'Tunus-Kartaca Havaalanı', ru: 'Аэропорт Тунис-Карфаген', zh: '突尼斯-迦太基机场', ar: 'مطار تونس قرطاج' },
+      'TNTU1_RAIL': { en: 'Tunis Central Station', fr: 'Gare centrale de Tunis', de: 'Hauptbahnhof Tunis', es: 'Estación Central de Túnez', it: 'Stazione Centrale di Tunisi', nl: 'Centraal Station Tunis', pt: 'Estação Central de Tunes', tr: 'Tunus Merkez İstasyonu', ru: 'Центральный вокзал Тунис', zh: '突尼斯中央车站', ar: 'محطة تونس المركزية' },
+      
+      // 🇹🇹 Trinidad and Tobago (Trinité-et-Tobago) - Perles des Caraïbes
+      'TTPOS': { en: 'Port of Port of Spain', fr: 'Port de Port of Spain', de: 'Hafen Port of Spain', es: 'Puerto de Puerto España', it: 'Porto di Port of Spain', nl: 'Haven van Port of Spain', pt: 'Porto de Port of Spain', tr: 'Port of Spain Limanı', ru: 'Порт Порт-оф-Спейн', zh: '西班牙港港口', ar: 'ميناء بورت أوف سبين' },
+      'TTCOU': { en: 'Port of Point Lisas', fr: 'Port de Point Lisas', de: 'Hafen Point Lisas', es: 'Puerto de Point Lisas', it: 'Porto di Point Lisas', nl: 'Haven van Point Lisas', pt: 'Porto de Point Lisas', tr: 'Point Lisas Limanı', ru: 'Порт Пойнт Лисас', zh: '利萨斯角港', ar: 'ميناء بوينت ليساس' },
+      'TTPOS_AIR': { en: 'Port of Spain Piarco International Airport', fr: 'Aéroport international de Port of Spain Piarco', de: 'Internationaler Flughafen Port of Spain Piarco', es: 'Aeropuerto Internacional de Puerto España Piarco', it: 'Aeroporto Internazionale di Port of Spain Piarco', nl: 'Internationale Luchthaven Port of Spain Piarco', pt: 'Aeroporto Internacional de Port of Spain Piarco', tr: 'Port of Spain Piarco Uluslararası Havaalanı', ru: 'Международный аэропорт Порт-оф-Спейн Пиарко', zh: '西班牙港皮亚尔科国际机场', ar: 'مطار بورت أوف سبين بيارko الدولي' },
+      
+      // 🇹🇿 Tanzania (Tanzanie) - Berceau de l'humanité (traductions améliorées)
+      'TZMTW': { en: 'Port of Mtwara', fr: 'Port de Mtwara', de: 'Hafen Mtwara', es: 'Puerto de Mtwara', it: 'Porto di Mtwara', nl: 'Haven van Mtwara', pt: 'Porto de Mtwara', tr: 'Mtwara Limanı', ru: 'Порт Мтвара', zh: '姆特瓦拉港', ar: 'ميناء متوارا' },
+      'TZMZA': { en: 'Port of Mwanza', fr: 'Port de Mwanza', de: 'Hafen Mwanza', es: 'Puerto de Mwanza', it: 'Porto di Mwanza', nl: 'Haven van Mwanza', pt: 'Porto de Mwanza', tr: 'Mwanza Limanı', ru: 'Порт Мванза', zh: '姆万扎港', ar: 'ميناء موانزا' },
+      'TZDAR_AIR': { en: 'Dar es Salaam Julius Nyerere International Airport', fr: 'Aéroport international de Dar es Salaam Julius Nyerere', de: 'Internationaler Flughafen Dar es Salaam Julius Nyerere', es: 'Aeropuerto Internacional de Dar es Salaam Julius Nyerere', it: 'Aeroporto Internazionale di Dar es Salaam Julius Nyerere', nl: 'Internationale Luchthaven Dar es Salaam Julius Nyerere', pt: 'Aeroporto Internacional de Dar es Salaam Julius Nyerere', tr: 'Dar es Salaam Julius Nyerere Uluslararası Havaalanı', ru: 'Международный аэропорт Дар-эс-Салам имени Джулиуса Ньерере', zh: '达累斯萨拉姆朱利叶斯·尼雷尔国际机场', ar: 'مطار دار السلام جوليوس نيريري الدولي' },
+      'TZKIL': { en: 'Kilimanjaro International Airport', fr: 'Aéroport international du Kilimandjaro', de: 'Internationaler Flughafen Kilimandscharo', es: 'Aeropuerto Internacional del Kilimanjaro', it: 'Aeroporto Internazionale del Kilimanjaro', nl: 'Internationale Luchthaven Kilimanjaro', pt: 'Aeroporto Internacional do Kilimanjaro', tr: 'Kilimanjaro Uluslararası Havaalanı', ru: 'Международный аэропорт Килиманджаро', zh: '乞力马扎罗国际机场', ar: 'مطار كليمنجارو الدولي' },
+      'TZDAR_RAIL': { en: 'Dar es Salaam Railway Station', fr: 'Gare de Dar es Salaam', de: 'Bahnhof Dar es Salaam', es: 'Estación de Dar es Salaam', it: 'Stazione di Dar es Salaam', nl: 'Station Dar es Salaam', pt: 'Estação de Dar es Salaam', tr: 'Dar es Salaam Tren İstasyonu', ru: 'Железнодорожная станция Дар-эс-Салам', zh: '达累斯萨拉姆火车站', ar: 'محطة دار السلام للسكك الحديدية' },
+      'TZMZA_RAIL': { en: 'Mwanza Railway Station', fr: 'Gare de Mwanza', de: 'Bahnhof Mwanza', es: 'Estación de Mwanza', it: 'Stazione di Mwanza', nl: 'Station Mwanza', pt: 'Estação de Mwanza', tr: 'Mwanza Tren İstasyonu', ru: 'Железнодорожная станция Мванза', zh: '姆万扎火车站', ar: 'محطة موانزا للسكك الحديدية' },
+      
+      // === PAYS EN U - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇺🇸 United States (États-Unis) - Superpuissance mondiale (traductions améliorées)
+      'USLAX': { en: 'Port of Los Angeles', fr: 'Port de Los Angeles', de: 'Hafen Los Angeles', es: 'Puerto de Los Ángeles', it: 'Porto di Los Angeles', nl: 'Haven van Los Angeles', pt: 'Porto de Los Angeles', tr: 'Los Angeles Limanı', ru: 'Порт Лос-Анджелес', zh: '洛杉矶港', ar: 'ميناء لوس أنجلوس' },
+      'USLGB': { en: 'Port of Long Beach', fr: 'Port de Long Beach', de: 'Hafen Long Beach', es: 'Puerto de Long Beach', it: 'Porto di Long Beach', nl: 'Haven van Long Beach', pt: 'Porto de Long Beach', tr: 'Long Beach Limanı', ru: 'Порт Лонг-Бич', zh: '长滩港', ar: 'ميناء لونغ بيتش' },
+      'USNYC': { en: 'Port of New York/New Jersey', fr: 'Port de New York/New Jersey', de: 'Hafen New York/New Jersey', es: 'Puerto de Nueva York/Nueva Jersey', it: 'Porto di New York/New Jersey', nl: 'Haven van New York/New Jersey', pt: 'Porto de Nova York/Nova Jersey', tr: 'New York/New Jersey Limanı', ru: 'Порт Нью-Йорк/Нью-Джерси', zh: '纽约/新泽西港', ar: 'ميناء نيويورك/نيو جيرسي' },
+      'USSAV': { en: 'Port of Savannah', fr: 'Port de Savannah', de: 'Hafen Savannah', es: 'Puerto de Savannah', it: 'Porto di Savannah', nl: 'Haven van Savannah', pt: 'Porto de Savannah', tr: 'Savannah Limanı', ru: 'Порт Саванна', zh: '萨凡纳港', ar: 'ميناء سافانا' },
+      'USSEA': { en: 'Port of Seattle', fr: 'Port de Seattle', de: 'Hafen Seattle', es: 'Puerto de Seattle', it: 'Porto di Seattle', nl: 'Haven van Seattle', pt: 'Porto de Seattle', tr: 'Seattle Limanı', ru: 'Порт Сиэтл', zh: '西雅图港', ar: 'ميناء سياتل' },
+      'USTAC': { en: 'Port of Tacoma', fr: 'Port de Tacoma', de: 'Hafen Tacoma', es: 'Puerto de Tacoma', it: 'Porto di Tacoma', nl: 'Haven van Tacoma', pt: 'Porto de Tacoma', tr: 'Tacoma Limanı', ru: 'Порт Такома', zh: '塔科马港', ar: 'ميناء تاكوما' },
+      'USHOU': { en: 'Port of Houston', fr: 'Port de Houston', de: 'Hafen Houston', es: 'Puerto de Houston', it: 'Porto di Houston', nl: 'Haven van Houston', pt: 'Porto de Houston', tr: 'Houston Limanı', ru: 'Порт Хьюстон', zh: '休斯顿港', ar: 'ميناء هيوستن' },
+      'USMIA': { en: 'Port of Miami', fr: 'Port de Miami', de: 'Hafen Miami', es: 'Puerto de Miami', it: 'Porto di Miami', nl: 'Haven van Miami', pt: 'Porto de Miami', tr: 'Miami Limanı', ru: 'Порт Майами', zh: '迈阿密港', ar: 'ميناء ميامي' },
+      'USMEM': { en: 'Memphis International Airport', fr: 'Aéroport international de Memphis', de: 'Internationaler Flughafen Memphis', es: 'Aeropuerto Internacional de Memphis', it: 'Aeroporto Internazionale di Memphis', nl: 'Internationale Luchthaven Memphis', pt: 'Aeroporto Internacional de Memphis', tr: 'Memphis Uluslararası Havaalanı', ru: 'Международный аэропорт Мемфис', zh: '孟菲斯国际机场', ar: 'مطار ممفيس الدولي' },
+      'USANC': { en: 'Anchorage Ted Stevens Airport', fr: 'Aéroport Ted Stevens d\'Anchorage', de: 'Flughafen Anchorage Ted Stevens', es: 'Aeropuerto Ted Stevens de Anchorage', it: 'Aeroporto Ted Stevens di Anchorage', nl: 'Luchthaven Anchorage Ted Stevens', pt: 'Aeroporto Ted Stevens de Anchorage', tr: 'Anchorage Ted Stevens Havaalanı', ru: 'Аэропорт Анкоридж имени Теда Стивенса', zh: '安克雷奇泰德·史蒂文斯机场', ar: 'مطار أنكوريج تيد ستيفنز' },
+      'USMIA_AIR': { en: 'Miami International Airport', fr: 'Aéroport international de Miami', de: 'Internationaler Flughafen Miami', es: 'Aeropuerto Internacional de Miami', it: 'Aeroporto Internazionale di Miami', nl: 'Internationale Luchthaven Miami', pt: 'Aeroporto Internacional de Miami', tr: 'Miami Uluslararası Havaalanı', ru: 'Международный аэропорт Майами', zh: '迈阿密国际机场', ar: 'مطار ميامي الدولي' },
+      'USNYC_RAIL': { en: 'New York Penn Station', fr: 'Gare Pennsylvania de New York', de: 'Bahnhof New York Penn Station', es: 'Estación Pennsylvania de Nueva York', it: 'Stazione Pennsylvania di New York', nl: 'Penn Station New York', pt: 'Estação Pennsylvania de Nova York', tr: 'New York Penn İstasyonu', ru: 'Пенсильванский вокзал Нью-Йорк', zh: '纽约宾夕法尼亚车站', ar: 'محطة نيويورك بنسلفانيا' },
+      'USCHI_RAIL': { en: 'Chicago Union Station', fr: 'Gare Union de Chicago', de: 'Union Station Chicago', es: 'Estación Union de Chicago', it: 'Stazione Union di Chicago', nl: 'Union Station Chicago', pt: 'Estação Union de Chicago', tr: 'Chicago Union İstasyonu', ru: 'Юнион-стейшн Чикаго', zh: '芝加哥联合车站', ar: 'محطة شيكاغو يونيون' },
+      'USLAX_RAIL': { en: 'Los Angeles Union Station', fr: 'Gare Union de Los Angeles', de: 'Union Station Los Angeles', es: 'Estación Union de Los Ángeles', it: 'Stazione Union di Los Angeles', nl: 'Union Station Los Angeles', pt: 'Estação Union de Los Angeles', tr: 'Los Angeles Union İstasyonu', ru: 'Юнион-стейшн Лос-Анджелес', zh: '洛杉矶联合车站', ar: 'محطة لوس أنجلوس يونيون' },
+      
+      // 🇺🇦 Ukraine (Ukraine) - Grenier de l'Europe
+      'UAODE': { en: 'Port of Odesa', fr: 'Port d\'Odessa', de: 'Hafen Odessa', es: 'Puerto de Odesa', it: 'Porto di Odessa', nl: 'Haven van Odessa', pt: 'Porto de Odessa', tr: 'Odessa Limanı', ru: 'Порт Одесса', zh: '敖德萨港', ar: 'ميناء أوديسا' },
+      'UAIEV': { en: 'Port of Chornomorsk', fr: 'Port de Chornomorsk', de: 'Hafen Tschornomorsk', es: 'Puerto de Chornomorsk', it: 'Porto di Chornomorsk', nl: 'Haven van Chornomorsk', pt: 'Porto de Chornomorsk', tr: 'Çornomorsk Limanı', ru: 'Порт Черноморск', zh: '切尔诺莫尔斯克港', ar: 'ميناء تشورنومورسك' },
+      'UAMYK': { en: 'Port of Mykolaiv', fr: 'Port de Mykolaiv', de: 'Hafen Mykolajiw', es: 'Puerto de Mykolaiv', it: 'Porto di Mykolaiv', nl: 'Haven van Mykolaiv', pt: 'Porto de Mykolaiv', tr: 'Mikolayiv Limanı', ru: 'Порт Николаев', zh: '尼古拉耶夫港', ar: 'ميناء ميكولايف' },
+      'UAKBP': { en: 'Kyiv Boryspil International Airport', fr: 'Aéroport international de Kiev Boryspil', de: 'Internationaler Flughafen Kiew Boryspil', es: 'Aeropuerto Internacional de Kiev Boryspil', it: 'Aeroporto Internazionale di Kiev Boryspil', nl: 'Internationale Luchthaven Kiev Boryspil', pt: 'Aeroporto Internacional de Kiev Boryspil', tr: 'Kiev Boryspil Uluslararası Havaalanı', ru: 'Международный аэропорт Киев Борисполь', zh: '基辅鲍里斯波尔国际机场', ar: 'مطار كييف بوريسبيل الدولي' },
+      'UAODS': { en: 'Odesa International Airport', fr: 'Aéroport international d\'Odessa', de: 'Internationaler Flughafen Odessa', es: 'Aeropuerto Internacional de Odesa', it: 'Aeroporto Internazionale di Odessa', nl: 'Internationale Luchthaven Odessa', pt: 'Aeroporto Internacional de Odessa', tr: 'Odessa Uluslararası Havaalanı', ru: 'Международный аэропорт Одесса', zh: '敖德萨国际机场', ar: 'مطار أوديسا الدولي' },
+      'UAKIV_RAIL': { en: 'Kyiv Central Railway Station', fr: 'Gare centrale de Kiev', de: 'Hauptbahnhof Kiew', es: 'Estación Central de Kiev', it: 'Stazione Centrale di Kiev', nl: 'Centraal Station Kiev', pt: 'Estação Central de Kiev', tr: 'Kiev Merkez Tren İstasyonu', ru: 'Центральный железнодорожный вокзал Киев', zh: '基辅中央火车站', ar: 'محطة كييف المركزية للسكك الحديدية' },
+      'UAODE_RAIL': { en: 'Odesa Railway Station', fr: 'Gare d\'Odessa', de: 'Bahnhof Odessa', es: 'Estación de Odesa', it: 'Stazione di Odessa', nl: 'Station Odessa', pt: 'Estação de Odessa', tr: 'Odessa Tren İstasyonu', ru: 'Железнодорожная станция Одесса', zh: '敖德萨火车站', ar: 'محطة أوديسا للسكك الحديدية' },
+      
+      // 🇺🇾 Uruguay (Uruguay) - Suisse de l'Amérique du Sud
+      'UYMVD': { en: 'Port of Montevideo', fr: 'Port de Montevideo', de: 'Hafen Montevideo', es: 'Puerto de Montevideo', it: 'Porto di Montevideo', nl: 'Haven van Montevideo', pt: 'Porto de Montevidéu', tr: 'Montevideo Limanı', ru: 'Порт Монтевидео', zh: '蒙得维的亚港', ar: 'ميناء مونتيفيديو' },
+      'UYMVD_AIR': { en: 'Montevideo Carrasco International Airport', fr: 'Aéroport international de Montevideo Carrasco', de: 'Internationaler Flughafen Montevideo Carrasco', es: 'Aeropuerto Internacional de Montevideo Carrasco', it: 'Aeroporto Internazionale di Montevideo Carrasco', nl: 'Internationale Luchthaven Montevideo Carrasco', pt: 'Aeroporto Internacional de Montevidéu Carrasco', tr: 'Montevideo Carrasco Uluslararası Havaalanı', ru: 'Международный аэропорт Монтевидео Карраско', zh: '蒙得维的亚卡拉斯科国际机场', ar: 'مطار مونتيفيديو كاراسكو الدولي' },
+      'UYMVD_RAIL': { en: 'Montevideo Central Station', fr: 'Gare centrale de Montevideo', de: 'Hauptbahnhof Montevideo', es: 'Estación Central de Montevideo', it: 'Stazione Centrale di Montevideo', nl: 'Centraal Station Montevideo', pt: 'Estação Central de Montevidéu', tr: 'Montevideo Merkez İstasyonu', ru: 'Центральный вокзал Монтевидео', zh: '蒙得维的亚中央车站', ar: 'محطة مونتيفيديو المركزية' },
+      
+      // 🇺🇬 Uganda (Ouganda) - Perle de l'Afrique (traductions améliorées)
+      'UGKMP': { en: 'Port of Kampala', fr: 'Port de Kampala', de: 'Hafen Kampala', es: 'Puerto de Kampala', it: 'Porto di Kampala', nl: 'Haven van Kampala', pt: 'Porto de Kampala', tr: 'Kampala Limanı', ru: 'Порт Кампала', zh: '坎帕拉港', ar: 'ميناء كامبالا' },
+      'UGENT': { en: 'Port of Entebbe', fr: 'Port d\'Entebbe', de: 'Hafen Entebbe', es: 'Puerto de Entebbe', it: 'Porto di Entebbe', nl: 'Haven van Entebbe', pt: 'Porto de Entebbe', tr: 'Entebbe Limanı', ru: 'Порт Энтеббе', zh: '恩德培港', ar: 'ميناء عنتيبي' },
+      'UGKMP_RAIL': { en: 'Kampala Railway Station', fr: 'Gare de Kampala', de: 'Bahnhof Kampala', es: 'Estación de Kampala', it: 'Stazione di Kampala', nl: 'Station Kampala', pt: 'Estação de Kampala', tr: 'Kampala Tren İstasyonu', ru: 'Железнодорожная станция Кампала', zh: '坎帕拉火车站', ar: 'محطة كامبالا للسكك الحديدية' },
+      
+      // === PAYS EN V - TRADUCTIONS COMPLÈTES ===
+      
+      // 🇻🇳 Vietnam (Vietnam) - Dragon d'Asie du Sud-Est (traductions excellentes)
+      'VNSGN': { en: 'Port of Ho Chi Minh City', fr: 'Port d\'Hô Chi Minh-Ville', de: 'Hafen Ho-Chi-Minh-Stadt', es: 'Puerto de Ciudad Ho Chi Minh', it: 'Porto di Ho Chi Minh', nl: 'Haven van Ho Chi Minh Stad', pt: 'Porto de Ho Chi Minh', tr: 'Ho Chi Minh Şehri Limanı', ru: 'Порт Хошимин', zh: '胡志明市港', ar: 'ميناء هو تشي مين' },
+      'VNHAN': { en: 'Port of Haiphong', fr: 'Port de Haïphong', de: 'Hafen Haiphong', es: 'Puerto de Haiphong', it: 'Porto di Haiphong', nl: 'Haven van Haiphong', pt: 'Porto de Haiphong', tr: 'Haiphong Limanı', ru: 'Порт Хайфон', zh: '海防港', ar: 'ميناء هايفونغ' },
+      'VNDAN': { en: 'Port of Da Nang', fr: 'Port de Da Nang', de: 'Hafen Da Nang', es: 'Puerto de Da Nang', it: 'Porto di Da Nang', nl: 'Haven van Da Nang', pt: 'Porto de Da Nang', tr: 'Da Nang Limanı', ru: 'Порт Дананг', zh: '岘港', ar: 'ميناء دا نانغ' },
+      'VNSGN_AIR': { en: 'Ho Chi Minh City Tan Son Nhat International Airport', fr: 'Aéroport international Tan Son Nhat d\'Hô Chi Minh-Ville', de: 'Internationaler Flughafen Tan Son Nhat Ho-Chi-Minh-Stadt', es: 'Aeropuerto Internacional Tan Son Nhat de Ciudad Ho Chi Minh', it: 'Aeroporto Internazionale Tan Son Nhat di Ho Chi Minh', nl: 'Internationale Luchthaven Tan Son Nhat Ho Chi Minh Stad', pt: 'Aeroporto Internacional Tan Son Nhat de Ho Chi Minh', tr: 'Ho Chi Minh Şehri Tan Son Nhat Uluslararası Havaalanı', ru: 'Международный аэропорт Таншоннят Хошимин', zh: '胡志明市新山一国际机场', ar: 'مطار هو تشي مين تان سون نهات الدولي' },
+      'VNHAN_AIR': { en: 'Hanoi Noi Bai International Airport', fr: 'Aéroport international Noi Bai de Hanoï', de: 'Internationaler Flughafen Noi Bai Hanoi', es: 'Aeropuerto Internacional Noi Bai de Hanoi', it: 'Aeroporto Internazionale Noi Bai di Hanoi', nl: 'Internationale Luchthaven Noi Bai Hanoi', pt: 'Aeroporto Internacional Noi Bai de Hanói', tr: 'Hanoi Noi Bai Uluslararası Havaalanı', ru: 'Международный аэропорт Нойбай Ханой', zh: '河内内排国际机场', ar: 'مطار هانوي نوي باي الدولي' },
+      'VNDAN_AIR': { en: 'Da Nang International Airport', fr: 'Aéroport international de Da Nang', de: 'Internationaler Flughafen Da Nang', es: 'Aeropuerto Internacional de Da Nang', it: 'Aeroporto Internazionale di Da Nang', nl: 'Internationale Luchthaven Da Nang', pt: 'Aeroporto Internacional de Da Nang', tr: 'Da Nang Uluslararası Havaalanı', ru: 'Международный аэропорт Дананг', zh: '岘港国际机场', ar: 'مطار دا نانغ الدولي' },
+      'VNHAN_RAIL': { en: 'Hanoi Railway Station', fr: 'Gare de Hanoï', de: 'Bahnhof Hanoi', es: 'Estación de Hanoi', it: 'Stazione di Hanoi', nl: 'Station Hanoi', pt: 'Estação de Hanói', tr: 'Hanoi Tren İstasyonu', ru: 'Железнодорожная станция Ханой', zh: '河内火车站', ar: 'محطة هانوي للسكك الحديدية' },
+      'VNSGN_RAIL': { en: 'Ho Chi Minh City Railway Station', fr: 'Gare d\'Hô Chi Minh-Ville', de: 'Bahnhof Ho-Chi-Minh-Stadt', es: 'Estación de Ciudad Ho Chi Minh', it: 'Stazione di Ho Chi Minh', nl: 'Station Ho Chi Minh Stad', pt: 'Estação de Ho Chi Minh', tr: 'Ho Chi Minh Şehri Tren İstasyonu', ru: 'Железнодорожная станция Хошимин', zh: '胡志明市火车站', ar: 'محطة هو تشي مين للسكك الحديدية' },
+      
+      // 🇻🇪 Venezuela (Venezuela) - Pays du pétrole (traductions solides)
+      'VELAS': { en: 'Port of La Guaira', fr: 'Port de La Guaira', de: 'Hafen La Guaira', es: 'Puerto de La Guaira', it: 'Porto di La Guaira', nl: 'Haven van La Guaira', pt: 'Porto de La Guaira', tr: 'La Guaira Limanı', ru: 'Порт Ла-Гуайра', zh: '拉瓜伊拉港', ar: 'ميناء لا غوايرا' },
+      'VEPZO': { en: 'Port of Puerto Cabello', fr: 'Port de Puerto Cabello', de: 'Hafen Puerto Cabello', es: 'Puerto de Puerto Cabello', it: 'Porto di Puerto Cabello', nl: 'Haven van Puerto Cabello', pt: 'Porto de Puerto Cabello', tr: 'Puerto Cabello Limanı', ru: 'Порт Пуэрто-Кабельо', zh: '卡贝略港', ar: 'ميناء بويرتو كابيلو' },
+      'VEMCB': { en: 'Port of Maracaibo', fr: 'Port de Maracaibo', de: 'Hafen Maracaibo', es: 'Puerto de Maracaibo', it: 'Porto di Maracaibo', nl: 'Haven van Maracaibo', pt: 'Porto de Maracaibo', tr: 'Maracaibo Limanı', ru: 'Порт Маракайбо', zh: '马拉开波港', ar: 'ميناء ماراكايبو' },
+      'VECCS': { en: 'Caracas Simón Bolívar International Airport', fr: 'Aéroport international Simón Bolívar de Caracas', de: 'Internationaler Flughafen Simón Bolívar Caracas', es: 'Aeropuerto Internacional Simón Bolívar de Caracas', it: 'Aeroporto Internazionale Simón Bolívar di Caracas', nl: 'Internationale Luchthaven Simón Bolívar Caracas', pt: 'Aeroporto Internacional Simón Bolívar de Caracas', tr: 'Caracas Simón Bolívar Uluslararası Havaalanı', ru: 'Международный аэропорт Симон Боливар Каракас', zh: '加拉加斯西蒙·玻利瓦尔国际机场', ar: 'مطار كاراكاس سيمون بوليفار الدولي' },
+      'VECCS_RAIL': { en: 'Caracas Railway Station', fr: 'Gare de Caracas', de: 'Bahnhof Caracas', es: 'Estación de Caracas', it: 'Stazione di Caracas', nl: 'Station Caracas', pt: 'Estação de Caracas', tr: 'Caracas Tren İstasyonu', ru: 'Железнодорожная станция Каракас', zh: '加拉加斯火车站', ar: 'محطة كاراكاس للسكك الحديدية' },
+      
+      // === PAYS EN P - TRADUCTIONS COMPLÈTES (DEUXIÈME RATTRAPAGE!) ===
+      
+      // 🇵🇪 Peru (Pérou) - Berceau des Incas (traductions parfaites)
+      'PECLL': { en: 'Port of Callao', fr: 'Port de Callao', de: 'Hafen Callao', es: 'Puerto del Callao', it: 'Porto di Callao', nl: 'Haven van Callao', pt: 'Porto de Callao', tr: 'Callao Limanı', ru: 'Порт Кальяо', zh: '卡亚俄港', ar: 'ميناء كالاو' },
+      'PELIM': { en: 'Jorge Chávez International Airport', fr: 'Aéroport international Jorge Chávez', de: 'Internationaler Flughafen Jorge Chávez', es: 'Aeropuerto Internacional Jorge Chávez', it: 'Aeroporto Internazionale Jorge Chávez', nl: 'Internationale Luchthaven Jorge Chávez', pt: 'Aeroporto Internacional Jorge Chávez', tr: 'Jorge Chávez Uluslararası Havaalanı', ru: 'Международный аэропорт Хорхе Чавес', zh: '豪尔赫·查韦斯国际机场', ar: 'مطار خورخي تشافيز الدولي' },
+      
+      // 🇵🇱 Poland (Pologne) - Cœur de l'Europe (traductions complètes)
+      'PLGDY': { en: 'Port of Gdynia', fr: 'Port de Gdynia', de: 'Hafen Gdingen', es: 'Puerto de Gdynia', it: 'Porto di Gdynia', nl: 'Haven van Gdynia', pt: 'Porto de Gdynia', tr: 'Gdynia Limanı', ru: 'Порт Гдыня', zh: '格丁尼亚港', ar: 'ميناء غدينيا' },
+      'PLSZZ': { en: 'Port of Szczecin', fr: 'Port de Szczecin', de: 'Hafen Stettin', es: 'Puerto de Szczecin', it: 'Porto di Stettino', nl: 'Haven van Szczecin', pt: 'Porto de Szczecin', tr: 'Szczecin Limanı', ru: 'Порт Щецин', zh: '什切青港', ar: 'ميناء شتشيتشين' },
+      'PLWAW': { en: 'Warsaw Chopin Airport', fr: 'Aéroport Chopin de Varsovie', de: 'Flughafen Warschau-Chopin', es: 'Aeropuerto Chopin de Varsovia', it: 'Aeroporto Chopin di Varsavia', nl: 'Luchthaven Warschau Chopin', pt: 'Aeroporto Chopin de Varsóvia', tr: 'Varşova Chopin Havaalanı', ru: 'Аэропорт Варшава-Шопен', zh: '华沙肖邦机场', ar: 'مطار وارسو شوبان' },
+      'PLKRK': { en: 'Kraków John Paul II International Airport', fr: 'Aéroport international Jean-Paul II de Cracovie', de: 'Internationaler Flughafen Johannes Paul II. Krakau', es: 'Aeropuerto Internacional Juan Pablo II de Cracovia', it: 'Aeroporto Internazionale Giovanni Paolo II di Cracovia', nl: 'Internationale Luchthaven Johannes Paulus II Krakau', pt: 'Aeroporto Internacional João Paulo II de Cracóvia', tr: 'Krakow II. John Paul Uluslararası Havaalanı', ru: 'Международный аэропорт Краков-Балице', zh: '克拉科夫约翰·保罗二世国际机场', ar: 'مطار كراكوف يوحنا بولس الثاني الدولي' },
+      'PLWAR_RAIL': { en: 'Warsaw Central Station', fr: 'Gare centrale de Varsovie', de: 'Warschau Hauptbahnhof', es: 'Estación Central de Varsovia', it: 'Stazione Centrale di Varsavia', nl: 'Centraal Station Warschau', pt: 'Estação Central de Varsóvia', tr: 'Varşova Merkez İstasyonu', ru: 'Центральная станция Варшава', zh: '华沙中央车站', ar: 'محطة وارسو المركزية' },
+      'PLKRK_RAIL': { en: 'Kraków Main Station', fr: 'Gare principale de Cracovie', de: 'Krakau Hauptbahnhof', es: 'Estación Principal de Cracovia', it: 'Stazione Principale di Cracovia', nl: 'Hoofdstation Krakau', pt: 'Estação Principal de Cracóvia', tr: 'Krakow Ana İstasyonu', ru: 'Главная станция Краков', zh: '克拉科夫主火车站', ar: 'محطة كراكوف الرئيسية' },
+      
+      // 🇵🇹 Portugal (Portugal) - Navigation des découvertes (traductions excellentes)
+      'PTLIS': { en: 'Port of Lisbon', fr: 'Port de Lisbonne', de: 'Hafen Lissabon', es: 'Puerto de Lisboa', it: 'Porto di Lisbona', nl: 'Haven van Lissabon', pt: 'Porto de Lisboa', tr: 'Lizbon Limanı', ru: 'Порт Лиссабон', zh: '里斯本港', ar: 'ميناء لشبونة' },
+      'PTLEI': { en: 'Port of Leixões', fr: 'Port de Leixões', de: 'Hafen Leixões', es: 'Puerto de Leixões', it: 'Porto di Leixões', nl: 'Haven van Leixões', pt: 'Porto de Leixões', tr: 'Leixões Limanı', ru: 'Порт Лейшойнш', zh: '莱绍英斯港', ar: 'ميناء ليشويس' },
+      'PTLIS_AIR': { en: 'Lisbon Portela Airport', fr: 'Aéroport de Lisbonne Portela', de: 'Flughafen Lissabon-Portela', es: 'Aeropuerto de Lisboa Portela', it: 'Aeroporto di Lisbona Portela', nl: 'Luchthaven Lissabon Portela', pt: 'Aeroporto de Lisboa Portela', tr: 'Lizbon Portela Havaalanı', ru: 'Аэропорт Лиссабон-Портела', zh: '里斯本波尔特拉机场', ar: 'مطار لشبونة بورتيلا' },
+      'PTOPO': { en: 'Porto Francisco Sá Carneiro Airport', fr: 'Aéroport Francisco Sá Carneiro de Porto', de: 'Flughafen Porto Francisco Sá Carneiro', es: 'Aeropuerto Francisco Sá Carneiro de Oporto', it: 'Aeroporto Francisco Sá Carneiro di Porto', nl: 'Luchthaven Porto Francisco Sá Carneiro', pt: 'Aeroporto Francisco Sá Carneiro do Porto', tr: 'Porto Francisco Sá Carneiro Havaalanı', ru: 'Аэропорт Порту Франсишку Са Карнейру', zh: '波尔图弗朗西斯科·萨·卡内罗机场', ar: 'مطار بورتو فرانسيسكو سا كارنيرو' },
+      'PTLIS_RAIL': { en: 'Lisbon Santa Apolónia Station', fr: 'Gare de Lisbonne Santa Apolónia', de: 'Bahnhof Lissabon Santa Apolónia', es: 'Estación de Lisboa Santa Apolónia', it: 'Stazione di Lisbona Santa Apolónia', nl: 'Station Lissabon Santa Apolónia', pt: 'Estação de Lisboa Santa Apolónia', tr: 'Lizbon Santa Apolónia İstasyonu', ru: 'Станция Лиссабон Санта-Аполония', zh: '里斯本圣阿波洛尼亚车站', ar: 'محطة لشبونة سانتا أبولونيا' },
+      'PTOPO_RAIL': { en: 'Porto Campanhã Station', fr: 'Gare de Porto Campanhã', de: 'Bahnhof Porto Campanhã', es: 'Estación de Oporto Campanhã', it: 'Stazione di Porto Campanhã', nl: 'Station Porto Campanhã', pt: 'Estação de Porto Campanhã', tr: 'Porto Campanhã İstasyonu', ru: 'Станция Порту Кампанья', zh: '波尔图坎帕尼亚车站', ar: 'محطة بورتو كامبانها' },
+      
+      // 🇵🇭 Philippines (Philippines) - Archipel des 7000 îles (traductions superbes)
+      'PHMNL': { en: 'Port of Manila', fr: 'Port de Manille', de: 'Hafen Manila', es: 'Puerto de Manila', it: 'Porto di Manila', nl: 'Haven van Manila', pt: 'Porto de Manila', tr: 'Manila Limanı', ru: 'Порт Манила', zh: '马尼拉港', ar: 'ميناء مانيلا' },
+      'PHCEB': { en: 'Port of Cebu', fr: 'Port de Cebu', de: 'Hafen Cebu', es: 'Puerto de Cebú', it: 'Porto di Cebu', nl: 'Haven van Cebu', pt: 'Porto de Cebu', tr: 'Cebu Limanı', ru: 'Порт Себу', zh: '宿务港', ar: 'ميناء سيبو' },
+      'PHBAT': { en: 'Port of Batangas', fr: 'Port de Batangas', de: 'Hafen Batangas', es: 'Puerto de Batangas', it: 'Porto di Batangas', nl: 'Haven van Batangas', pt: 'Porto de Batangas', tr: 'Batangas Limanı', ru: 'Порт Батангас', zh: '八打雁港', ar: 'ميناء باتانغاس' },
+      'PHMNL_AIR': { en: 'Ninoy Aquino International Airport', fr: 'Aéroport international Ninoy Aquino', de: 'Internationaler Flughafen Ninoy Aquino', es: 'Aeropuerto Internacional Ninoy Aquino', it: 'Aeroporto Internazionale Ninoy Aquino', nl: 'Internationale Luchthaven Ninoy Aquino', pt: 'Aeroporto Internacional Ninoy Aquino', tr: 'Ninoy Aquino Uluslararası Havaalanı', ru: 'Международный аэропорт Ниной Акино', zh: '尼诺·阿基诺国际机场', ar: 'مطار نينوي أكينو الدولي' },
+      'PHCEB_AIR': { en: 'Mactan-Cebu International Airport', fr: 'Aéroport international Mactan-Cebu', de: 'Internationaler Flughafen Mactan-Cebu', es: 'Aeropuerto Internacional Mactan-Cebú', it: 'Aeroporto Internazionale Mactan-Cebu', nl: 'Internationale Luchthaven Mactan-Cebu', pt: 'Aeroporto Internacional Mactan-Cebu', tr: 'Mactan-Cebu Uluslararası Havaalanı', ru: 'Международный аэропорт Мактан-Себу', zh: '马克坦-宿务国际机场', ar: 'مطار ماكتان-سيبو الدولي' },
+      'PHCRK': { en: 'Clark International Airport', fr: 'Aéroport international de Clark', de: 'Internationaler Flughafen Clark', es: 'Aeropuerto Internacional de Clark', it: 'Aeroporto Internazionale di Clark', nl: 'Internationale Luchthaven Clark', pt: 'Aeroporto Internacional de Clark', tr: 'Clark Uluslararası Havaalanı', ru: 'Международный аэропорт Кларк', zh: '克拉克国际机场', ar: 'مطار كلارك الدولي' },
+      
+      // 🇵🇰 Pakistan (Pakistan) - Terre des purs (traductions excellentes)
+      'PKKAR': { en: 'Port of Karachi', fr: 'Port de Karachi', de: 'Hafen Karatschi', es: 'Puerto de Karachi', it: 'Porto di Karachi', nl: 'Haven van Karachi', pt: 'Porto de Karachi', tr: 'Karaçi Limanı', ru: 'Порт Карачи', zh: '卡拉奇港', ar: 'ميناء كراتشي' },
+      'PKQAS': { en: 'Port Qasim', fr: 'Port Qasim', de: 'Hafen Qasim', es: 'Puerto Qasim', it: 'Porto Qasim', nl: 'Haven Qasim', pt: 'Porto Qasim', tr: 'Qasim Limanı', ru: 'Порт Касим', zh: '卡西姆港', ar: 'ميناء قاسم' },
+      'PKGWA': { en: 'Port of Gwadar', fr: 'Port de Gwadar', de: 'Hafen Gwadar', es: 'Puerto de Gwadar', it: 'Porto di Gwadar', nl: 'Haven van Gwadar', pt: 'Porto de Gwadar', tr: 'Gwadar Limanı', ru: 'Порт Гвадар', zh: '瓜达尔港', ar: 'ميناء جوادر' },
+      'PKKAR_AIR': { en: 'Jinnah International Airport', fr: 'Aéroport international Jinnah', de: 'Internationaler Flughafen Jinnah', es: 'Aeropuerto Internacional Jinnah', it: 'Aeroporto Internazionale Jinnah', nl: 'Internationale Luchthaven Jinnah', pt: 'Aeroporto Internacional Jinnah', tr: 'Jinnah Uluslararası Havaalanı', ru: 'Международный аэропорт Джинна', zh: '真纳国际机场', ar: 'مطار جناح الدولي' },
+      'PKLHE': { en: 'Allama Iqbal International Airport', fr: 'Aéroport international Allama Iqbal', de: 'Internationaler Flughafen Allama Iqbal', es: 'Aeropuerto Internacional Allama Iqbal', it: 'Aeroporto Internazionale Allama Iqbal', nl: 'Internationale Luchthaven Allama Iqbal', pt: 'Aeroporto Internacional Allama Iqbal', tr: 'Allama Iqbal Uluslararası Havaalanı', ru: 'Международный аэропорт Аллама Икбал', zh: '阿拉马·伊克巴尔国际机场', ar: 'مطار علامة إقبال الدولي' },
+      'PKISB': { en: 'Islamabad International Airport', fr: 'Aéroport international d\'Islamabad', de: 'Internationaler Flughafen Islamabad', es: 'Aeropuerto Internacional de Islamabad', it: 'Aeroporto Internazionale di Islamabad', nl: 'Internationale Luchthaven Islamabad', pt: 'Aeroporto Internacional de Islamabad', tr: 'İslamabad Uluslararası Havaalanı', ru: 'Международный аэропорт Исламабад', zh: '伊斯兰堡国际机场', ar: 'مطار إسلام أباد الدولي' },
+      'PKKAR_RAIL': { en: 'Karachi City Railway Station', fr: 'Gare de Karachi', de: 'Bahnhof Karatschi', es: 'Estación de Karachi', it: 'Stazione di Karachi', nl: 'Station Karachi', pt: 'Estação de Karachi', tr: 'Karaçi Tren İstasyonu', ru: 'Железнодорожная станция Карачи', zh: '卡拉奇火车站', ar: 'محطة كراتشي للسكك الحديدية' },
+      'PKLHE_RAIL': { en: 'Lahore Railway Station', fr: 'Gare de Lahore', de: 'Bahnhof Lahore', es: 'Estación de Lahore', it: 'Stazione di Lahore', nl: 'Station Lahore', pt: 'Estação de Lahore', tr: 'Lahore Tren İstasyonu', ru: 'Железнодорожная станция Лахор', zh: '拉合尔火车站', ar: 'محطة لاهور للسكك الحديدية' },
+      
+      // 🇵🇾 Paraguay (Paraguay) - Cœur de l'Amérique du Sud (traductions solides)
+      'PYASU': { en: 'Port of Asunción', fr: 'Port d\'Asunción', de: 'Hafen Asunción', es: 'Puerto de Asunción', it: 'Porto di Asunción', nl: 'Haven van Asunción', pt: 'Porto de Assunção', tr: 'Asunción Limanı', ru: 'Порт Асунсьон', zh: '亚松森港', ar: 'ميناء أسونسيون' },
+      'PYASU_AIR': { en: 'Silvio Pettirossi International Airport', fr: 'Aéroport international Silvio Pettirossi', de: 'Internationaler Flughafen Silvio Pettirossi', es: 'Aeropuerto Internacional Silvio Pettirossi', it: 'Aeroporto Internazionale Silvio Pettirossi', nl: 'Internationale Luchthaven Silvio Pettirossi', pt: 'Aeroporto Internacional Silvio Pettirossi', tr: 'Silvio Pettirossi Uluslararası Havaalanı', ru: 'Международный аэропорт Сильвио Петтиросси', zh: '西尔维奥·佩蒂罗西国际机场', ar: 'مطار سيلفيو بيتيروسي الدولي' },
+      'PYASU_RAIL': { en: 'Asunción Railway Station', fr: 'Gare d\'Asunción', de: 'Bahnhof Asunción', es: 'Estación de Asunción', it: 'Stazione di Asunción', nl: 'Station Asunción', pt: 'Estação de Assunção', tr: 'Asunción Tren İstasyonu', ru: 'Железнодорожная станция Асунсьон', zh: '亚松森火车站', ar: 'محطة أسونسيون للسكك الحديدية' },
+      
+      // 🇵🇦 Panama (Panama) - Canal entre les océans (traductions magistrales)
+      'PABAL': { en: 'Port of Balboa', fr: 'Port de Balboa', de: 'Hafen Balboa', es: 'Puerto de Balboa', it: 'Porto di Balboa', nl: 'Haven van Balboa', pt: 'Porto de Balboa', tr: 'Balboa Limanı', ru: 'Порт Бальбоа', zh: '巴尔博亚港', ar: 'ميناء بالبوا' },
+      'PACOL': { en: 'Port of Colón', fr: 'Port de Colón', de: 'Hafen Colón', es: 'Puerto de Colón', it: 'Porto di Colón', nl: 'Haven van Colón', pt: 'Porto de Colón', tr: 'Colón Limanı', ru: 'Порт Колон', zh: '科隆港', ar: 'ميناء كولون' },
+      'PACRZ': { en: 'Port of Cristóbal', fr: 'Port de Cristóbal', de: 'Hafen Cristóbal', es: 'Puerto de Cristóbal', it: 'Porto di Cristóbal', nl: 'Haven van Cristóbal', pt: 'Porto de Cristóbal', tr: 'Cristóbal Limanı', ru: 'Порт Кристобаль', zh: '克里斯托瓦尔港', ar: 'ميناء كريستوبال' },
+      'PAPTY': { en: 'Tocumen International Airport', fr: 'Aéroport international de Tocumen', de: 'Internationaler Flughafen Tocumen', es: 'Aeropuerto Internacional de Tocumen', it: 'Aeroporto Internazionale di Tocumen', nl: 'Internationale Luchthaven Tocumen', pt: 'Aeroporto Internacional de Tocumen', tr: 'Tocumen Uluslararası Havaalanı', ru: 'Международный аэропорт Токумен', zh: '托库门国际机场', ar: 'مطار توكومين الدولي' },
+      
+      // === PAYS EN D - TRADUCTIONS COMPLÈTES (RATTRAPAGE!) ===
+      
+      // 🇩🇪 Germany (Allemagne) - Puissance industrielle européenne (traductions complètes)
+      'DEWVN': { en: 'Port of Wilhelmshaven', fr: 'Port de Wilhelmshaven', de: 'Hafen Wilhelmshaven', es: 'Puerto de Wilhelmshaven', it: 'Porto di Wilhelmshaven', nl: 'Haven van Wilhelmshaven', pt: 'Porto de Wilhelmshaven', tr: 'Wilhelmshaven Limanı', ru: 'Порт Вильгельмсхафен', zh: '威廉港', ar: 'ميناء فيلهلمسهافن' },
+      'DELUB': { en: 'Port of Lübeck', fr: 'Port de Lübeck', de: 'Hafen Lübeck', es: 'Puerto de Lübeck', it: 'Porto di Lubecca', nl: 'Haven van Lübeck', pt: 'Porto de Lübeck', tr: 'Lübeck Limanı', ru: 'Порт Любек', zh: '吕贝克港', ar: 'ميناء لوبيك' },
+      'DEROS': { en: 'Port of Rostock', fr: 'Port de Rostock', de: 'Hafen Rostock', es: 'Puerto de Rostock', it: 'Porto di Rostock', nl: 'Haven van Rostock', pt: 'Porto de Rostock', tr: 'Rostock Limanı', ru: 'Порт Росток', zh: '罗斯托克港', ar: 'ميناء روستوك' },
+      'DEBER': { en: 'Berlin Brandenburg Airport', fr: 'Aéroport de Berlin-Brandebourg', de: 'Flughafen Berlin Brandenburg', es: 'Aeropuerto de Berlín-Brandeburgo', it: 'Aeroporto di Berlino-Brandeburgo', nl: 'Luchthaven Berlijn Brandenburg', pt: 'Aeroporto de Berlim-Brandemburgo', tr: 'Berlin Brandenburg Havaalanı', ru: 'Аэропорт Берлин-Бранденбург', zh: '柏林勃兰登堡机场', ar: 'مطار برلين براندنبورغ' },
+      'DEDUS': { en: 'Düsseldorf Airport', fr: 'Aéroport de Düsseldorf', de: 'Flughafen Düsseldorf', es: 'Aeropuerto de Düsseldorf', it: 'Aeroporto di Düsseldorf', nl: 'Luchthaven Düsseldorf', pt: 'Aeroporto de Düsseldorf', tr: 'Düsseldorf Havaalanı', ru: 'Аэропорт Дюссельдорф', zh: '杜塞尔多夫机场', ar: 'مطار دوسلدورف' },
+      'DEHAM_AIR': { en: 'Hamburg Airport', fr: 'Aéroport de Hambourg', de: 'Flughafen Hamburg', es: 'Aeropuerto de Hamburgo', it: 'Aeroporto di Amburgo', nl: 'Luchthaven Hamburg', pt: 'Aeroporto de Hamburgo', tr: 'Hamburg Havaalanı', ru: 'Аэропорт Гамбург', zh: '汉堡机场', ar: 'مطار هامبورغ' },
+      'DECGN': { en: 'Cologne Bonn Airport', fr: 'Aéroport de Cologne/Bonn', de: 'Flughafen Köln/Bonn', es: 'Aeropuerto de Colonia/Bonn', it: 'Aeroporto di Colonia/Bonn', nl: 'Luchthaven Keulen/Bonn', pt: 'Aeroporto de Colônia/Bonn', tr: 'Köln/Bonn Havaalanı', ru: 'Аэропорт Кёльн/Бонн', zh: '科隆/波恩机场', ar: 'مطار كولونيا/بون' },
+      'DESTR': { en: 'Stuttgart Airport', fr: 'Aéroport de Stuttgart', de: 'Flughafen Stuttgart', es: 'Aeropuerto de Stuttgart', it: 'Aeroporto di Stoccarda', nl: 'Luchthaven Stuttgart', pt: 'Aeroporto de Stuttgart', tr: 'Stuttgart Havaalanı', ru: 'Аэропорт Штутгарт', zh: '斯图加特机场', ar: 'مطار شتوتغارت' },
+      'DENUR': { en: 'Nuremberg Airport', fr: 'Aéroport de Nuremberg', de: 'Flughafen Nürnberg', es: 'Aeropuerto de Núremberg', it: 'Aeroporto di Norimberga', nl: 'Luchthaven Neurenberg', pt: 'Aeroporto de Nuremberga', tr: 'Nürnberg Havaalanı', ru: 'Аэропорт Нюрнберг', zh: '纽伦堡机场', ar: 'مطار نورمبرغ' },
+      'DEBER_RAIL': { en: 'Berlin Central Station', fr: 'Gare centrale de Berlin', de: 'Berlin Hauptbahnhof', es: 'Estación Central de Berlín', it: 'Stazione Centrale di Berlino', nl: 'Centraal Station Berlijn', pt: 'Estação Central de Berlim', tr: 'Berlin Merkez İstasyonu', ru: 'Центральная станция Берлин', zh: '柏林中央车站', ar: 'محطة برلين المركزية' },
+      'DEFRA_RAIL': { en: 'Frankfurt Central Station', fr: 'Gare centrale de Francfort', de: 'Frankfurt Hauptbahnhof', es: 'Estación Central de Fráncfort', it: 'Stazione Centrale di Francoforte', nl: 'Centraal Station Frankfurt', pt: 'Estação Central de Frankfurt', tr: 'Frankfurt Merkez İstasyonu', ru: 'Центральная станция Франкфурт', zh: '法兰克福中央车站', ar: 'محطة فرانكفورت المركزية' },
+      'DEHAM_RAIL': { en: 'Hamburg Central Station', fr: 'Gare centrale de Hambourg', de: 'Hamburg Hauptbahnhof', es: 'Estación Central de Hamburgo', it: 'Stazione Centrale di Amburgo', nl: 'Centraal Station Hamburg', pt: 'Estação Central de Hamburgo', tr: 'Hamburg Merkez İstasyonu', ru: 'Центральная станция Гамбург', zh: '汉堡中央车站', ar: 'محطة هامبورغ المركزية' },
+      'DEMUC_RAIL': { en: 'Munich Central Station', fr: 'Gare centrale de Munich', de: 'München Hauptbahnhof', es: 'Estación Central de Múnich', it: 'Stazione Centrale di Monaco', nl: 'Centraal Station München', pt: 'Estação Central de Munique', tr: 'Münih Merkez İstasyonu', ru: 'Центральная станция Мюнхен', zh: '慕尼黑中央车站', ar: 'محطة ميونيخ المركزية' },
+      'DECGN_RAIL': { en: 'Cologne Central Station', fr: 'Gare centrale de Cologne', de: 'Köln Hauptbahnhof', es: 'Estación Central de Colonia', it: 'Stazione Centrale di Colonia', nl: 'Centraal Station Keulen', pt: 'Estação Central de Colônia', tr: 'Köln Merkez İstasyonu', ru: 'Центральная станция Кёльн', zh: '科隆中央车站', ar: 'محطة كولونيا المركزية' },
+      
+      // 🇩🇰 Denmark (Danemark) - Royaume scandinave (traductions excellentes)
+      'DKAAR': { en: 'Port of Aarhus', fr: 'Port d\'Aarhus', de: 'Hafen Aarhus', es: 'Puerto de Aarhus', it: 'Porto di Aarhus', nl: 'Haven van Aarhus', pt: 'Porto de Aarhus', tr: 'Aarhus Limanı', ru: 'Порт Орхус', zh: '奥胡斯港', ar: 'ميناء آرهوس' },
+      'DKCPH': { en: 'Port of Copenhagen', fr: 'Port de Copenhague', de: 'Hafen Kopenhagen', es: 'Puerto de Copenhague', it: 'Porto di Copenaghen', nl: 'Haven van Kopenhagen', pt: 'Porto de Copenhague', tr: 'Kopenhag Limanı', ru: 'Порт Копенгаген', zh: '哥本哈根港', ar: 'ميناء كوبنهاغن' },
+      'DKCPH_AIR': { en: 'Copenhagen Airport', fr: 'Aéroport de Copenhague', de: 'Flughafen Kopenhagen', es: 'Aeropuerto de Copenhague', it: 'Aeroporto di Copenaghen', nl: 'Luchthaven Kopenhagen', pt: 'Aeroporto de Copenhague', tr: 'Kopenhag Havaalanı', ru: 'Аэропорт Копенгаген', zh: '哥本哈根机场', ar: 'مطار كوبنهاغن' },
+      'DKCPH_RAIL': { en: 'Copenhagen Central Station', fr: 'Gare centrale de Copenhague', de: 'Kopenhagen Hauptbahnhof', es: 'Estación Central de Copenhague', it: 'Stazione Centrale di Copenaghen', nl: 'Centraal Station Kopenhagen', pt: 'Estação Central de Copenhague', tr: 'Kopenhag Merkez İstasyonu', ru: 'Центральная станция Копенгаген', zh: '哥本哈根中央车站', ar: 'محطة كوبنهاغن المركزية' },
+      
+      // 🇩🇴 Dominican Republic (République dominicaine) - Perle des Caraïbes (traductions parfaites)
+      'DOSDQ': { en: 'Port of Santo Domingo', fr: 'Port de Saint-Domingue', de: 'Hafen Santo Domingo', es: 'Puerto de Santo Domingo', it: 'Porto di Santo Domingo', nl: 'Haven van Santo Domingo', pt: 'Porto de Santo Domingo', tr: 'Santo Domingo Limanı', ru: 'Порт Санто-Доминго', zh: '圣多明各港', ar: 'ميناء سانتو دومينغو' },
+      'DOHIG': { en: 'Port of Haina', fr: 'Port de Haina', de: 'Hafen Haina', es: 'Puerto de Haina', it: 'Porto di Haina', nl: 'Haven van Haina', pt: 'Porto de Haina', tr: 'Haina Limanı', ru: 'Порт Хайна', zh: '海纳港', ar: 'ميناء هاينا' },
+      'DOSDQ_AIR': { en: 'Santo Domingo Las Américas International Airport', fr: 'Aéroport international Las Américas de Saint-Domingue', de: 'Internationaler Flughafen Las Américas Santo Domingo', es: 'Aeropuerto Internacional Las Américas de Santo Domingo', it: 'Aeroporto Internazionale Las Américas di Santo Domingo', nl: 'Internationale Luchthaven Las Américas Santo Domingo', pt: 'Aeroporto Internacional Las Américas de Santo Domingo', tr: 'Santo Domingo Las Américas Uluslararası Havaalanı', ru: 'Международный аэропорт Лас-Америкас Санто-Доминго', zh: '圣多明各拉斯美洲国际机场', ar: 'مطار سانتو دومينغو لاس أمريكاس الدولي' },
+      'DOPOP': { en: 'Puerto Plata Gregorio Luperón International Airport', fr: 'Aéroport international Gregorio Luperón de Puerto Plata', de: 'Internationaler Flughafen Gregorio Luperón Puerto Plata', es: 'Aeropuerto Internacional Gregorio Luperón de Puerto Plata', it: 'Aeroporto Internazionale Gregorio Luperón di Puerto Plata', nl: 'Internationale Luchthaven Gregorio Luperón Puerto Plata', pt: 'Aeroporto Internacional Gregorio Luperón de Puerto Plata', tr: 'Puerto Plata Gregorio Luperón Uluslararası Havaalanı', ru: 'Международный аэропорт Грегорио Луперон Пуэрто-Плата', zh: '普拉塔港格雷戈里奥·卢佩龙国际机场', ar: 'مطار بويرتو بلاتا غريغوريو لوبيرون الدولي' },
+      
+      // === PAYS EN Z - TRADUCTIONS COMPLÈTES (DERNIÈRE LETTRE!) ===
+      
+      // 🇿🇦 South Africa (Afrique du Sud) - Nation arc-en-ciel (traductions excellentes)
+      'ZADUR': { en: 'Port of Durban', fr: 'Port de Durban', de: 'Hafen Durban', es: 'Puerto de Durban', it: 'Porto di Durban', nl: 'Haven van Durban', pt: 'Porto de Durban', tr: 'Durban Limanı', ru: 'Порт Дурбан', zh: '德班港', ar: 'ميناء ديربان' },
+      'ZACPT': { en: 'Port of Cape Town', fr: 'Port du Cap', de: 'Hafen Kapstadt', es: 'Puerto de Ciudad del Cabo', it: 'Porto di Città del Capo', nl: 'Haven van Kaapstad', pt: 'Porto da Cidade do Cabo', tr: 'Cape Town Limanı', ru: 'Порт Кейптаун', zh: '开普敦港', ar: 'ميناء كيب تاون' },
+      'ZAJNB': { en: 'OR Tambo International Airport', fr: 'Aéroport international OR Tambo', de: 'Internationaler Flughafen OR Tambo', es: 'Aeropuerto Internacional OR Tambo', it: 'Aeroporto Internazionale OR Tambo', nl: 'Internationale Luchthaven OR Tambo', pt: 'Aeroporto Internacional OR Tambo', tr: 'OR Tambo Uluslararası Havaalanı', ru: 'Международный аэропорт О. Р. Тамбо', zh: 'OR坦博国际机场', ar: 'مطار أو آر تامبو الدولي' },
+      'ZACPT_AIR': { en: 'Cape Town International Airport', fr: 'Aéroport international du Cap', de: 'Internationaler Flughafen Kapstadt', es: 'Aeropuerto Internacional de Ciudad del Cabo', it: 'Aeroporto Internazionale di Città del Capo', nl: 'Internationale Luchthaven Kaapstad', pt: 'Aeroporto Internacional da Cidade do Cabo', tr: 'Cape Town Uluslararası Havaalanı', ru: 'Международный аэропорт Кейптаун', zh: '开普敦国际机场', ar: 'مطار كيب تاون الدولي' },
+      
+      // 🇿🇼 Zimbabwe (Zimbabwe) - Berceau des ruines du Grand Zimbabwe
+      'ZWHRE': { en: 'Port of Harare', fr: 'Port de Harare', de: 'Hafen Harare', es: 'Puerto de Harare', it: 'Porto di Harare', nl: 'Haven van Harare', pt: 'Porto de Harare', tr: 'Harare Limanı', ru: 'Порт Хараре', zh: '哈拉雷港', ar: 'ميناء هراري' },
+      'ZWBYO': { en: 'Port of Bulawayo', fr: 'Port de Bulawayo', de: 'Hafen Bulawayo', es: 'Puerto de Bulawayo', it: 'Porto di Bulawayo', nl: 'Haven van Bulawayo', pt: 'Porto de Bulawayo', tr: 'Bulawayo Limanı', ru: 'Порт Булавайо', zh: '布拉瓦约港', ar: 'ميناء بولاوايو' },
+      'ZWHRE_AIR': { en: 'Harare International Airport', fr: 'Aéroport international de Harare', de: 'Internationaler Flughafen Harare', es: 'Aeropuerto Internacional de Harare', it: 'Aeroporto Internazionale di Harare', nl: 'Internationale Luchthaven Harare', pt: 'Aeroporto Internacional de Harare', tr: 'Harare Uluslararası Havaalanı', ru: 'Международный аэропорт Хараре', zh: '哈拉雷国际机场', ar: 'مطار هراري الدولي' },
+      'ZWBYO_AIR': { en: 'Bulawayo Airport', fr: 'Aéroport de Bulawayo', de: 'Flughafen Bulawayo', es: 'Aeropuerto de Bulawayo', it: 'Aeroporto di Bulawayo', nl: 'Luchthaven Bulawayo', pt: 'Aeroporto de Bulawayo', tr: 'Bulawayo Havaalanı', ru: 'Аэропорт Булавайо', zh: '布拉瓦约机场', ar: 'مطار بولاوايو' },
+      'ZWHRE_RAIL': { en: 'Harare Railway Station', fr: 'Gare de Harare', de: 'Bahnhof Harare', es: 'Estación de Harare', it: 'Stazione di Harare', nl: 'Station Harare', pt: 'Estação de Harare', tr: 'Harare Tren İstasyonu', ru: 'Железнодорожная станция Хараре', zh: '哈拉雷火车站', ar: 'محطة هراري للسكك الحديدية' },
+      'ZWBYO_RAIL': { en: 'Bulawayo Railway Station', fr: 'Gare de Bulawayo', de: 'Bahnhof Bulawayo', es: 'Estación de Bulawayo', it: 'Stazione di Bulawayo', nl: 'Station Bulawayo', pt: 'Estação de Bulawayo', tr: 'Bulawayo Tren İstasyonu', ru: 'Железнодорожная станция Булавайо', zh: '布拉瓦约火车站', ar: 'محطة بولاوايو للسكك الحديدية' },
+      
+      // 🇿🇲 Zambia (Zambie) - Pays du cuivre et des chutes Victoria
+      'ZMLUN': { en: 'Port of Lusaka', fr: 'Port de Lusaka', de: 'Hafen Lusaka', es: 'Puerto de Lusaka', it: 'Porto di Lusaka', nl: 'Haven van Lusaka', pt: 'Porto de Lusaka', tr: 'Lusaka Limanı', ru: 'Порт Лусака', zh: '卢萨卡港', ar: 'ميناء لوساكا' },
+      'ZMKAP': { en: 'Port of Kapiri Mposhi', fr: 'Port de Kapiri Mposhi', de: 'Hafen Kapiri Mposhi', es: 'Puerto de Kapiri Mposhi', it: 'Porto di Kapiri Mposhi', nl: 'Haven van Kapiri Mposhi', pt: 'Porto de Kapiri Mposhi', tr: 'Kapiri Mposhi Limanı', ru: 'Порт Капири-Мпоши', zh: '卡皮里姆波希港', ar: 'ميناء كابيري مبوشي' },
+      'ZMLUN_AIR': { en: 'Kenneth Kaunda International Airport', fr: 'Aéroport international Kenneth Kaunda', de: 'Internationaler Flughafen Kenneth Kaunda', es: 'Aeropuerto Internacional Kenneth Kaunda', it: 'Aeroporto Internazionale Kenneth Kaunda', nl: 'Internationale Luchthaven Kenneth Kaunda', pt: 'Aeroporto Internacional Kenneth Kaunda', tr: 'Kenneth Kaunda Uluslararası Havaalanı', ru: 'Международный аэропорт Кеннет Каунда', zh: '肯尼思·卡翁达国际机场', ar: 'مطار كينيث كاوندا الدولي' },
+      'ZMNDO': { en: 'Ndola Airport', fr: 'Aéroport de Ndola', de: 'Flughafen Ndola', es: 'Aeropuerto de Ndola', it: 'Aeroporto di Ndola', nl: 'Luchthaven Ndola', pt: 'Aeroporto de Ndola', tr: 'Ndola Havaalanı', ru: 'Аэропорт Ндола', zh: '恩多拉机场', ar: 'مطار ندولا' },
+      'ZMLUN_RAIL': { en: 'Lusaka Railway Station', fr: 'Gare de Lusaka', de: 'Bahnhof Lusaka', es: 'Estación de Lusaka', it: 'Stazione di Lusaka', nl: 'Station Lusaka', pt: 'Estação de Lusaka', tr: 'Lusaka Tren İstasyonu', ru: 'Железнодорожная станция Лусака', zh: '卢萨卡火车站', ar: 'محطة لوساكا للسكك الحديدية' },
+      'ZMKAP_RAIL': { en: 'Kapiri Mposhi Railway Station', fr: 'Gare de Kapiri Mposhi', de: 'Bahnhof Kapiri Mposhi', es: 'Estación de Kapiri Mposhi', it: 'Stazione di Kapiri Mposhi', nl: 'Station Kapiri Mposhi', pt: 'Estação de Kapiri Mposhi', tr: 'Kapiri Mposhi Tren İstasyonu', ru: 'Железнодорожная станция Капири-Мпоши', zh: '卡皮里姆波希火车站', ar: 'محطة كابيري مبوشي للسكك الحديدية' },
+      
+      // US major airports (fix the French source names)
+      'USLAX_AIR': { en: 'Los Angeles International Airport (LAX)', fr: 'Aéroport international de Los Angeles (LAX)', de: 'Internationaler Flughafen Los Angeles (LAX)', es: 'Aeropuerto Internacional de Los Ángeles (LAX)', it: 'Aeroporto Internazionale di Los Angeles (LAX)', nl: 'Internationale Luchthaven Los Angeles (LAX)', pt: 'Aeroporto Internacional de Los Angeles (LAX)', tr: 'Los Angeles Uluslararası Havaalanı (LAX)', ru: 'Международный аэропорт Лос-Анджелес (LAX)', zh: '洛杉矶国际机场 (LAX)', ar: 'مطار لوس أنجلوس الدولي (LAX)' },
+      'USJFK': { en: 'John F. Kennedy International Airport (JFK)', fr: 'Aéroport international John F. Kennedy (JFK)', de: 'John F. Kennedy International Airport (JFK)', es: 'Aeropuerto Internacional John F. Kennedy (JFK)', it: 'Aeroporto Internazionale John F. Kennedy (JFK)', nl: 'John F. Kennedy International Airport (JFK)', pt: 'Aeroporto Internacional John F. Kennedy (JFK)', tr: 'John F. Kennedy Uluslararası Havaalanı (JFK)', ru: 'Международный аэропорт имени Джона Кеннеди (JFK)', zh: '约翰·肯尼迪国际机场 (JFK)', ar: 'مطار جون كينيدي الدولي (JFK)' },
+      'USORD': { en: 'O\'Hare International Airport (ORD)', fr: 'Aéroport international O\'Hare (ORD)', de: 'O\'Hare International Airport (ORD)', es: 'Aeropuerto Internacional O\'Hare (ORD)', it: 'Aeroporto Internazionale O\'Hare (ORD)', nl: 'O\'Hare International Airport (ORD)', pt: 'Aeroporto Internacional O\'Hare (ORD)', tr: 'O\'Hare Uluslararası Havaalanı (ORD)', ru: 'Международный аэропорт О\'Хэйр (ORD)', zh: '芝加哥奥黑尔国际机场 (ORD)', ar: 'مطار أوهير الدولي (ORD)' },
+      'USDFW': { en: 'Dallas/Fort Worth International Airport (DFW)', fr: 'Aéroport international de Dallas/Fort Worth (DFW)', de: 'Dallas/Fort Worth International Airport (DFW)', es: 'Aeropuerto Internacional de Dallas/Fort Worth (DFW)', it: 'Aeroporto Internazionale di Dallas/Fort Worth (DFW)', nl: 'Dallas/Fort Worth International Airport (DFW)', pt: 'Aeroporto Internacional de Dallas/Fort Worth (DFW)', tr: 'Dallas/Fort Worth Uluslararası Havaalanı (DFW)', ru: 'Международный аэропорт Даллас/Форт-Уэрт (DFW)', zh: '达拉斯/沃斯堡国际机场 (DFW)', ar: 'مطار دالاس/فورت وورث الدولي (DFW)' },
+      'USATL': { en: 'Hartsfield-Jackson Atlanta International Airport (ATL)', fr: 'Aéroport international Hartsfield-Jackson d\'Atlanta (ATL)', de: 'Hartsfield-Jackson Atlanta International Airport (ATL)', es: 'Aeropuerto Internacional Hartsfield-Jackson de Atlanta (ATL)', it: 'Aeroporto Internazionale Hartsfield-Jackson di Atlanta (ATL)', nl: 'Hartsfield-Jackson Atlanta International Airport (ATL)', pt: 'Aeroporto Internacional Hartsfield-Jackson de Atlanta (ATL)', tr: 'Hartsfield-Jackson Atlanta Uluslararası Havaalanı (ATL)', ru: 'Международный аэропорт Хартсфилд-Джексон Атланта (ATL)', zh: '亚特兰大哈茨菲尔德-杰克逊国际机场 (ATL)', ar: 'مطار هارتسفيلد جاكسون أتلانتا الدولي (ATL)' }
+    };
+    
+    // Check manual translations first
+    const manualTranslation = manualTranslations[portCode];
+    if (manualTranslation && manualTranslation[userLang]) {
+      return manualTranslation[userLang];
+    }
+    
+    // City name translations for common toponyms
+    const cityTranslations: Record<string, Record<string, string>> = {
+      'London': { en: 'London', fr: 'Londres', de: 'London', es: 'Londres', it: 'Londra', nl: 'Londen', pt: 'Londres', tr: 'Londra', ru: 'Лондон', zh: '伦敦', ar: 'لندن' },
+      'Londres': { en: 'London', fr: 'Londres', de: 'London', es: 'Londres', it: 'Londra', nl: 'Londen', pt: 'Londres', tr: 'Londra', ru: 'Лондон', zh: '伦敦', ar: 'لندن' },
+      'Munich': { en: 'Munich', fr: 'Munich', de: 'München', es: 'Múnich', it: 'Monaco', nl: 'München', pt: 'Munique', tr: 'Münih', ru: 'Мюнхен', zh: '慕尼黑', ar: 'ميونيخ' },
+      'München': { en: 'Munich', fr: 'Munich', de: 'München', es: 'Múnich', it: 'Monaco', nl: 'München', pt: 'Munique', tr: 'Münih', ru: 'Мюнхен', zh: '慕尼黑', ar: 'ميونيخ' },
+      'Cologne': { en: 'Cologne', fr: 'Cologne', de: 'Köln', es: 'Colonia', it: 'Colonia', nl: 'Keulen', pt: 'Colônia', tr: 'Köln', ru: 'Кёльн', zh: '科隆', ar: 'كولونيا' },
+      'Köln': { en: 'Cologne', fr: 'Cologne', de: 'Köln', es: 'Colonia', it: 'Colonia', nl: 'Keulen', pt: 'Colônia', tr: 'Köln', ru: 'Кёльн', zh: '科隆', ar: 'كولونيا' },
+      'Dover': { en: 'Dover', fr: 'Douvres', de: 'Dover', es: 'Dover', it: 'Dover', nl: 'Dover', pt: 'Dover', tr: 'Dover', ru: 'Дувр', zh: '多佛', ar: 'دوفر' },
+      'Douvres': { en: 'Dover', fr: 'Douvres', de: 'Dover', es: 'Dover', it: 'Dover', nl: 'Dover', pt: 'Dover', tr: 'Dover', ru: 'Дувр', zh: '多佛', ar: 'دوفر' },
+      'Edinburgh': { en: 'Edinburgh', fr: 'Édimbourg', de: 'Edinburgh', es: 'Edimburgo', it: 'Edimburgo', nl: 'Edinburgh', pt: 'Edimburgo', tr: 'Edinburgh', ru: 'Эдинбург', zh: '爱丁堡', ar: 'إدنبرة' },
+      'Édimbourg': { en: 'Edinburgh', fr: 'Édimbourg', de: 'Edinburgh', es: 'Edimburgo', it: 'Edimburgo', nl: 'Edinburgh', pt: 'Edimburgo', tr: 'Edinburgh', ru: 'Эдинбург', zh: '爱丁堡', ar: 'إدنبرة' },
+      'Genoa': { en: 'Genoa', fr: 'Gênes', de: 'Genua', es: 'Génova', it: 'Genova', nl: 'Genua', pt: 'Gênova', tr: 'Cenova', ru: 'Генуя', zh: '热那亚', ar: 'جنوة' },
+      'Gênes': { en: 'Genoa', fr: 'Gênes', de: 'Genua', es: 'Génova', it: 'Genova', nl: 'Genua', pt: 'Gênova', tr: 'Cenova', ru: 'Генуя', zh: '热那亚', ar: 'جنوة' },
+      'Genova': { en: 'Genoa', fr: 'Gênes', de: 'Genua', es: 'Génova', it: 'Genova', nl: 'Genua', pt: 'Gênova', tr: 'Cenova', ru: 'Генуя', zh: '热那亚', ar: 'جنوة' },
+      'Valletta': { en: 'Valletta', fr: 'La Valette', de: 'Valletta', es: 'La Valeta', it: 'La Valletta', nl: 'Valletta', pt: 'Valletta', tr: 'Valletta', ru: 'Валлетта', zh: '瓦莱塔', ar: 'فاليتا' },
+      'La Valette': { en: 'Valletta', fr: 'La Valette', de: 'Valletta', es: 'La Valeta', it: 'La Valletta', nl: 'Valletta', pt: 'Valletta', tr: 'Valletta', ru: 'Валлетта', zh: '瓦莱塔', ar: 'فاليتا' },
+      'Warsaw': { en: 'Warsaw', fr: 'Varsovie', de: 'Warschau', es: 'Varsovia', it: 'Varsavia', nl: 'Warschau', pt: 'Varsóvia', tr: 'Varşova', ru: 'Варшава', zh: '华沙', ar: 'وارسو' },
+      'Varsovie': { en: 'Warsaw', fr: 'Varsovie', de: 'Warschau', es: 'Varsovia', it: 'Varsavia', nl: 'Warschau', pt: 'Varsóvia', tr: 'Varşova', ru: 'Варшава', zh: '华沙', ar: 'وارسو' },
+      'Immingham': { en: 'Immingham', fr: 'Immingham', de: 'Immingham', es: 'Immingham', it: 'Immingham', nl: 'Immingham', pt: 'Immingham', tr: 'Immingham', ru: 'Иммингхэм', zh: '伊明厄姆', ar: 'إمنجهام' }
+    };
+    
+    // Apply city translations
+    const applyCityTranslations = (text: string): string => {
+      let result = text;
+      for (const [sourceCity, translations] of Object.entries(cityTranslations)) {
+        if (translations[userLang]) {
+          const regex = new RegExp(`\\b${sourceCity}\\b`, 'giu');
+          result = result.replace(regex, translations[userLang]);
+        }
+      }
+      return result;
+    };
+    
+    // Smart pattern-based translation for common terms
+    const translateTerm = (term: string, lang: string): string => {
+      const translations: Record<string, Record<string, string>> = {
+        en: {
+          'Port of': 'Port of', 'Airport': 'Airport', 'Station': 'Station',
+          'Central Station': 'Central Station', 'Railway Station': 'Railway Station',
+          'International Airport': 'International Airport'
+        },
+        fr: {
+          'Port of': 'Port de', 'Airport': 'Aéroport', 'Station': 'Gare',
+          'Central Station': 'Gare centrale', 'Railway Station': 'Gare',
+          'International Airport': 'Aéroport international', 'Railway Connection': 'Connexion ferroviaire'
+        },
+        de: {
+          'Port of': 'Hafen', 'Airport': 'Flughafen', 'Station': 'Bahnhof',
+          'Central Station': 'Hauptbahnhof', 'Railway Station': 'Bahnhof',
+          'International Airport': 'Internationaler Flughafen', 'Railway Connection': 'Bahnanschluss'
+        },
+        es: {
+          'Port of': 'Puerto de', 'Airport': 'Aeropuerto', 'Station': 'Estación',
+          'Central Station': 'Estación Central', 'Railway Station': 'Estación',
+          'International Airport': 'Aeropuerto Internacional', 'Railway Connection': 'Conexión ferroviaria'
+        },
+        it: {
+          'Port of': 'Porto di', 'Airport': 'Aeroporto', 'Station': 'Stazione',
+          'Central Station': 'Stazione Centrale', 'Railway Station': 'Stazione',
+          'International Airport': 'Aeroporto Internazionale', 'Railway Connection': 'Collegamento ferroviario'
+        },
+        nl: {
+          'Port of': 'Haven van', 'Airport': 'Luchthaven', 'Station': 'Station',
+          'Central Station': 'Centraal Station', 'Railway Station': 'Station',
+          'International Airport': 'Internationale Luchthaven', 'Railway Connection': 'Spoorverbinding'
+        },
+        pt: {
+          'Port of': 'Porto de', 'Airport': 'Aeroporto', 'Station': 'Estação',
+          'Central Station': 'Estação Central', 'Railway Station': 'Estação',
+          'International Airport': 'Aeroporto Internacional', 'Railway Connection': 'Conexão ferroviária'
+        },
+        tr: {
+          'Port of': '', 'Airport': 'Havaalanı', 'Station': 'İstasyonu',
+          'Central Station': 'Merkez İstasyonu', 'Railway Station': 'Tren İstasyonu',
+          'International Airport': 'Uluslararası Havaalanı', 'Railway Connection': 'Demiryolu bağlantısı'
+        },
+        ru: {
+          'Port of': 'Порт', 'Airport': 'Аэропорт', 'Station': 'Вокзал',
+          'Central Station': 'Центральный вокзал', 'Railway Station': 'Железнодорожный вокзал',
+          'International Airport': 'Международный аэропорт', 'Railway Connection': 'Железнодорожное соединение'
+        },
+        zh: {
+          'Port of': '', 'Airport': '机场', 'Station': '车站',
+          'Central Station': '中央车站', 'Railway Station': '火车站',
+          'International Airport': '国际机场', 'Railway Connection': '铁路连接'
+        },
+        ar: {
+          'Port of': 'ميناء', 'Airport': 'مطار', 'Station': 'محطة',
+          'Central Station': 'المحطة المركزية', 'Railway Station': 'محطة القطار',
+          'International Airport': 'مطار دولي', 'Railway Connection': 'الاتصال بالسكك الحديدية'
+        }
+      };
+      
+      const langTerms = translations[lang] || translations.en;
+      return langTerms[term] || term;
+    };
+    
+    // Auto-translate based on patterns (ALWAYS NORMALIZE, including for English)
+    let translatedName = portName;
+    
+    // Always apply pattern-based translation, regardless of target language
+    
+    // Normalize French patterns to target language
+    translatedName = translatedName
+      .replace(/^Port de (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+      .replace(/^Aéroport de (.+)$/, `${translateTerm('Airport', userLang)} $1`)
+      .replace(/^Aéroport d'(.+)$/, `${translateTerm('Airport', userLang)} $1`)
+      
+    // Normalize English patterns to target language  
+      .replace(/^Port of (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+      .replace(/(.+) Airport$/, `$1 ${translateTerm('Airport', userLang)}`)
+      .replace(/(.+) International Airport$/, `$1 ${translateTerm('International Airport', userLang)}`)
+      .replace(/(.+) Central Station$/, `$1 ${translateTerm('Central Station', userLang)}`)
+      .replace(/(.+) Railway Station$/, `$1 ${translateTerm('Railway Station', userLang)}`)
+      .replace(/(.+) Railway Connection$/, `$1 ${translateTerm('Railway Connection', userLang)}`)
+      
+    // Normalize Spanish patterns
+      .replace(/^Puerto de (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+      .replace(/^Aeropuerto de (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
+      .replace(/^Aeropuerto Internacional de (.+)$/, `$1 ${translateTerm('International Airport', userLang)}`)
+      
+    // Normalize Italian patterns
+      .replace(/^Porto di (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+      .replace(/^Aeroporto di (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
+      .replace(/^Aeroporto Internazionale di (.+)$/, `$1 ${translateTerm('International Airport', userLang)}`)
+      
+    // Normalize Dutch patterns
+      .replace(/^Haven van (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+      .replace(/^Luchthaven (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
+      .replace(/^Internationale Luchthaven (.+)$/, `$1 ${translateTerm('International Airport', userLang)}`)
+      
+    // Normalize German patterns
+      .replace(/^Hafen (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+      .replace(/^Flughafen (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
+      .replace(/^Internationaler Flughafen (.+)$/, `$1 ${translateTerm('International Airport', userLang)}`)
+      .replace(/(.+) Hauptbahnhof$/, `$1 ${translateTerm('Central Station', userLang)}`)
+      .replace(/(.+) Bahnhof$/, `$1 ${translateTerm('Railway Station', userLang)}`)
+      
+    // Handle Turkish patterns
+      .replace(/(.+) Limanı$/, `${translateTerm('Port of', userLang)} $1`)
+      .replace(/(.+) Havaalanı$/, `$1 ${translateTerm('Airport', userLang)}`)
+      .replace(/(.+) İstasyonu$/, `$1 ${translateTerm('Railway Station', userLang)}`)
+      
+    // Handle Chinese patterns  
+      .replace(/(.+)港$/, `${translateTerm('Port of', userLang)} $1`)
+      .replace(/(.+)机场$/, `$1 ${translateTerm('Airport', userLang)}`)
+      .replace(/(.+)车站$/, `$1 ${translateTerm('Railway Station', userLang)}`)
+      
+    // Handle Arabic patterns
+      .replace(/^ميناء (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+      .replace(/^مطار (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
+      .replace(/^محطة (.+)$/, `$1 ${translateTerm('Railway Station', userLang)}`);
+      
+    // Fix specific problematic cases
+    translatedName = translatedName
+      .replace(/Port of Port of Spain/g, 'Port of Spain')  // Fix double "Port"
+      .replace(/Port of Londres/g, translateTerm('Port of', userLang) + ' London')
+      .replace(/Port d'Immingham/g, translateTerm('Port of', userLang) + ' Immingham')
+      .replace(/Port de Douvres/g, translateTerm('Port of', userLang) + ' Dover');
+    
+    // Apply city name translations to the final result
+    translatedName = applyCityTranslations(translatedName);
+    
+    // Clean up double spaces and trim
+    translatedName = translatedName.replace(/\s+/g, ' ').trim();
+    
+    return translatedName;
+  }, []);
+  
+  const getTranslatedPortType = useCallback((portType: string, userLang: string) => {
+    const translations = {
+      en: { sea: 'Sea Port', air: 'Airport', rail: 'Rail Terminal' },
+      fr: { sea: 'Port maritime', air: 'Aéroport', rail: 'Terminal ferroviaire' },
+      de: { sea: 'Seehafen', air: 'Flughafen', rail: 'Bahnterminal' },
+      es: { sea: 'Puerto marítimo', air: 'Aeropuerto', rail: 'Terminal ferroviario' },
+      it: { sea: 'Porto marittimo', air: 'Aeroporto', rail: 'Terminal ferroviario' },
+      nl: { sea: 'Zeehaven', air: 'Luchthaven', rail: 'Spoorterminal' },
+      zh: { sea: '海港', air: '机场', rail: '铁路终端' },
+      ar: { sea: 'ميناء بحري', air: 'مطار', rail: 'محطة سكة حديد' },
+      pt: { sea: 'Porto marítimo', air: 'Aeroporto', rail: 'Terminal ferroviário' },
+      tr: { sea: 'Deniz limanı', air: 'Havaalanı', rail: 'Demiryolu terminali' },
+      ru: { sea: 'Морской порт', air: 'Аэропорт', rail: 'Железнодорожный терминал' }
+    };
+    const langTypes = translations[userLang as keyof typeof translations] || translations.en;
+    return langTypes[portType as keyof typeof langTypes] || portType;
+  }, []);
+  
+  const getSearchPortsText = useCallback((countryCode: string, userLang: string) => {
+    const baseText = (I18N_TEXT as any)[userLang]?.searchPortsIn || 'Search ports in';
+    
+    // French preposition rules (comprehensive)
+    if (userLang === 'fr') {
+      // Pays avec "à" (micro-États, îles, villes-États)
+      const countriesWithA = ['MC', 'AD', 'LI', 'VA', 'SM', 'MT', 'CY', 'SG', 'MU', 'SC', 'MV', 'FJ'];
+      if (countriesWithA.includes(countryCode)) {
+        return baseText.replace('en', 'à');
+      }
+      
+      // Pays avec "aux" (pluriels)
+      const countriesWithAux = ['US', 'AE', 'NL', 'PH', 'MV'];
+      if (countriesWithAux.includes(countryCode)) {
+        return baseText.replace('en', 'aux');
+      }
+      
+      // Pays avec "au" (masculin singulier)
+      const countriesWithAu = [
+        'CA', 'BR', 'MX', 'PE', 'CL', 'AR', 'UY', 'PY', 'EC', 'PA', 'VE', 'GT', 'CR', 'DO', 'JM', 'TT',  // Amériques
+        'JP', 'KR', 'VN', 'KH', 'LA', 'BD', 'PK', 'LK', 'KZ', 'KG', 'UZ', 'TJ', 'TM', 'AF', 'IQ', 'YE', 'OM', 'QA', 'KW', 'BH', 'JO', 'LB', 'IL', // Asie/Moyen-Orient (RETIRÉ: 'IR')
+        'MA', 'TN', 'EG', 'SD', 'ET', 'KE', 'UG', 'TZ', 'RW', 'NG', 'GH', 'CI', 'SN', 'ML', 'BF', 'NE', 'TD', 'CM', 'GA', 'CG', 'CD', 'AO', 'ZM', 'ZW', 'MZ', 'MG', // Afrique
+        'DK', 'LU', 'PT'  // Europe
+      ];
+      if (countriesWithAu.includes(countryCode)) {
+        return baseText.replace('en', 'au');
+      }
+    }
+    
+    // German preposition rules  
+    if (userLang === 'de') {
+      // Most countries use "in" + dative, but some exceptions:
+      const countriesWithDen = ['US', 'AE', 'NL', 'PH']; // die USA, die VAE, die Niederlande, die Philippinen
+      if (countriesWithDen.includes(countryCode)) {
+        return baseText.replace('in', 'in den');
+      }
+      
+      const countriesWithDer = ['CH', 'TR', 'UA']; // die Schweiz, die Türkei, die Ukraine  
+      if (countriesWithDer.includes(countryCode)) {
+        return baseText.replace('in', 'in der');
+      }
+    }
+    
+    // Spanish preposition rules
+    if (userLang === 'es') {
+      // Countries with "en la" (feminine)
+      const countriesWithLa = ['AR', 'IN']; // la Argentina, la India
+      if (countriesWithLa.includes(countryCode)) {
+        return baseText.replace('en', 'en la');
+      }
+      
+      // Countries with "en los" (masculine plural)
+      const countriesWithLos = ['AE']; // los Emiratos Árabes Unidos
+      if (countriesWithLos.includes(countryCode)) {
+        return baseText.replace('en', 'en los');
+      }
+      
+      // Countries with "en las" (feminine plural) 
+      const countriesWithLas = ['PH', 'MV']; // las Filipinas, las Maldivas
+      if (countriesWithLas.includes(countryCode)) {
+        return baseText.replace('en', 'en las');
+      }
+    }
+    
+    // Italian preposition rules
+    if (userLang === 'it') {
+      // Countries with "negli" (masculine plural)
+      const countriesWithNegli = ['US', 'AE']; // negli Stati Uniti, negli Emirati Arabi Uniti
+      if (countriesWithNegli.includes(countryCode)) {
+        return baseText.replace('in', 'negli');
+      }
+      
+      // Countries with "nelle" (feminine plural)
+      const countriesWithNelle = ['PH', 'MV']; // nelle Filippine, nelle Maldive
+      if (countriesWithNelle.includes(countryCode)) {
+        return baseText.replace('in', 'nelle');
+      }
+      
+      // Countries with "nei" (masculine plural with consonant)
+      const countriesWithNei = ['NL']; // nei Paesi Bassi
+      if (countriesWithNei.includes(countryCode)) {
+        return baseText.replace('in', 'nei');
+      }
+    }
+    
+    // Dutch preposition rules
+    if (userLang === 'nl') {
+      // Countries with "de" (definite article)
+      const countriesWithDe = ['US', 'NL', 'PH', 'AE', 'GB', 'TR', 'CH', 'UA']; 
+      // de Verenigde Staten, de Nederland, de Filipijnen, de VAE, het Verenigd Koninkrijk, de Turkije, de Zwitserland, de Oekraïne
+      if (countriesWithDe.includes(countryCode)) {
+        return baseText.replace('in', 'in de');
+      }
+    }
+    
+    // Portuguese preposition rules  
+    if (userLang === 'pt') {
+      // Countries with "no" (masculine singular)
+      const countriesWithNo = ['BR', 'CA', 'JP', 'MX', 'PE', 'CL', 'AR', 'UY', 'PY', 'EC', 'PA', 'VE', 'GT', 'CR', 'MA', 'EG', 'IR', 'IQ', 'PK', 'BD', 'KW', 'QA', 'OM', 'JO', 'LB'];
+      if (countriesWithNo.includes(countryCode)) {
+        return baseText.replace('em', 'no');
+      }
+      
+      // Countries with "na" (feminine singular)  
+      const countriesWithNa = ['FR', 'DE', 'ES', 'IT', 'RU', 'CN', 'IN', 'AU', 'ZA', 'TR', 'UA', 'PL', 'RO', 'GR', 'HR', 'BG', 'HU', 'CZ', 'SK', 'SI', 'LT', 'LV', 'EE'];
+      if (countriesWithNa.includes(countryCode)) {
+        return baseText.replace('em', 'na');
+      }
+      
+      // Countries with "nos" (masculine plural)
+      const countriesWithNos = ['US', 'AE']; // nos Estados Unidos, nos Emiratos Árabes Unidos
+      if (countriesWithNos.includes(countryCode)) {
+        return baseText.replace('em', 'nos');
+      }
+      
+      // Countries with "nas" (feminine plural)
+      const countriesWithNas = ['PH', 'MV']; // nas Filipinas, nas Maldivas  
+      if (countriesWithNas.includes(countryCode)) {
+        return baseText.replace('em', 'nas');
+      }
+    }
+    
+    // Turkish preposition rules
+    if (userLang === 'tr') {
+      // Turkish uses locative case suffix (-de/-da/-te/-ta)
+      // Most country names in the data should already be properly formatted
+      // The base text "Limanları ara" + country name with locative suffix works
+      // Example: "Türkiye'de limanları ara", "Fransa'da limanları ara"
+    }
+    
+    // Russian preposition rules
+    if (userLang === 'ru') {
+      // Russian uses "в" + prepositional case for most countries
+      // Countries requiring "на" (island countries, some specific regions)
+      const countriesWithNa = ['CY', 'MT', 'IS', 'IE', 'GB', 'PH', 'JP', 'TW', 'NZ', 'AU', 'MV', 'FJ', 'SC', 'MU', 'UA']; 
+      // на Кипре, на Мальте, на Исландии, на Филиппинах, на Украине, etc.
+      if (countriesWithNa.includes(countryCode)) {
+        return baseText.replace('в', 'на');
+      }
+    }
+    
+    // Arabic preposition rules
+    if (userLang === 'ar') {
+      // Arabic uses "في" (fi) for most countries, but some variations exist
+      // The base text should handle most cases correctly
+      // Arabic is written RTL, so word order is generally correct in the base text
+    }
+    
+    // Chinese preposition rules
+    if (userLang === 'zh') {
+      // Chinese uses "在" (zai) + country name 
+      // The base text should handle this correctly: "搜索港口在" + country name
+      // Chinese grammar is relatively simple for this case
+    }
+    
+    return baseText;
+  }, []);
+
+  // Helper to sanitize search
+  const sanitizeSearch = (input: string) => input.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim().toLowerCase();
+  const sanitizedCountrySearch = sanitizeSearch(debouncedCountrySearch || '');
+
+  // Filtered countries with priority logic
+  const filteredCountries = (() => {
+    const priorityCountryCodes = PRIORITY_COUNTRIES_BY_LANG[userLang] || [];
+    const searchFiltered = COUNTRIES.filter(country => {
+      if (!sanitizedCountrySearch) return true;
+      const translatedName = getTranslatedCountryName(country.code, userLang);
+      return (
+        translatedName.toLowerCase().includes(sanitizedCountrySearch) ||
+        country.name.toLowerCase().includes(sanitizedCountrySearch) ||
+        country.code.toLowerCase().includes(sanitizedCountrySearch)
+      );
+    });
+
+    if (sanitizedCountrySearch) {
+      return searchFiltered.sort((a, b) => {
+        const aName = getTranslatedCountryName(a.code, userLang);
+        const bName = getTranslatedCountryName(b.code, userLang);
+        return aName.localeCompare(bName);
+      });
+    }
+
+    const priorityCountries = searchFiltered.filter(country => 
+      priorityCountryCodes.includes(country.code)
+    ).sort((a, b) => {
+      const aName = getTranslatedCountryName(a.code, userLang);
+      const bName = getTranslatedCountryName(b.code, userLang);
+      return aName.localeCompare(bName);
+    });
+
+    const otherCountries = searchFiltered.filter(country => 
+      !priorityCountryCodes.includes(country.code)
+    ).sort((a, b) => {
+      const aName = getTranslatedCountryName(a.code, userLang);
+      const bName = getTranslatedCountryName(b.code, userLang);
+      return aName.localeCompare(bName);
+    });
+
+    return [...priorityCountries, ...otherCountries];
+  })();
+
+  // Additional handlers (moved after filteredCountries)
+  const handleCountrySearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!isCountryListVisible && ['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
+      setIsCountryListVisible(true);
+      return;
+    }
+    
+    if (e.key === 'ArrowDown') {
+      if (!filteredCountries.length) return;
+      e.preventDefault();
+      setHighlightedCountryIndex(prev => (prev + 1) % filteredCountries.length);
+    } else if (e.key === 'ArrowUp') {
+      if (!filteredCountries.length) return;
+      e.preventDefault();
+      setHighlightedCountryIndex(prev => (prev - 1 + filteredCountries.length) % filteredCountries.length);
+    } else if (e.key === 'Enter') {
+      if (highlightedCountryIndex >= 0 && highlightedCountryIndex < filteredCountries.length) {
+        e.preventDefault();
+        handleCountrySelect(filteredCountries[highlightedCountryIndex].code);
+      }
+    } else if (e.key === 'Escape') {
+      setIsCountryListVisible(false);
+      setHighlightedCountryIndex(-1);
+    }
+  }, [isCountryListVisible, highlightedCountryIndex, filteredCountries, handleCountrySelect, setIsCountryListVisible, setHighlightedCountryIndex]);
+
+  const clearCountrySelection = useCallback(() => {
+    setFormData(prev => ({ ...prev, country: '' }));
+    setCountrySearch('');
+    setFieldValid(prev => ({ ...prev, country: null }));
+  }, [setFormData, setCountrySearch, setFieldValid]);
+
+  const handleDestLocationTypeSelect = useCallback((typeId: string) => {
+    setFormData(prev => ({ ...prev, destLocationType: typeId }));
+    setFieldValid(prev => ({ ...prev, destLocationType: true }));
+  }, [setFormData, setFieldValid]);
+
+  const handleDestPortSelect = useCallback((portCode: string) => {
+    // Find the selected port from the filtered ports
+    const allPorts = formData.country ? DESTINATION_PORTS_BY_COUNTRY[formData.country] || [] : [];
+    const selectedPort = allPorts.find(port => port.code === portCode);
+    
+    setFormData(prev => ({ ...prev, destPort: portCode }));
+    setFieldValid(prev => ({ ...prev, destPort: true }));
+    
+    // Set the display value to show the selected port name
+    if (selectedPort) {
+      setDestPortSearch(`${selectedPort.flag} ${getTranslatedPortNameLocal(selectedPort, userLang)}`);
+    }
+    
+    setIsDestPortListVisible(false);
+  }, [setFormData, setFieldValid, setDestPortSearch, setIsDestPortListVisible, formData.country, userLang]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setFieldValid(prev => ({ ...prev, [name]: value.trim() ? true : null }));
+  }, [setFormData, setFieldValid]);
+
+  const handleCurrencySelect = useCallback((currencyCode: string) => {
+    const currencies = [
+      { code: 'USD', flag: '💵', name: 'US Dollar' },
+      { code: 'EUR', flag: '💶', name: 'Euro' },
+      { code: 'GBP', flag: '💷', name: 'British Pound' },
+      { code: 'CNY', flag: '💴', name: 'Chinese Yuan' },
+      { code: 'JPY', flag: '💴', name: 'Japanese Yen' }
+    ];
+    
+    const selectedCurrency = currencies.find(c => c.code === currencyCode);
+    if (selectedCurrency) {
+      setFormData(prev => ({ ...prev, goodsCurrency: currencyCode }));
+      setCurrencySearch(`${currencyCode} ${selectedCurrency.flag}`);
+      setIsCurrencyListVisible(false);
+    }
+  }, [setFormData, setCurrencySearch, setIsCurrencyListVisible]);
+
+  const nextStep = useCallback(() => {
+    setCurrentStep((s) => {
+      if (s === 5 && step5SubStep < 3) {
+        setStep5SubStep((prev) => prev + 1);
+        return s;
+      }
+      return Math.min(s + 1, 7);
+    });
+  }, [step5SubStep]);
+
+  const prevStep = useCallback(() => {
+    setCurrentStep((s) => {
+      if (s === 5 && step5SubStep > 1) {
+        setStep5SubStep((prev) => prev - 1);
+        return s;
+      }
+      return Math.max(s - 1, 1);
+    });
+  }, [step5SubStep]);
+
+  const value: QuoteFormContextValue = {
+    currentStep,
+    setCurrentStep,
+    nextStep,
+    prevStep,
+    formData,
+    setFormData,
+    fieldValid,
+    setFieldValid,
+
+    // Step 1 UI list states values
+    countrySearch,
+    setCountrySearch,
+    isCountryListVisible,
+    setIsCountryListVisible,
+    highlightedCountryIndex,
+    setHighlightedCountryIndex,
+
+    userLang,
+    setUserLang,
+    phonePrefixSearch,
+    setPhonePrefixSearch,
+
+    debouncedCountrySearch,
+    setDebouncedCountrySearch,
+    destPortSearch,
+    setDestPortSearch,
+    isDestPortListVisible,
+    setIsDestPortListVisible,
+
+    step5SubStep,
+    setStep5SubStep,
+    activeLoadIndex, 
+    setActiveLoadIndex,
+    shippingType,
+    setShippingType,
+    currencySearch,
+    setCurrencySearch,
+    isCurrencyListVisible,
+    setIsCurrencyListVisible,
+    
+    handleCurrencySelect,
+
+    handleCountrySelect,
+    handleCountrySearchKeyDown,
+    clearCountrySelection,
+    handleDestLocationTypeSelect,
+    handleDestPortSelect,
+    handleInputChange,
+
+    getDestinationLocationTypes,
+    getFilteredDestinationPorts,
+    filteredCountries,
+    sanitizedCountrySearch,
+    
+    I18N_TEXT,
+    getLocationTypeName,
+    getLocationTypeDescription,
+    getTranslatedPortNameLocal,
+    getTranslatedPortType,
+    getSearchPortsText,
+    getTranslatedCountryName,
+  };
+  return <QuoteFormContext.Provider value={value}>{children}</QuoteFormContext.Provider>;
+};
+
+export function useQuoteForm() {
+  const ctx = useContext(QuoteFormContext);
+  if (!ctx) throw new Error('useQuoteForm must be used inside <QuoteFormProvider>');
+  return ctx;
+} 

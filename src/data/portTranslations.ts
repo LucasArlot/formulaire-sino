@@ -2419,7 +2419,7 @@ export const PORT_TRANSLATIONS: Record<string, Record<string, string>> = {
     ar: 'ميناء سانتوس',
     pt: 'Porto de Santos',
     tr: 'Santos Limanı',
-    ru: 'Порт Сантоس',
+    ru: 'Порт Сантос',
     zh: '桑托斯港'
   },
   'BRRIG': {

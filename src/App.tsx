@@ -1,6 +1,7 @@
 import React from 'react';
-import QuoteForm from './components/QuoteForm';
-import './styles/main.css';
+import { QuoteForm } from '@/features/lead';
+import { QuoteFormProvider } from '@/features/lead/QuoteFormContext';
+import '@/styles/main.css';
 
 function App() {
   return (
@@ -16,7 +17,9 @@ function App() {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/30 to-transparent pointer-events-none"></div>
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDAsIDAsIDAsIDAuMDIpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-50 pointer-events-none"></div>
       
-      <QuoteForm />
+      <QuoteFormProvider>
+        <QuoteForm />
+      </QuoteFormProvider>
     </div>
   );
 }

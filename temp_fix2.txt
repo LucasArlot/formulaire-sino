@@ -1,0 +1,21 @@
+  const clearCountrySelection = useCallback(() => {
+    // Reset the destination country related fields (COMPLETE VERSION)
+    setFormData(prev => ({
+      ...prev,
+      country: '',
+      destLocationType: '', // Reset destination location type
+      destCity: '', // Reset destination city
+      destZipCode: '', // Reset destination zip code
+      destPort: '' // Reset destination port
+    }));
+    setCountrySearch('');
+    setDestPortSearch(''); // Reset destination port search
+    setFieldValid(prev => ({ 
+      ...prev, 
+      country: null,
+      destLocationType: null,
+      destCity: null,
+      destZipCode: null,
+      destPort: null
+    }));
+  }, [setFormData, setCountrySearch, setDestPortSearch, setFieldValid]);
