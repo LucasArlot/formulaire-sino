@@ -1,7 +1,6 @@
 import React, { useState, FormEvent, useEffect, useRef } from "react";
-import { Truck, Ship, Plane, TrainFront, CheckCircle, Search, MapPin, Building2, Home, Warehouse, Info, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Ship, Plane, TrainFront, Building2, Home, Warehouse, ChevronLeft, ChevronRight } from 'lucide-react';
 import Timeline from './Timeline';
-import FormStep from './FormStep';
 import Toast from '@/shared/components/Toast';
 import CustomDropdown from '@/shared/components/CustomDropdown';
 import { useQuoteForm, initialLoadDetails } from "@/features/lead/QuoteFormContext";
@@ -16,7 +15,7 @@ import StepConfirmation from './steps/StepConfirmation';
 
 import { COUNTRIES } from '@/data/countries';
 import { COUNTRY_TRANSLATIONS } from '@/data/countryTranslations';
-import { getTranslatedPortName } from '@/data/portTranslations';
+// import { getTranslatedPortName } from '@/data/portTranslations';
 import { TEST_LEADS } from '@/data/testLeads';
 
 const LOCATION_TYPES = [
@@ -42,7 +41,7 @@ const getTranslatedCountryName = (countryCode: string, userLang: 'en' | 'fr' | '
 };
 
 // Helper function to get the correct "search ports in/à/en" text with proper preposition
-const getSearchPortsText = (countryCode: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'): string => {
+/* const getSearchPortsText = (countryCode: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'): string => {
   const baseText = I18N_TEXT[userLang].searchPortsIn;
   
   // French preposition rules
@@ -232,10 +231,10 @@ const getSearchPortsText = (countryCode: string, userLang: 'en' | 'fr' | 'zh' | 
   }
 
   return baseText;
-};
+}; */
 
 // Helper function to get translated location type name
-const getLocationTypeName = (typeId: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru', mode?: string) => {
+/* const getLocationTypeName = (typeId: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru', mode?: string) => {
   switch (typeId) {
     case 'factory': return I18N_TEXT[userLang].factoryWarehouse;
     case 'port': 
@@ -253,10 +252,10 @@ const getLocationTypeName = (typeId: string, userLang: 'en' | 'fr' | 'zh' | 'de'
     case 'residential': return I18N_TEXT[userLang].residentialAddress;
     default: return '';
   }
-};
+}; */
 
 // Helper function to get translated location type description
-const getLocationTypeDescription = (typeId: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
+/* const getLocationTypeDescription = (typeId: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
   const translations = I18N_TEXT[userLang] as any;
   switch (typeId) {
     case 'business': return translations.businessDescription || 'Company address, office building';
@@ -265,21 +264,21 @@ const getLocationTypeDescription = (typeId: string, userLang: 'en' | 'fr' | 'zh'
     case 'port': return translations.portDescription || 'Direct to port/airport pickup';
     default: return '';
   }
-};
+}; */
 
 // Helper function to get translated port/airport/terminal name
-const getTranslatedPortNameLocal = (port: any, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
+/* const getTranslatedPortNameLocal = (port: any, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
   // Use the imported function from portTranslations.ts
   return getTranslatedPortName(port.code, userLang, port.name);
-};
+}; */
 
 // Helper function to get translated port type
-const getTranslatedPortType = (portType: 'sea' | 'air' | 'rail', userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
+/* const getTranslatedPortType = (portType: 'sea' | 'air' | 'rail', userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
   if (portType === 'sea') return I18N_TEXT[userLang].seaPort;
   if (portType === 'air') return I18N_TEXT[userLang].airport;
   if (portType === 'rail') return I18N_TEXT[userLang].railTerminal;
   return portType;
-};
+}; */
 
 // Helper function to get translated region name
 const getTranslatedRegionName = (region: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
@@ -295,7 +294,7 @@ const getTranslatedRegionName = (region: string, userLang: 'en' | 'fr' | 'zh' | 
 };
 
 // Helper function to get dynamic search placeholder text based on shipping mode
-const getDynamicSearchText = (userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru', mode: string) => {
+/* const getDynamicSearchText = (userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru', mode: string) => {
   const translations = I18N_TEXT[userLang] as any;
   if (mode === 'Sea') {
     return translations.searchPort || 'Search for port...';
@@ -306,10 +305,10 @@ const getDynamicSearchText = (userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' 
   } else {
     return translations.searchPortTerminal || 'Search for port/terminal/airport...';
   }
-};
+}; */
 
 // Helper function to get dynamic selection title text based on shipping mode
-const getDynamicSelectText = (userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru', mode: string) => {
+/* const getDynamicSelectText = (userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru', mode: string) => {
   const translations = I18N_TEXT[userLang] as any;
   if (mode === 'Sea') {
     return translations.selectPort || 'Select pickup port';
@@ -320,13 +319,13 @@ const getDynamicSelectText = (userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' 
   } else {
     return translations.selectPortTerminal || 'Select pickup port/terminal/airport';
   }
-};
+}; */
 
 // Helper function to get simplified generic description
-const getLocationDescription = (userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
+/* const getLocationDescription = (userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
   const translations = I18N_TEXT[userLang] as any;
   return translations.chooseLocationDescription || 'Choose your pickup location';
-};
+}; */
 
 const SEA_PORTS = [
   { code: 'SHA', name: 'Shanghai', region: 'East China', type: 'sea', volume: '47M TEU', flag: '🚢' },
@@ -340,7 +339,6 @@ const SEA_PORTS = [
   { code: 'YTN', name: 'Yantian', region: 'South China', type: 'sea', volume: '14M TEU', flag: '🚢' },
   { code: 'LYG', name: 'Lianyungang', region: 'East China', type: 'sea', volume: '8M TEU', flag: '🚢' }
 ].sort((a, b) => a.name.localeCompare(b.name));
-
 const AIRPORTS = [
   { code: 'PEK', name: 'Beijing Capital', region: 'North China', type: 'air', volume: '2M tons', flag: '✈️' },
   { code: 'PVG', name: 'Shanghai Pudong', region: 'East China', type: 'air', volume: '3.6M tons', flag: '✈️' },
@@ -1189,7 +1187,7 @@ const getTransitTimes = (countryCode: string, mode: string): { min: number; max:
 };
 
 // Function to generate dynamic shipping mode descriptions with country-specific transit times
-const getDynamicModeDescription = (mode: string, countryCode: string, userLang: string): string => {
+/* const getDynamicModeDescription = (mode: string, countryCode: string, userLang: string): string => {
   const times = getTransitTimes(countryCode, mode);
   
   // If no rail service (999 days indicates not available)
@@ -1251,7 +1249,7 @@ const getDynamicModeDescription = (mode: string, countryCode: string, userLang: 
   const modeWord = modeLang[modeKey] || modeLang.sea;
   
   return `${modeWord}, ${timeString}`;
-};
+}; */
 
 // CustomDropdown component moved to shared/components/CustomDropdown.tsx
 // Legacy CustomDropdown implementation removed (unused)
@@ -4986,7 +4984,7 @@ const I18N_TEXT: any = {
     express: 'إكسبريس',
     expressDesc: 'الأسرع، 3-5 أيام',
     unsureShipping: 'لست متأكداً بعد',
-    unsureShippingDesc: 'دع الخبراء يساعدون',
+    unsureShippingDesc: 'دع الخبراء يساعدونك',
     unsureShippingBenefits: 'إرشاد مهني',
     unsureShippingFeedback: 'خيار ممتاز! سنوصي بأفضل خيار شحن لاحتياجاتك المحددة',
     beginnerSectionTitle: 'للمبتدئين',
@@ -6521,8 +6519,6 @@ const I18N_TEXT: any = {
 const getText = (key: string, lang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
   return (I18N_TEXT[lang] as any)[key] || (I18N_TEXT.en as any)[key] || key;
 };
-
-
 // Experience options with improved translations
 const EXPERIENCE_OPTIONS = [
   { 
@@ -6610,41 +6606,48 @@ const QuoteForm: React.FC = () => {
     nextStep,
     prevStep,
     activeLoadIndex,
-    setActiveLoadIndex
+    setActiveLoadIndex,
+    destPortSearch: destPortSearchCtx,
+    setPhonePrefixSearch,
+    setDestPortSearch: setDestPortSearchCtx,
+    setIsDestPortListVisible,
+    getTranslatedPortNameLocal,
+    handleCountrySelect
   } = useQuoteForm();
+  // Legacy local UI states kept temporarily for compatibility with remaining inline logic.
   const [countrySearch, setCountrySearch] = useState('');
   const [debouncedCountrySearch, setDebouncedCountrySearch] = useState(''); // debounced value
   const [portSearch, setPortSearch] = useState('');
-  const [destPortSearch, setDestPortSearch] = useState(''); // For destination port search
-  const [phonePrefixSearch, setPhonePrefixSearch] = useState(''); // New state for phone prefix search term
-  const [selectedLocationType, setSelectedLocationType] = useState('');
+  const destPortSearch = destPortSearchCtx;
+  // const [phonePrefixSearch, setPhonePrefixSearch] = useState('');
+  // const [selectedLocationType, setSelectedLocationType] = useState('');
   const [isCountryListVisible, setIsCountryListVisible] = useState(false);
   const [isPortListVisible, setIsPortListVisible] = useState(false);
-  const [isDestPortListVisible, setIsDestPortListVisible] = useState(false); // For destination port list
-  const [isPhonePrefixListVisible, setIsPhonePrefixListVisible] = useState(false); // New state for phone prefix list
+  // const [isDestPortListVisible, setIsDestPortListVisible] = useState(false);
+  // const [isPhonePrefixListVisible, setIsPhonePrefixListVisible] = useState(false);
   
   // Step 5 custom dropdown states moved into StepGoodsDetails
   
   // Step 6 custom dropdown states
-  const [experienceSearch, setExperienceSearch] = useState('');
-  const [isExperienceListVisible, setIsExperienceListVisible] = useState(false);
+  // const [experienceSearch, setExperienceSearch] = useState('');
+  // const [isExperienceListVisible, setIsExperienceListVisible] = useState(false);
   // Step 4 simple/advanced toggle
   // removed: advanced cargo UI now handled in StepFreight
 
   // Customer type state
-  const [customerType, setCustomerType] = useState<'individual' | 'company' | ''>('');
+  // const [customerType, setCustomerType] = useState<'individual' | 'company' | ''>('');
   
   const countryListRef = useRef<HTMLDivElement>(null);
   const portListRef = useRef<HTMLDivElement>(null);
   const destPortListRef = useRef<HTMLDivElement>(null); // For destination port list
-  const phonePrefixListRef = useRef<HTMLDivElement>(null); // New ref for phone prefix list
+  // const phonePrefixListRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const portSearchInputRef = useRef<HTMLInputElement>(null);
-  const phonePrefixSearchInputRef = useRef<HTMLInputElement>(null); // New ref for phone prefix search input
+  // const phonePrefixSearchInputRef = useRef<HTMLInputElement>(null);
   
   // Refs for custom dropdowns
   // Step 5 refs moved into StepGoodsDetails
-  const experienceListRef = useRef<HTMLDivElement>(null);
+  // const experienceListRef = useRef<HTMLDivElement>(null);
   
   interface LoadDetails {
     shippingType: 'loose' | 'container' | 'unsure' | '';
@@ -6762,21 +6765,12 @@ const QuoteForm: React.FC = () => {
         setIsDestPortListVisible(false);
       }
 
-      if (
-        phonePrefixListRef.current &&
-        !phonePrefixListRef.current.contains(event.target as Node) &&
-        phonePrefixSearchInputRef.current &&
-        !phonePrefixSearchInputRef.current.contains(event.target as Node)
-      ) {
-        setIsPhonePrefixListVisible(false);
-      }
+      // Phone prefix dropdown now handled inside StepContact
 
       // Step 5 custom dropdowns moved inside StepGoodsDetails
       
       // Step 6 custom dropdowns
-      if (experienceListRef.current && !experienceListRef.current.contains(event.target as Node)) {
-        setIsExperienceListVisible(false);
-      }
+      // Experience dropdown handled in StepContact
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -6827,16 +6821,11 @@ const QuoteForm: React.FC = () => {
       adjustDropdownPosition(portListRef.current, portSearchInputRef.current);
     }
     
-    if (isPhonePrefixListVisible && phonePrefixListRef.current && phonePrefixSearchInputRef.current) {
-      adjustDropdownPosition(phonePrefixListRef.current, phonePrefixSearchInputRef.current);
-    }
+    // Phone prefix dropdown handled inside StepContact
 
     // Step 5 dropdown positioning handled within StepGoodsDetails
 
-    if (isExperienceListVisible && experienceListRef.current) {
-      const experienceInput = experienceListRef.current.previousElementSibling as HTMLElement;
-      adjustDropdownPosition(experienceListRef.current, experienceInput);
-    }
+    // Experience dropdown handled in StepContact
 
     // Re-adjust on scroll or resize
     const handleResize = () => {
@@ -6846,14 +6835,9 @@ const QuoteForm: React.FC = () => {
       if (isPortListVisible && portListRef.current && portSearchInputRef.current) {
         adjustDropdownPosition(portListRef.current, portSearchInputRef.current);
       }
-      if (isPhonePrefixListVisible && phonePrefixListRef.current && phonePrefixSearchInputRef.current) {
-        adjustDropdownPosition(phonePrefixListRef.current, phonePrefixSearchInputRef.current);
-      }
+      // Phone prefix dropdown handled inside StepContact
       // Step 5 dropdown positioning handled within StepGoodsDetails
-      if (isExperienceListVisible && experienceListRef.current) {
-        const experienceInput = experienceListRef.current.previousElementSibling as HTMLElement;
-        adjustDropdownPosition(experienceListRef.current, experienceInput);
-      }
+      // Experience dropdown handled in StepContact
     };
 
     window.addEventListener('resize', handleResize);
@@ -6863,7 +6847,7 @@ const QuoteForm: React.FC = () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleResize);
     };
-  }, [isCountryListVisible, isPortListVisible, isPhonePrefixListVisible, isExperienceListVisible]);
+  }, [isCountryListVisible, isPortListVisible]);
 
   const isLoadDataValid = (load: LoadDetails, loadIndex: number): boolean => {
     const loadNumber = loadIndex + 1;
@@ -6986,7 +6970,7 @@ const QuoteForm: React.FC = () => {
     return currentLoadFromStates;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  /* const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     // Sanitize zip code fields to allow only digits
     let sanitizedValue = value;
@@ -7003,7 +6987,7 @@ const QuoteForm: React.FC = () => {
       [name]: sanitizedValue
     });
     validateField(name, sanitizedValue);
-  };
+  }; */
 
   const validateField = (name: string, value: string): boolean => {
     let isValid = true;
@@ -7240,8 +7224,7 @@ const QuoteForm: React.FC = () => {
       const target = event.target as HTMLElement;
       const isInTextarea = target.tagName === 'TEXTAREA';
       const isInInput = target.tagName === 'INPUT';
-      const anyDropdownOpen = isCountryListVisible || isPortListVisible || isPhonePrefixListVisible || 
-                             isExperienceListVisible;
+  const anyDropdownOpen = isCountryListVisible || isPortListVisible; // experience dropdown handled in StepContact
       
       // Don't trigger if any dropdown is open or if user is typing in textarea
       if (anyDropdownOpen || isInTextarea) return;
@@ -7271,7 +7254,7 @@ const QuoteForm: React.FC = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, nextStep, isCountryListVisible, isPortListVisible, isPhonePrefixListVisible, isExperienceListVisible]);
+  }, [currentStep, nextStep, isCountryListVisible, isPortListVisible]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -7417,7 +7400,7 @@ const QuoteForm: React.FC = () => {
     }
   };
 
-  const handleModeSelect = (mode: string) => {
+  /* const handleModeSelect = (mode: string) => {
     setFormData({
       ...formData,
       mode
@@ -7426,9 +7409,9 @@ const QuoteForm: React.FC = () => {
       ...fieldValid,
       mode: true
     });
-  };
+  }; */
 
-  const handleCountrySelect = (countryCode: string) => {
+  /* const handleCountrySelect = (countryCode: string) => {
     const selectedCountryData = COUNTRIES.find(c => c.code === countryCode);
 
     if (selectedCountryData) {
@@ -7495,10 +7478,10 @@ const QuoteForm: React.FC = () => {
       const usageObj: Record<string, number> = usageRaw ? JSON.parse(usageRaw) : {};
       usageObj[countryCode] = (usageObj[countryCode] || 0) + 1;
       localStorage.setItem(key, JSON.stringify(usageObj));
-    } catch (err) { /* ignore quota errors */ }
-  };
+    } catch (err) { }
+  }; */
 
-  const handlePhonePrefixSelect = (prefix: string) => {
+  /* const handlePhonePrefixSelect = (prefix: string) => {
     const country = COUNTRIES.find(c => c.phonePrefix === prefix);
     setFormData({
       ...formData,
@@ -7507,10 +7490,9 @@ const QuoteForm: React.FC = () => {
     // Optionally update validation state for phoneCountryCode if needed
     // setFieldValid({ ...fieldValid, phoneCountryCode: true }); 
     setPhonePrefixSearch(country ? `${country.flag} ${prefix}` : prefix);
-    setIsPhonePrefixListVisible(false);
-  };
-
-  const handlePortSelect = (portCode: string) => {
+    // setIsPhonePrefixListVisible(false);
+  }; */
+  /* const handlePortSelect = (portCode: string) => {
     if (portCode === 'DONT_KNOW') {
       // Handle "I don't know" option
       setFormData({
@@ -7537,9 +7519,9 @@ const QuoteForm: React.FC = () => {
       setPortSearch(port ? `${port.flag} ${getTranslatedPortNameLocal(port, userLang)}` : '');
       setIsPortListVisible(false);
     }
-  };
+  }; */
 
-  const handleDestPortSelect = (portCode: string) => {
+  /* const handleDestPortSelect = (portCode: string) => {
     const countryPorts = DESTINATION_PORTS_BY_COUNTRY[formData.country] || [];
     const port = countryPorts.find(p => p.code === portCode);
     setFormData({
@@ -7550,9 +7532,9 @@ const QuoteForm: React.FC = () => {
       ...fieldValid,
       destPort: true
     });
-          setDestPortSearch(port ? `${port.flag} ${getTranslatedPortNameLocal(port, userLang)}` : '');
+          setDestPortSearchCtx(port ? `${port.flag} ${getTranslatedPortNameLocal(port, userLang)}` : '');
     setIsDestPortListVisible(false);
-  };
+  }; */
 
   // Step 5 dropdown options are defined within StepGoodsDetails
 
@@ -7560,7 +7542,7 @@ const QuoteForm: React.FC = () => {
 
   // Step 5 handlers and helpers moved into StepGoodsDetails
 
-  const handleExperienceSelect = (experienceCode: string) => {
+  /* const handleExperienceSelect = (experienceCode: string) => {
     const experience = EXPERIENCE_OPTIONS.find(e => e.code === experienceCode);
     setFormData({
       ...formData,
@@ -7585,12 +7567,12 @@ const QuoteForm: React.FC = () => {
     }
     
     setExperienceSearch(experience ? `${experience.icon}  ${translatedName}` : experienceCode);
-    setIsExperienceListVisible(false);
+  // setIsExperienceListVisible(false);
     setFieldValid(prev => ({ ...prev, shipperType: true }));
-  };
+  }; */
 
   // Helper to clear the currently selected destination country (UX improvement)
-  const clearCountrySelection = () => {
+  /* const clearCountrySelection = () => {
     // Reset the destination country related fields
     setFormData(prev => ({
       ...prev,
@@ -7601,11 +7583,11 @@ const QuoteForm: React.FC = () => {
       destPort: '' // Reset destination port
     }));
     setCountrySearch('');
-    setDestPortSearch(''); // Reset destination port search
-  };
+    setDestPortSearchCtx(''); // Reset destination port search
+  }; */
 
   // Helper to clear the currently selected port (UX improvement)
-  const clearPortSelection = () => {
+  /* const clearPortSelection = () => {
     // Reset the origin port related fields
     setFormData(prev => ({
       ...prev,
@@ -7613,19 +7595,18 @@ const QuoteForm: React.FC = () => {
     }));
     setPortSearch('');
     setFieldValid(prev => ({ ...prev, origin: null }));
-  };
+  }; */
 
-  const handleLocationTypeSelect = (type: string) => {
-    setSelectedLocationType(type);
+  /* const handleLocationTypeSelect = (type: string) => {
     setFormData({
       ...formData,
       locationType: type,
       origin: '' // Reset origin when changing location type
     });
     setFieldValid(prev => ({ ...prev, locationType: true }));
-  };
+  }; */
 
-  const handleDestLocationTypeSelect = (type: string) => {
+  /* const handleDestLocationTypeSelect = (type: string) => {
     setFormData({
       ...formData,
       destLocationType: type,
@@ -7640,7 +7621,7 @@ const QuoteForm: React.FC = () => {
       destZipCode: null, // Reset validation state
       destPort: null // Reset validation state
     }));
-  };
+  }; */
 
   // handleAddLoad removed (unused)
 
@@ -7658,12 +7639,12 @@ const QuoteForm: React.FC = () => {
 
 
   // Function for destination location types (Step 1) - includes all types with special handling for ports
-  const getDestinationLocationTypes = () => {
+  /* const getDestinationLocationTypes = () => {
     return LOCATION_TYPES.map(type => ({ ...type })); // Use all types including ports
-  };
+  }; */
 
   // Function for pickup location types (Step 3) - uses dynamic icons based on selected shipping mode
-  const getPickupLocationTypes = () => {
+  /* const getPickupLocationTypes = () => {
     const baseTypes = LOCATION_TYPES.map(type => ({ ...type })); // Deep copy for modification
     const portIndex = baseTypes.findIndex(t => t.id === 'port');
 
@@ -7682,7 +7663,7 @@ const QuoteForm: React.FC = () => {
       // it will use the name 'Port/Airport' and icon from the updated LOCATION_TYPES (Ship icon).
     }
     return baseTypes;
-  };
+  }; */
 
 
 
@@ -7739,7 +7720,7 @@ const QuoteForm: React.FC = () => {
     return [...priorityCountries, ...otherCountries];
   })();
 
-  const getFilteredPorts = () => {
+  /* const getFilteredPorts = () => {
     let ports;
     if (formData.mode === 'Sea') {
       ports = SEA_PORTS;
@@ -7776,9 +7757,9 @@ const QuoteForm: React.FC = () => {
     }
     
     return filteredPorts;
-  };
+  }; */
 
-  const getFilteredDestinationPorts = () => {
+  /* const getFilteredDestinationPorts = () => {
     // Get ports for the selected country
     const countryPorts = DESTINATION_PORTS_BY_COUNTRY[formData.country] || [];
     
@@ -7798,10 +7779,7 @@ const QuoteForm: React.FC = () => {
       return translatedName.toLowerCase().includes(destPortSearch.toLowerCase()) ||
              port.code.toLowerCase().includes(destPortSearch.toLowerCase());
     });
-  };
-
-
-
+  }; */
 
 
   const handleTestSubmit = () => {
@@ -7842,20 +7820,19 @@ const QuoteForm: React.FC = () => {
       const countryPorts = DESTINATION_PORTS_BY_COUNTRY[nextLead.country] || [];
       const destPort = countryPorts.find(p => p.code === nextLead.destPort);
       if (destPort) {
-        setDestPortSearch(`${destPort.flag} ${getTranslatedPortNameLocal(destPort, userLang)}`);
+        setDestPortSearchCtx(`${destPort.flag} ${getTranslatedPortNameLocal(destPort, userLang)}`);
       } else {
-        setDestPortSearch('');
+        setDestPortSearchCtx('');
       }
     } else {
-      setDestPortSearch('');
+      setDestPortSearchCtx('');
     }
 
-    setSelectedLocationType(nextLead.locationType);
+    // No local selectedLocationType state; UI derives from formData
   };
 
   // Accessibility: highlighted index for keyboard navigation in country list
   const [highlightedCountryIndex, setHighlightedCountryIndex] = useState<number>(-1);
-
   // Reset highlighted index whenever we open/close list or search term changes
   useEffect(() => {
     if (!isCountryListVisible) {
@@ -7973,2488 +7950,60 @@ const QuoteForm: React.FC = () => {
       )}
       
       <form onSubmit={handleSubmit} className="quote-form">
-        <StepDestination />
-        <StepMode />
-        <StepOrigin />
-        {/* Step 6 is rendered inline below with the new progressive UI */}
-        <FormStep isVisible={false} stepNumber={1} title={I18N_TEXT[userLang].step1Title} emoji="🌍">
-          {/* Country Selection with Progressive Disclosure */}
-          <div className="step-1-container">
-            
-            {/* Phase 1: Country Search */}
-            <div className="country-selection-phase">
-              <div className="phase-header">
-                <h3 className="phase-header-title">
-                  <span className={`step-indicator ${formData.country ? 'completed' : ''}`}>1</span>
-                  {I18N_TEXT[userLang].selectDestinationCountry}
-                </h3>
-                <p className="phase-header-subtitle">
-                  {I18N_TEXT[userLang].searchCountryDescription}
-                </p>
-              </div>
+  <StepDestination />
+  <StepMode />
+  <StepOrigin />
+  <StepFreight />
+  <StepGoodsDetails />
+  <StepContact />
 
-              <div className="form-control country-select">
-                <div className="search-input-wrapper relative">
-                  <Search className="search-icon" size={18} />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    placeholder={I18N_TEXT[userLang].searchCountry}
-                    value={countrySearch}
-                    onChange={(e) => {
-                      setCountrySearch(e.target.value);
-                      setIsCountryListVisible(true);
-                    }}
-                    onFocus={() => setIsCountryListVisible(true)}
-                    onKeyDown={handleCountrySearchKeyDown}
-                    role="combobox"
-                    aria-expanded={isCountryListVisible}
-                    aria-controls="country-listbox"
-                    aria-activedescendant={highlightedCountryIndex >= 0 && filteredCountries[highlightedCountryIndex] ? `country-option-${filteredCountries[highlightedCountryIndex].code}` : undefined}
-                    className="input glassmorphism search-input"
-                  />
-                  {formData.country && (
-                    <XCircle
-                      size={18}
-                      className="clear-search-icon clear-button"
-                      onClick={clearCountrySelection}
-                      aria-label={I18N_TEXT[userLang].clearCountry}
-                    />
-                  )}
-                </div>
-                <div 
-                  ref={countryListRef}
-                  id="country-listbox"
-                  role="listbox"
-                  aria-expanded={isCountryListVisible}
-                  className={`country-list ${isCountryListVisible ? 'show' : ''}`}
-                >
-                  {filteredCountries.length > 0 ? (
-                    (() => {
-                      const priorityCountryCodes = PRIORITY_COUNTRIES_BY_LANG[userLang] || [];
-                      const priorityCountries = filteredCountries.filter(country => 
-                        priorityCountryCodes.includes(country.code)
-                      );
-                      const otherCountries = filteredCountries.filter(country => 
-                        !priorityCountryCodes.includes(country.code)
-                      );
-                      
-                      return (
-                        <>
-                          {/* Show priority countries section only if no search term and there are priority countries */}
-                          {!sanitizedCountrySearch && priorityCountries.length > 0 && (
-                            <>
-                              <div className="country-section-header" style={{
-                                padding: '0.5rem 0.75rem',
-                                backgroundColor: '#f8fafc',
-                                borderBottom: '1px solid #e5e7eb',
-                                fontSize: '0.8rem',
-                                fontWeight: '600',
-                                color: '#6b7280',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.05em',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem'
-                              }}>
-                                <span style={{ color: '#10b981' }}>⭐</span>
-                                {I18N_TEXT[userLang].popular}
-                              </div>
-                              {priorityCountries.map((country, index) => (
-                                <div
-                                  id={`country-option-${country.code}`}
-                                  role="option"
-                                  aria-selected={highlightedCountryIndex === index}
-                                  key={country.code}
-                                  className={`country-option ${formData.country === country.code ? 'selected' : ''} ${highlightedCountryIndex === index ? 'highlighted' : ''}`}
-                                  onClick={() => handleCountrySelect(country.code)}
-                                >
-                                  <span className="country-flag">{country.flag}</span>
-                                <span className="country-name">{getTranslatedCountryName(country.code, userLang)}</span>
-                                  <span className="country-code">{country.code}</span>
-                                </div>
-                              ))}
-                              {otherCountries.length > 0 && (
-                                                                 <div className="country-section-header section-header">
-                                   {I18N_TEXT[userLang].otherCountries}
-                                 </div>
-                              )}
-                            </>
-                          )}
-                          
-                          {/* Show all other countries or all countries if searching */}
-                          {(sanitizedCountrySearch ? filteredCountries : otherCountries).map((country, index) => {
-                            const adjustedIndex = !sanitizedCountrySearch ? index + priorityCountries.length : index;
-                            return (
-                              <div
-                                id={`country-option-${country.code}`}
-                                role="option"
-                                aria-selected={highlightedCountryIndex === adjustedIndex}
-                                key={country.code}
-                                className={`country-option ${formData.country === country.code ? 'selected' : ''} ${highlightedCountryIndex === adjustedIndex ? 'highlighted' : ''}`}
-                                onClick={() => handleCountrySelect(country.code)}
-                              >
-                                <span className="country-flag">{country.flag}</span>
-                                <span className="country-name">{getTranslatedCountryName(country.code, userLang)}</span>
-                                <span className="country-code">{country.code}</span>
-                              </div>
-                            );
-                          })}
-                        </>
-                      );
-                    })()
-                  ) : (
-                    countrySearch.trim() && (
-                      <div className="no-results">
-                        {I18N_TEXT[userLang].noCountryResults}
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Phase 2: Location Type Selection (revealed after country selection) */}
-            {formData.country && (
-              <div 
-                className="location-type-phase"
-                style={{
-                  marginTop: '2rem',
-                  opacity: formData.country ? 1 : 0,
-                  transform: formData.country ? 'translateY(0)' : 'translateY(20px)',
-                  transition: 'all 0.4s ease',
-                  borderTop: '1px solid #e5e7eb',
-                  paddingTop: '2rem'
-                }}
-              >
-                <div className="phase-header">
-                  <h3 className="phase-header-title">
-                    <span className={`step-indicator ${formData.destLocationType ? 'completed' : ''}`}>2</span>
-                    {I18N_TEXT[userLang].addressTypeQuestion}
-                  </h3>
-                  
-                  {/* Help hint */}
-                  <div className="phase-header-subtitle flex-center flex-gap-sm">
-                    <Info size={14} className="info-icon" />
-                    <span>{(I18N_TEXT[userLang] as any).helpChooseLocation || 'Not sure? Most beginners choose Business/Office'}</span>
-                  </div>
-                </div>
-
-                <div className="location-types">
-                  {getDestinationLocationTypes().map(type => (
-                    <div
-                      key={type.id}
-                      className={`location-type-option ${formData.destLocationType === type.id ? 'selected' : ''}`}
-                      onClick={() => handleDestLocationTypeSelect(type.id)}
-                      data-id={type.id}
-                    >
-                      <type.icon size={24} />
-                      <span>{getLocationTypeName(type.id, userLang)}</span>
-                      <p className="location-desc">{getLocationTypeDescription(type.id, userLang)}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Phase 3: Address Details (revealed after location type selection) */}
-            {formData.destLocationType && (
-              <div 
-                className="address-details-phase"
-                style={{
-                  marginTop: '2rem',
-                  opacity: formData.destLocationType ? 1 : 0,
-                  transform: formData.destLocationType ? 'translateY(0)' : 'translateY(20px)',
-                  transition: 'all 0.4s ease 0.2s',
-                  borderTop: '1px solid #e5e7eb',
-                  paddingTop: '2rem'
-                }}
-              >
-                <div className="phase-header">
-                  <h3 className="phase-header-title">
-                    <span className={`step-indicator ${(
-                      formData.destLocationType === 'port' 
-                        ? !!formData.destPort 
-                        : !!(formData.destCity && formData.destZipCode)
-                    ) ? 'completed' : ''}`}>3</span>
-                    {formData.destLocationType === 'port' 
-                      ? (I18N_TEXT[userLang].selectDestinationPort || 'Select destination port')
-                      : I18N_TEXT[userLang].enterDestinationDetails
-                    }
-                  </h3>
-                  <p className="phase-header-subtitle">
-                    {formData.destLocationType === 'port' 
-                      ? (I18N_TEXT[userLang].selectDestinationPortDescription || 'Choose the specific port or airport for delivery')
-                      : I18N_TEXT[userLang].cityPostalDescription
-                    }
-                  </p>
-                </div>
-
-                {formData.destLocationType === 'port' ? (
-                  // Port selection interface
-                  <div className="form-control port-select">
-                    <div className="search-input-wrapper" style={{ position: 'relative' }}>
-                      <MapPin className="search-icon" size={18} />
-                      <input
-                        type="text"
-                        placeholder={`${formData.country ? getSearchPortsText(formData.country, userLang) + ' ' + getTranslatedCountryName(formData.country, userLang) : I18N_TEXT[userLang].searchDestinationPorts}...`}
-                        value={destPortSearch}
-                        onChange={(e) => {
-                          setDestPortSearch(e.target.value);
-                          setIsDestPortListVisible(true);
-                        }}
-                        onFocus={() => setIsDestPortListVisible(true)}
-                        className="input glassmorphism search-input"
-                        style={{
-                          transition: 'all 0.3s ease',
-                          transform: formData.destPort ? 'scale(1.02)' : 'scale(1)'
-                        }}
-                      />
-                      {formData.destPort && (
-                        <XCircle
-                          size={18}
-                          className="clear-search-icon"
-                          style={{ cursor: 'pointer', position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}
-                          onClick={() => {
-                            setFormData(prev => ({ ...prev, destPort: '' }));
-                            setDestPortSearch('');
-                            setFieldValid(prev => ({ ...prev, destPort: null }));
-                          }}
-                          aria-label="Clear selected port"
-                        />
-                      )}
-                    </div>
-                    <div 
-                      ref={destPortListRef}
-                      className={`port-list ${isDestPortListVisible ? 'show' : ''}`}
-                    >
-                      {getFilteredDestinationPorts().length > 0 ? (
-                        getFilteredDestinationPorts().map(port => (
-                          <div
-                            key={port.code}
-                            className={`port-option ${formData.destPort === port.code ? 'selected' : ''}`}
-                            onClick={() => handleDestPortSelect(port.code)}
-                          >
-                            <span className="port-icon">{port.flag}</span>
-                            <div className="port-info">
-                                                          <span className="port-name">{getTranslatedPortNameLocal(port, userLang)}</span>
-                            <span className="port-region">{getTranslatedPortType(port.type, userLang)}</span>
-                            {port.volume && <span className="port-volume">{I18N_TEXT[userLang].annualVolume} : {port.volume}</span>}
-                            </div>
-                            <span className="port-code">{port.code}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="no-results">
-                          {formData.country 
-                            ? `No ports found for ${getTranslatedCountryName(formData.country, userLang)}`
-                            : 'Please select a country first'
-                          }
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  // Standard city + zip code interface
-                <div className="address-form">
-                  <div className="address-details" style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                    gap: '1rem'
-                  }}>
-                    <div className="form-control">
-                      <input
-                        type="text"
-                        name="destCity"
-                        placeholder={I18N_TEXT[userLang].destinationCity}
-                        value={formData.destCity}
-                        onChange={handleInputChange}
-                        className={`input glassmorphism ${fieldValid.destCity === false ? 'input-error' : ''}`}
-                        style={{
-                          transition: 'all 0.3s ease',
-                          transform: formData.destCity ? 'scale(1.02)' : 'scale(1)'
-                        }}
-                      />
-                      {fieldValid.destCity === true && <CheckCircle className="check-icon" />}
-                    </div>
-                    <div className="form-control">
-                      <input
-                        type="text"
-                        name="destZipCode"
-                        placeholder={I18N_TEXT[userLang].destinationZipCode}
-                        value={formData.destZipCode}
-                        onChange={handleInputChange}
-                        className={`input glassmorphism ${fieldValid.destZipCode === false ? 'input-error' : ''}`}
-                        style={{
-                          transition: 'all 0.3s ease',
-                          transform: formData.destZipCode ? 'scale(1.02)' : 'scale(1)'
-                        }}
-                      />
-                      {fieldValid.destZipCode === true && <CheckCircle className="check-icon" />}
-                    </div>
-                  </div>
-                </div>
-                )}
-              </div>
-            )}
-          </div>
-        </FormStep>
-
-        <FormStep isVisible={false} stepNumber={2} title={I18N_TEXT[userLang].step2Title} emoji="🚢">
-          {/* Step 2 Container with Progressive Disclosure */}
-          <div className="step-2-container">
-            
-            {/* Phase 1: Understanding Shipping Options */}
-            <div className="shipping-options-guidance-phase">
-              <div className="phase-header">
-                 <h3 className="phase-header-title">
-                   {I18N_TEXT[userLang].chooseShippingMethod}
-                 </h3>
-                 <p className="phase-header-subtitle">
-                   {I18N_TEXT[userLang].shippingMethodDescription} 
-                   {RAIL_FREIGHT_COUNTRIES.includes(formData.country) && (
-                     <span className="success-text">
-                       {' '}{I18N_TEXT[userLang].railAvailableForDestination}
-                     </span>
-                   )}
-                </p>
-              </div>
-            </div>
-
-                        {/* Phase 2: Mode Selection */}
-            <div className="mode-selection-phase">
-              
-              {/* Traditional shipping options first */}
-              <div className={`shipping-modes stagger-children ${RAIL_FREIGHT_COUNTRIES.includes(formData.country) ? 'four-options' : 'three-options'}`}>
-                <div 
-                  className={`mode-option ${formData.mode === 'Sea' ? 'selected' : ''}`}
-                  onClick={() => handleModeSelect('Sea')}
-                  data-mode="Sea"
-                >
-                  <Ship size={24} />
-                  <span>{I18N_TEXT[userLang].seaFreight}</span>
-                  <p className="mode-desc">{formData.country ? getDynamicModeDescription('sea', formData.country, userLang) : I18N_TEXT[userLang].seaFreightDesc}</p>
-                  <div className="mode-additional-info">
-                    {I18N_TEXT[userLang].seaFreightBenefits}
-                  </div>
-                </div>
-                
-                {/* Rail Freight option appears only if selected destination country supports it */}
-                {RAIL_FREIGHT_COUNTRIES.includes(formData.country) && (
-                  <div 
-                    className={`mode-option ${formData.mode === 'Rail' ? 'selected' : ''}`}
-                    onClick={() => handleModeSelect('Rail')}
-                    data-mode="Rail"
-                  >
-                    <TrainFront size={24} />
-                    <span>{I18N_TEXT[userLang].railFreight}</span>
-                    <p className="mode-desc">{formData.country ? getDynamicModeDescription('rail', formData.country, userLang) : I18N_TEXT[userLang].railFreightDesc}</p>
-                    <div className="mode-additional-info">
-                      {I18N_TEXT[userLang].railFreightBenefits}
-                    </div>
-                  </div>
-                )}
-                
-                <div 
-                  className={`mode-option ${formData.mode === 'Air' ? 'selected' : ''}`}
-                  onClick={() => handleModeSelect('Air')}
-                  data-mode="Air"
-                >
-                  <Plane size={24} />
-                  <span>{I18N_TEXT[userLang].airFreight}</span>
-                  <p className="mode-desc">{formData.country ? getDynamicModeDescription('air', formData.country, userLang) : I18N_TEXT[userLang].airFreightDesc}</p>
-                  <div className="mode-additional-info">
-                    {I18N_TEXT[userLang].airFreightBenefits}
-                  </div>
-                </div>
-                
-                <div 
-                  className={`mode-option ${formData.mode === 'Express' ? 'selected' : ''}`}
-                  onClick={() => handleModeSelect('Express')}
-                  data-mode="Express"
-                >
-                  <Truck size={24} />
-                  <span>{I18N_TEXT[userLang].express}</span>
-                  <p className="mode-desc">{formData.country ? getDynamicModeDescription('express', formData.country, userLang) : I18N_TEXT[userLang].expressDesc}</p>
-                  <div className="mode-additional-info">
-                    {I18N_TEXT[userLang].expressBenefits}
-                  </div>
-                </div>
-              </div>
-
-              {/* Separator */}
-              <div className="options-separator-bottom">
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  margin: '1.5rem 0 1rem 0',
-                  gap: '1rem'
-                }}>
-                  <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent, #e5e7eb, transparent)' }}></div>
-                  <span style={{ 
-                    fontSize: '0.8rem', 
-                    color: '#9ca3af', 
-                    fontWeight: '400',
-                    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                    padding: '0.4rem 0.8rem',
-                    borderRadius: '16px',
-                    border: '1px solid #e5e7eb'
-                  }}>
-                                         {(I18N_TEXT[userLang] as any).unsureAboutChoice || 'Unsure about your choice?'}
-                  </span>
-                  <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent, #e5e7eb, transparent)' }}></div>
-                </div>
-              </div>
-
-              {/* Beginner-friendly option at the bottom */}
-              <div className="beginner-option-section-bottom">
-                <div 
-                  className={`mode-option ${formData.mode === 'Unsure' ? 'selected' : ''}`}
-                  onClick={() => handleModeSelect('Unsure')}
-                  data-mode="Unsure"
-                  style={{
-                    transition: 'all 0.3s ease',
-                    transform: formData.mode === 'Unsure' ? 'scale(1.05)' : 'scale(1)',
-                    background: formData.mode === 'Unsure' 
-                      ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(255, 255, 255, 0.95))' 
-                      : 'linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(255, 255, 255, 0.9))',
-                    borderColor: formData.mode === 'Unsure' ? '#3b82f6' : 'rgba(59, 130, 246, 0.2)',
-                    opacity: formData.mode === 'Unsure' ? 1 : 0.85
-                  }}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9.09 9C9.3251 8.33167 9.78915 7.76811 10.4 7.40913C11.0108 7.05016 11.7289 6.91894 12.4272 7.03871C13.1255 7.15849 13.7588 7.52152 14.2151 8.06353C14.6713 8.60553 14.9211 9.29152 14.92 10C14.92 12 11.92 13 11.92 13M12 17H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                                      <span>{(I18N_TEXT[userLang] as any).unsureShipping || "I'm not sure yet"}</span>
-                    <p className="mode-desc">{(I18N_TEXT[userLang] as any).unsureShippingDesc || 'Let the experts help'}</p>
-                  <div className="mode-additional-info" style={{
-                    fontSize: '0.75rem',
-                    color: '#3b82f6',
-                    marginTop: '0.5rem',
-                    fontWeight: '500'
-                  }}>
-                                          {(I18N_TEXT[userLang] as any).unsureShippingBenefits || 'Professional guidance'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Contextual guidance based on selection */}
-              {formData.mode && (
-                <div 
-                  className="selection-feedback" 
-                  style={{
-                    marginTop: '1.5rem',
-                    padding: '1rem',
-                    background: 'rgba(16, 185, 129, 0.15)',
-                    borderRadius: '12px',
-                    border: '2px solid rgba(16, 185, 129, 0.3)',
-                    display: 'block',
-                    visibility: 'visible',
-                    opacity: '1'
-                  }}
-                >
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.5rem',
-                    visibility: 'visible'
-                  }}>
-                    <CheckCircle size={20} style={{ color: '#10b981', flexShrink: 0 }} />
-                    <span style={{ 
-                      fontSize: '0.9rem', 
-                      color: '#047857', 
-                      fontWeight: '600',
-                      lineHeight: '1.4',
-                      display: 'block'
-                    }}>
-                      {formData.mode === 'Sea' && I18N_TEXT[userLang].seaFeedback}
-                      {formData.mode === 'Rail' && I18N_TEXT[userLang].railFeedback}
-                      {formData.mode === 'Air' && I18N_TEXT[userLang].airFeedback}
-                      {formData.mode === 'Express' && I18N_TEXT[userLang].expressFeedback}
-                      {formData.mode === 'Unsure' && ((I18N_TEXT[userLang] as any).unsureShippingFeedback || "Great choice! We'll recommend the best shipping option for your specific needs")}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </FormStep>
-
-        <FormStep isVisible={false} stepNumber={3} title={I18N_TEXT[userLang].step3Title} emoji="🇨🇳">
-          {/* Step 3 Container with Progressive Disclosure */}
-          <div className="step-3-container">
-            
-            {/* Phase 1: Location Type Selection */}
-            <div className="location-type-selection-phase">
-              <div className="phase-header">
-                <h3 style={{ 
-                  fontSize: '1.1rem', 
-                  fontWeight: '600', 
-                  color: '#1f2937', 
-                  marginBottom: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <span style={{ 
-                    backgroundColor: selectedLocationType ? '#10b981' : '#6b7280',
-                    color: 'white',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.8rem',
-                    fontWeight: '600',
-                    transition: 'background-color 0.3s ease'
-                  }}>1</span>
-                  {I18N_TEXT[userLang].selectPickupLocationType}
-                </h3>
-                <p style={{ 
-                  fontSize: '0.9rem', 
-                  color: '#6b7280', 
-                  margin: '0 0 1.5rem 0' 
-                }}>
-                  {I18N_TEXT[userLang].pickupLocationDescription}
-                </p>
-              </div>
-
-              <div className="location-types">
-                {getPickupLocationTypes().map(type => (
-                  <div
-                    key={type.id}
-                    className={`location-type-option ${selectedLocationType === type.id ? 'selected' : ''}`}
-                    onClick={() => handleLocationTypeSelect(type.id)}
-                    data-id={type.id}
-                    style={{
-                      transition: 'all 0.3s ease',
-                      transform: selectedLocationType === type.id ? 'scale(1.05)' : 'scale(1)'
-                    }}
-                  >
-                    <type.icon size={24} />
-                    <span>{getLocationTypeName(type.id, userLang, formData.mode)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Phase 2: Location Details (revealed after location type selection) */}
-            {selectedLocationType && (
-              <div 
-                className="location-details-phase"
-                style={{
-                  marginTop: '2rem',
-                  opacity: selectedLocationType ? 1 : 0,
-                  transform: selectedLocationType ? 'translateY(0)' : 'translateY(20px)',
-                  transition: 'all 0.4s ease',
-                  borderTop: '1px solid #e5e7eb',
-                  paddingTop: '2rem'
-                }}
-              >
-                <div className="phase-header">
-                  <h3 style={{ 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    color: '#1f2937', 
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{ 
-                      backgroundColor: (selectedLocationType === 'port' ? !!formData.origin : !!(formData.city && formData.zipCode)) ? '#10b981' : '#6b7280',
-                      color: 'white',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      transition: 'background-color 0.3s ease'
-                    }}>2</span>
-                    {selectedLocationType === 'port' ? getDynamicSelectText(userLang, formData.mode) : I18N_TEXT[userLang].enterPickupDetails}
-                  </h3>
-                  <p style={{ 
-                    fontSize: '0.9rem', 
-                    color: '#6b7280', 
-                    margin: '0 0 1.5rem 0' 
-                  }}                  >
-                    {selectedLocationType === 'port' ? getLocationDescription(userLang) : I18N_TEXT[userLang].pickupCityPostalDescription}
-                  </p>
-                </div>
-
-                <div className="location-details">
-                  {selectedLocationType === 'port' ? (
-                    <div className="form-control port-select">
-                      <div className="search-input-wrapper" style={{ position: 'relative' }}>
-                        <MapPin className="search-icon" size={18} />
-                        <input
-                          ref={portSearchInputRef}
-                          type="text"
-                          placeholder={getDynamicSearchText(userLang, formData.mode)}
-                          value={portSearch}
-                          onChange={(e) => {
-                            setPortSearch(e.target.value);
-                            setIsPortListVisible(true);
-                          }}
-                          onFocus={() => setIsPortListVisible(true)}
-                          className="input glassmorphism search-input"
-                          style={{
-                            transition: 'all 0.3s ease',
-                            transform: formData.origin ? 'scale(1.02)' : 'scale(1)'
-                          }}
-                        />
-                        {formData.origin && (
-                          <XCircle
-                            size={18}
-                            className="clear-search-icon"
-                            style={{ cursor: 'pointer', position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}
-                            onClick={clearPortSelection}
-                            aria-label={I18N_TEXT[userLang].clearPort}
-                          />
-                        )}
-                      </div>
-                      <div 
-                        ref={portListRef}
-                        className={`port-list ${isPortListVisible ? 'show' : ''}`}
-                      >
-                        {getFilteredPorts().length > 0 ? (
-                          getFilteredPorts().map(port => (
-                            <div
-                              key={port.code}
-                              className={`port-option ${formData.origin === port.code ? 'selected' : ''}`}
-                              onClick={() => handlePortSelect(port.code)}
-                            >
-                              <span className="port-icon">{port.flag}</span>
-                              <div className="port-info">
-                                <span className="port-name">{getTranslatedPortNameLocal(port, userLang)}</span>
-                                <span className="port-region">{getTranslatedRegionName(port.region, userLang)}</span>
-                                {port.volume && <span className="port-volume">{I18N_TEXT[userLang].annualVolume} : {port.volume}</span>}
-                              </div>
-                              {port.code !== 'DONT_KNOW' && <span className="port-code">{port.code}</span>}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="no-results">
-                            No {formData.mode === 'Sea' ? 'ports' : formData.mode === 'Rail' ? 'rail terminals' : 'airports'} found. Try a different search.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="address-form">
-                      <div className="address-details" style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                        gap: '1rem'
-                      }}>
-                        <div className="form-control">
-                          <input
-                            type="text"
-                            name="city"
-                            placeholder={I18N_TEXT[userLang].pickupCity}
-                            value={formData.city}
-                            onChange={handleInputChange}
-                            className={`input glassmorphism ${fieldValid.city === false ? 'input-error' : ''}`}
-                            style={{
-                              transition: 'all 0.3s ease',
-                              transform: formData.city ? 'scale(1.02)' : 'scale(1)'
-                            }}
-                          />
-                          {fieldValid.city === true && <CheckCircle className="check-icon" />}
-                        </div>
-                        <div className="form-control">
-                          <input
-                            type="text"
-                            name="zipCode"
-                            placeholder={I18N_TEXT[userLang].pickupZipCode}
-                            value={formData.zipCode}
-                            onChange={handleInputChange}
-                            className={`input glassmorphism ${fieldValid.zipCode === false ? 'input-error' : ''}`}
-                            style={{
-                              transition: 'all 0.3s ease',
-                              transform: formData.zipCode ? 'scale(1.02)' : 'scale(1)'
-                            }}
-                          />
-                          {fieldValid.zipCode === true && <CheckCircle className="check-icon" />}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Feedback section for user guidance */}
-                {((selectedLocationType === 'port' && formData.origin) || 
-                  (selectedLocationType !== 'port' && formData.city && formData.zipCode)) && (
-                  <div 
-                    className="selection-feedback" 
-                    style={{
-                      marginTop: '1.5rem',
-                      padding: '1rem',
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      borderRadius: '12px',
-                      border: '2px solid rgba(16, 185, 129, 0.3)',
-                      display: 'block',
-                      visibility: 'visible',
-                      opacity: '1'
-                    }}
-                  >
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem',
-                      visibility: 'visible'
-                    }}>
-                      <CheckCircle size={20} style={{ color: '#10b981', flexShrink: 0 }} />
-                      <span style={{ 
-                        fontSize: '0.9rem', 
-                        color: '#047857', 
-                        fontWeight: '600',
-                        lineHeight: '1.4',
-                        display: 'block'
-                      }}>
-                                                  {selectedLocationType === 'port' 
-                            ? formData.origin === 'DONT_KNOW' 
-                              ? I18N_TEXT[userLang].dontKnowPortFeedback
-                              : `${I18N_TEXT[userLang].perfectPortFeedback} ${(() => {
-                                  const selectedPort = [...SEA_PORTS, ...AIRPORTS, ...RAIL_TERMINALS].find(p => p.code === formData.origin);
-                                  return selectedPort ? getTranslatedPortNameLocal(selectedPort, userLang) : 'the selected location';
-                                })()} `
-                            : I18N_TEXT[userLang].cityPickupFeedback.replace('{city}', formData.city || '')
-                          }
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </FormStep>
-
-
-
-        {/* Step 4: Freight Details */}
-        <StepFreight />
-
-        <StepGoodsDetails />
-        <StepContact />
-
-        {/* Removed legacy inline Step 6 block; using StepContact component instead */}
-        {false && (
-        <FormStep isVisible={currentStep === 6} stepNumber={6} title={(I18N_TEXT[userLang] as any).step6Title || 'Contact details'} emoji="📱">
-          {/* Step 6 Container with Progressive Disclosure */}
-          <div className="step-6-container">
-            
-            {/* Phase 0: Customer Type Selection */}
-            <div className="customer-type-phase">
-              <div className="phase-header">
-                <h3 style={{ 
-                  fontSize: '1.1rem', 
-                  fontWeight: '600', 
-                  color: '#1f2937', 
-                  marginBottom: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
-                  <span style={{ 
-                    backgroundColor: customerType ? '#10b981' : '#6b7280',
-                    color: 'white',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.8rem',
-                    fontWeight: '600',
-                    transition: 'background-color 0.3s ease'
-                  }}>1</span>
-                  {getText('customerTypeQuestion', userLang)}
-                </h3>
-                <p style={{ 
-                  fontSize: '0.9rem', 
-                  color: '#6b7280', 
-                  margin: '0 0 1.5rem 0' 
-                }}>
-                  {getText('customerTypeDescription', userLang)}
-                </p>
-              </div>
-
-              <div className="customer-type-selection" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                gap: '1rem',
-                marginBottom: '2rem'
-              }}>
-                <div 
-                  className={`customer-type-option ${customerType === 'individual' ? 'selected' : ''}`}
-                  onClick={() => setCustomerType('individual')}
-                  style={{
-                    padding: '1.5rem',
-                    border: customerType === 'individual' ? '2px solid #10b981' : '2px solid #e5e7eb',
-                    borderRadius: '0.75rem',
-                    backgroundColor: customerType === 'individual' ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255, 255, 255, 0.9)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    textAlign: 'center',
-                    gap: '0.75rem',
-                    transform: customerType === 'individual' ? 'scale(1.02)' : 'scale(1)',
-                    boxShadow: customerType === 'individual' ? '0 4px 12px rgba(16, 185, 129, 0.15)' : '0 2px 4px rgba(0, 0, 0, 0.1)'
-                  }}
-                >
-                  <div style={{ fontSize: '2rem' }}>👤</div>
-                  <h4 style={{ margin: 0, color: '#1f2937', fontWeight: '600' }}>
-                    {getText('individualCustomer', userLang)}
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#6b7280' }}>
-                    {getText('individualDescription', userLang)}
-                  </p>
-                </div>
-
-                <div 
-                  className={`customer-type-option ${customerType === 'company' ? 'selected' : ''}`}
-                  onClick={() => setCustomerType('company')}
-                  style={{
-                    padding: '1.5rem',
-                    border: customerType === 'company' ? '2px solid #10b981' : '2px solid #e5e7eb',
-                    borderRadius: '0.75rem',
-                    backgroundColor: customerType === 'company' ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255, 255, 255, 0.9)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    textAlign: 'center',
-                    gap: '0.75rem',
-                    transform: customerType === 'company' ? 'scale(1.02)' : 'scale(1)',
-                    boxShadow: customerType === 'company' ? '0 4px 12px rgba(16, 185, 129, 0.15)' : '0 2px 4px rgba(0, 0, 0, 0.1)'
-                  }}
-                >
-                  <div style={{ fontSize: '2rem' }}>🏢</div>
-                  <h4 style={{ margin: 0, color: '#1f2937', fontWeight: '600' }}>
-                    {getText('companyCustomer', userLang)}
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#6b7280' }}>
-                    {getText('companyDescription', userLang)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Phase 1: Personal Information - Only show after customer type selected */}
-            {customerType && (
-              <div className="personal-info-phase animate-slide-in">
-                <div className="phase-header">
-                  <h3 style={{ 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    color: '#1f2937', 
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{ 
-                      backgroundColor: (formData.firstName && formData.lastName) ? '#10b981' : '#6b7280',
-                      color: 'white',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      transition: 'background-color 0.3s ease'
-                    }}>2</span>
-                    {(I18N_TEXT[userLang] as any).personalInformation || 'Personal Information'}
-                  </h3>
-                  <p style={{ 
-                    fontSize: '0.9rem', 
-                    color: '#6b7280', 
-                    margin: '0 0 1.5rem 0' 
-                  }}>
-                    {(I18N_TEXT[userLang] as any).personalInfoDescription || 'Tell us who you are'}
-                  </p>
-                </div>
-
-              <div className="personal-details" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '1rem',
-                marginBottom: '2rem'
-              }}>
-          <div className="form-control">
-                                      <label htmlFor="firstName" className="label-text">{getText('firstName', userLang)}</label>
-                                      <div className="input-wrapper">
-            <input 
-              type="text"
-              name="firstName"
-                    id="firstName"
-                    placeholder={getText('firstNamePlaceholder', userLang)}
-              value={formData.firstName}
-              onChange={handleInputChange}
-              className={`input glassmorphism ${fieldValid.firstName === false ? 'input-error' : ''}`}
-                    style={{
-                      transition: 'all 0.3s ease',
-                      transform: formData.firstName ? 'scale(1.02)' : 'scale(1)'
-                    }}
-            />
-            {fieldValid.firstName === true && <CheckCircle className="check-icon" />}
-          </div>
-          </div>
-
-          <div className="form-control">
-                                      <label htmlFor="lastName" className="label-text">{getText('lastName', userLang)}</label>
-                                      <div className="input-wrapper">
-            <input 
-              type="text"
-              name="lastName"
-                      id="lastName"
-                      placeholder={getText('lastNamePlaceholder', userLang)}
-              value={formData.lastName}
-              onChange={handleInputChange}
-              className={`input glassmorphism ${fieldValid.lastName === false ? 'input-error' : ''}`}
-                    style={{
-                      transition: 'all 0.3s ease',
-                      transform: formData.lastName ? 'scale(1.02)' : 'scale(1)'
-                    }}
-            />
-            {fieldValid.lastName === true && <CheckCircle className="check-icon" />}
-          </div>
-          </div>
-              </div>
-            </div>
-            )}  {/* Fermeture de la condition customerType pour la phase 1 */}
-
-            {/* Phase 2: Shipping Experience - Show for all customer types */}
-            {(formData.firstName && formData.lastName) && (
-              <div className="shipping-experience-phase animate-slide-in">
-                <div className="phase-header">
-                  <h3 style={{ 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    color: '#1f2937', 
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{ 
-                      backgroundColor: formData.shipperType ? '#10b981' : '#6b7280',
-                      color: 'white',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      transition: 'background-color 0.3s ease'
-                    }}>3</span>
-                    {getText('shippingExperience', userLang)}
-                  </h3>
-                  <p style={{ 
-                    fontSize: '0.9rem', 
-                    color: '#6b7280', 
-                    margin: '0 0 1.5rem 0' 
-                  }}>
-                    {getText('selectExperience', userLang)}
-                  </p>
-                </div>
-
-                <div className="experience-details" style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                  gap: '1rem',
-                  marginBottom: '2rem'
-                }}>
-          <div className="form-control">
-                    <label htmlFor="shipperType" className="label-text">{getText('shippingExperience', userLang)}</label>
-                    <div className="timing-select input-wrapper" style={{ position: 'relative' }}>
-                      <input
-                        type="text"
-                        value={experienceSearch || getText('selectExperience', userLang)}
-                        onClick={() => setIsExperienceListVisible(true)}
-                        onFocus={() => setIsExperienceListVisible(true)}
-                        readOnly
-                        className={`input glassmorphism timing-input ${fieldValid.shipperType === false ? 'input-error' : ''}`}
-                        style={{
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          transform: formData.shipperType ? 'scale(1.02)' : 'scale(1)'
-                        }}
-                        placeholder={getText('selectExperience', userLang)}
-                      />
-                      <div 
-                        ref={experienceListRef}
-                        className={`port-list ${isExperienceListVisible ? 'show' : ''}`}
-                        style={{ zIndex: 1000 }}
-                      >
-                        {EXPERIENCE_OPTIONS.map(experience => (
-                          <div
-                            key={experience.code}
-                            className="port-option"
-                            onClick={() => handleExperienceSelect(experience.code)}
-                          >
-                            <span className="port-icon">{experience.icon}</span>
-                            <div className="port-info">
-                              <span className="port-name">
-                                {experience.code === 'first-time' && getText('firstTimeShipper', userLang)}
-                                {experience.code === 'up-to-10x' && getText('upTo10Times', userLang)}
-                                {experience.code === 'more-than-10x' && getText('moreThan10Times', userLang)}
-                                {experience.code === 'regular' && getText('regularShipper', userLang)}
-                              </span>
-                              <span className="port-region">{experience.descriptions[userLang] || experience.descriptions.en}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {fieldValid.shipperType === true && <CheckCircle className="check-icon" />}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Phase 4: Contact Information */}
-            {(formData.firstName && formData.lastName && formData.shipperType) && (
-              <div className="contact-info-phase animate-slide-in">
-                <div className="phase-header">
-                  <h3 style={{ 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    color: '#1f2937', 
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{ 
-                      backgroundColor: (formData.email && formData.phone) ? '#10b981' : '#6b7280',
-                      color: 'white',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      transition: 'background-color 0.3s ease'
-                    }}>4</span>
-                    {getText('contactInformation', userLang)}
-                  </h3>
-                  <p style={{ 
-                    fontSize: '0.9rem', 
-                    color: '#6b7280', 
-                    margin: '0 0 1.5rem 0' 
-                  }}>
-                    {getText('contactInfoDescription', userLang)}
-                  </p>
-                </div>
-
-                <div className="contact-details" style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                  gap: '1rem',
-                  marginBottom: '2rem'
-                }}>
-          <div className="form-control">
-                    <label htmlFor="email" className="label-text">{getText('emailAddress', userLang)}</label>
-                    <div className="input-wrapper">
-            <input 
-              type="email" 
-              name="email" 
-                      id="email"
-                      placeholder={getText('emailPlaceholder', userLang)}
-              value={formData.email} 
-              onChange={handleInputChange}
-              className={`input glassmorphism ${fieldValid.email === false ? 'input-error' : ''}`}
-                      style={{
-                        transition: 'all 0.3s ease',
-                        transform: formData.email ? 'scale(1.02)' : 'scale(1)'
-                      }}
-            />
-            {fieldValid.email === true && <CheckCircle className="check-icon" />}
-                    </div>
-                    <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                      📧 {getText('emailHelp', userLang)}
-                    </div>
-          </div>
-          
-                  <div className="form-control">
-                    <label htmlFor="phone" className="label-text">{getText('phoneNumber', userLang)}</label>
-                    <div className="phone-input-wrapper" style={{
-                      display: 'grid',
-                      gridTemplateColumns: '105px 1fr',
-                      gap: '0.5rem'
-                    }}>
-                      {/* Phone Country Code Selector */}
-                      <div className="phone-prefix-select" style={{ position: 'relative' }}>
-                        <div className="search-input-wrapper" style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                            value={phonePrefixSearch}
-                                                    onClick={() => setIsPhonePrefixListVisible(true)}
-                        onFocus={() => setIsPhonePrefixListVisible(true)}
-                            onChange={(e) => setPhonePrefixSearch(e.target.value)}
-                            placeholder="+1"
-                            ref={phonePrefixSearchInputRef}
-                            className="input glassmorphism search-input"
-                            style={{ cursor: 'pointer', fontSize: '0.9rem' }}
-                          />
-              </div>
-              <div 
-                ref={phonePrefixListRef}
-                          className={`port-list ${isPhonePrefixListVisible ? 'show' : ''}`}
-                          style={{ zIndex: 1000 }}
-                        >
-                          {COUNTRIES
-                            .filter(country => 
-                              country.phonePrefix && (
-                                country.name.toLowerCase().includes(phonePrefixSearch.toLowerCase()) ||
-                                country.phonePrefix.includes(phonePrefixSearch.replace(/[^\d+]/g, ''))
-                              )
-                            )
-                            .slice(0, 10)
-                            .map(country => (
-                              <div
-                                key={country.code}
-                                className="port-option"
-                                onClick={() => handlePhonePrefixSelect(country.phonePrefix)}
-                              >
-                                <span className="port-icon">{country.flag}</span>
-                                <div className="port-info">
-                                  <span className="port-name">{country.phonePrefix}</span>
-                                  <span className="port-region">{getTranslatedCountryName(country.code, userLang)}</span>
-                    </div>
-                  </div>
-                            ))}
-              </div>
-            </div>
-
-            <input 
-              type="tel" 
-              name="phone" 
-                        id="phone"
-                        placeholder={getText('phonePlaceholder', userLang)}
-              value={formData.phone} 
-              onChange={handleInputChange}
-                        className={`input glassmorphism ${fieldValid.phone === false ? 'input-error' : ''}`}
-                        style={{
-                          transition: 'all 0.3s ease',
-                          transform: formData.phone ? 'scale(1.02)' : 'scale(1)'
-                        }}
-                      />
-                    </div>
-                    {fieldValid.phone === true && <CheckCircle className="check-icon" />}
-                    <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                      📱 {getText('phoneHelp', userLang)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Phase 5: Business Information - Only show for companies */}
-            {(formData.firstName && formData.lastName && formData.shipperType && customerType === 'company') && (
-              <div className="business-info-phase animate-slide-in">
-                <div className="phase-header">
-                  <h3 style={{ 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    color: '#1f2937', 
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{ 
-                      backgroundColor: formData.companyName ? '#10b981' : '#6b7280',
-                      color: 'white',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      transition: 'background-color 0.3s ease'
-                    }}>5</span>
-                    {getText('businessInformation', userLang)}
-                  </h3>
-                  <p style={{ 
-                    fontSize: '0.9rem', 
-                    color: '#6b7280', 
-                    margin: '0 0 1.5rem 0' 
-                  }}>
-                    {getText('businessInfoDescription', userLang)}
-                  </p>
-                </div>
-
-                <div className="business-details" style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                  gap: '1rem',
-                  marginBottom: '2rem'
-                }}>
-                  <div className="form-control">
-                    <label htmlFor="companyName" className="label-text">{getText('companyName', userLang)}</label>
-                    <div className="input-wrapper">
-            <input 
-              type="text"
-              name="companyName"
-                      id="companyName"
-                      placeholder={getText('companyNamePlaceholder', userLang)}
-              value={formData.companyName}
-              onChange={handleInputChange}
-              className={`input glassmorphism ${fieldValid.companyName === false ? 'input-error' : ''}`}
-                      style={{
-                        transition: 'all 0.3s ease',
-                        transform: formData.companyName ? 'scale(1.02)' : 'scale(1)'
-                      }}
-            />
-            {fieldValid.companyName === true && <CheckCircle className="check-icon" />}
-          </div>
-          </div>
-
-
-          </div>
-              </div>
-            )}
-
-            {/* Phase 5: Additional Notes (Optional) */}
-            {(formData.email && formData.phone) && (
-              <div className="additional-notes-phase animate-slide-in">
-                <div className="phase-header">
-                  <h3 style={{ 
-                    fontSize: '1.1rem', 
-                    fontWeight: '600', 
-                    color: '#1f2937', 
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{ 
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      transition: 'background-color 0.3s ease'
-                    }}>✓</span>
-                    {getText('additionalNotes', userLang)}
-                  </h3>
-                  <p style={{ 
-                    fontSize: '0.9rem', 
-                    color: '#6b7280', 
-                    margin: '0 0 1.5rem 0' 
-                  }}>
-                    {getText('additionalNotesDescription', userLang)}
-                  </p>
-          </div>
-          
-          <div className="form-control">
-                  <label htmlFor="remarks" className="label-text">{getText('remarks', userLang)}</label>
-            <textarea
-              name="remarks"
-                    id="remarks"
-                    placeholder={getText('remarksPlaceholder', userLang)}
-                    value={formData.remarks || ''}
-              onChange={handleInputChange}
-              className="input glassmorphism"
-              rows={4}
-                    style={{
-                      minHeight: '120px',
-                      resize: 'vertical',
-                      transition: 'all 0.3s ease'
-                    }}
-            />
-                  <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                    💬 {getText('remarksHelp', userLang)}
-                  </div>
-          </div>
-
-                {/* Summary Banner */}
-                <div className="contact-summary-banner" style={{ 
-                  marginTop: '2rem',
-                  padding: '1.5rem',
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                  border: '2px solid rgba(16, 185, 129, 0.2)',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '1rem'
-                }}>
-                  <div style={{
-                    backgroundColor: '#10b981',
-                    borderRadius: '50%',
-                    padding: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: '40px',
-                    height: '40px'
-                  }}>
-                    <CheckCircle size={24} style={{ color: 'white' }} />
-                  </div>
-                  <div>
-                    <h4 style={{ 
-                      fontSize: '1.1rem', 
-                      fontWeight: '600', 
-                      color: '#047857', 
-                      margin: '0 0 0.5rem 0' 
-                    }}>
-                      {getText('readyToSubmit', userLang)}
-                    </h4>
-                    <p style={{ 
-                      fontSize: '0.9rem', 
-                      color: '#065f46', 
-                      margin: '0',
-                      lineHeight: '1.5'
-                    }}>
-                      {getText('submitDescription', userLang)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="security-badge glassmorphism" style={{ 
-            marginTop: '2rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            padding: '1rem'
-          }}>
-            <span style={{ fontSize: '1.1rem' }}>🔒</span>
-            <span style={{ fontWeight: '500' }}>{getText('securityBadge', userLang)}</span>
-          </div>
-        </FormStep>
-        )}
-
+  {currentStep !== 7 && (
+  <div className="form-navigation">
+    {currentStep > 1 && (
+      <button 
+        type="button" 
+        onClick={prevStep} 
+        className="btn btn-secondary glassmorphism"
+        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+      >
+        <ChevronLeft size={16} />
+        {I18N_TEXT[userLang].previous}
+      </button>
+    )}
+    {currentStep < 6 ? (
+      <button 
+        type="button" 
+        onClick={nextStep} 
+        className="btn btn-primary glassmorphism"
+        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+      >
+        {I18N_TEXT[userLang].next}
+        <ChevronRight size={16} />
+      </button>
+    ) : (
+      <button 
+        type="submit" 
+        className="btn btn-success glassmorphism"
+        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+      >
+        {getText('getMyQuote', userLang)}
+        <ChevronRight size={16} />
+      </button>
+    )}
+  </div>
+  )}
+</form>
+        
         {/* Step 7: Confirmation Page */}
         <StepConfirmation submissionId={submissionId} setSubmissionId={setSubmissionId} showToast={showToast} />
-        <FormStep isVisible={false} stepNumber={7} title={getText('confirmationTitle', userLang)} emoji="✅" hideStepNumber={true}>
-          <div className="confirmation-container" style={{
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%)',
-            borderRadius: '2rem',
-            padding: '0',
-            margin: '2rem 0',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            overflow: 'hidden',
-            position: 'relative'
-          }}>
-            
-            {/* Animated Background Elements */}
-            <div style={{
-              position: 'absolute',
-              top: '-50%',
-              left: '-50%',
-              width: '200%',
-              height: '200%',
-              background: 'radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%)',
-              animation: 'float 6s ease-in-out infinite',
-              zIndex: 0
-            }}></div>
-            
-            <div style={{
-              position: 'absolute',
-              top: '10%',
-              right: '10%',
-              width: '100px',
-              height: '100px',
-              background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
-              borderRadius: '50%',
-              animation: 'pulse 4s ease-in-out infinite',
-              zIndex: 0
-            }}></div>
-            
-            {/* Main Content */}
-            <div style={{ position: 'relative', zIndex: 10 }}>
-              
-              {/* Hero Section */}
-              <div style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                padding: '4rem 2rem',
-                textAlign: 'center',
-                color: 'white',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                
-                {/* Floating Particles */}
-                <div style={{
-                  position: 'absolute',
-                  top: '20%',
-                  left: '10%',
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                  borderRadius: '50%',
-                  animation: 'float 3s ease-in-out infinite'
-                }}></div>
-                <div style={{
-                  position: 'absolute',
-                  top: '60%',
-                  right: '15%',
-                  width: '6px',
-                  height: '6px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.4)',
-                  borderRadius: '50%',
-                  animation: 'float 4s ease-in-out infinite reverse'
-                }}></div>
-                <div style={{
-                  position: 'absolute',
-                  top: '30%',
-                  right: '30%',
-                  width: '10px',
-                  height: '10px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                  borderRadius: '50%',
-                  animation: 'float 5s ease-in-out infinite'
-                }}></div>
-                <div style={{
-                  position: 'absolute',
-                  bottom: '25%',
-                  left: '20%',
-                  width: '4px',
-                  height: '4px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.5)',
-                  borderRadius: '50%',
-                  animation: 'sparkle 2s ease-in-out infinite'
-                }}></div>
-
-                {/* Success Icon with Animation */}
-                <div style={{
-                  fontSize: '6rem',
-                  marginBottom: '1.5rem',
-                  animation: 'bounceIn 1s ease-out',
-                  filter: 'drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2))'
-                }}>
-                  🎉
-                </div>
-
-                {/* Process Complete Badge */}
-                <div style={{
-                  display: 'inline-block',
-                  padding: '1rem 2.5rem',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  borderRadius: '50px',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  fontSize: '1rem',
-                  fontWeight: '700',
-                  marginBottom: '2rem',
-                  backdropFilter: 'blur(10px)',
-                  animation: 'slideInDown 0.8s ease-out 0.3s both',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px'
-                }}>
-                  ✨ {userLang === 'fr' ? 'Processus Terminé avec Succès' : 
-                       userLang === 'de' ? 'Vorgang Erfolgreich Abgeschlossen' :
-                       userLang === 'es' ? 'Proceso Completado con Éxito' :
-                       userLang === 'it' ? 'Processo Completato con Successo' :
-                       userLang === 'nl' ? 'Proces Succesvol Voltooid' :
-                       userLang === 'ar' ? 'تم إنجاز العملية بنجاح' :
-                       userLang === 'pt' ? 'Processo Concluído com Sucesso' :
-                       userLang === 'tr' ? 'Süreç Başarıyla Tamamlandı' :
-                       userLang === 'ru' ? 'Процесс Успешно Завершён' :
-                       userLang === 'zh' ? '流程成功完成' :
-                       'Process Successfully Completed'}
-                </div>
-
-                <h1 style={{ 
-                  fontSize: '3rem', 
-                  fontWeight: '800',
-                  marginBottom: '1.5rem',
-                  textShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-                  animation: 'slideInUp 0.8s ease-out 0.1s both',
-                  background: 'linear-gradient(45deg, #ffffff 0%, #f0fdf4 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
-                }}>
-                  {getText('thankYouTitle', userLang)}
-                </h1>
-                
-                <p style={{ 
-                  fontSize: '1.3rem', 
-                  opacity: '0.95',
-                  marginBottom: '2.5rem',
-                  maxWidth: '700px',
-                  margin: '0 auto 2.5rem auto',
-                  lineHeight: '1.7',
-                  animation: 'slideInUp 0.8s ease-out 0.2s both',
-                  fontWeight: '300'
-                }}>
-                  {getText('confirmationSubtitle', userLang)}
-                </p>
-
-                {/* Reference Number */}
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.1) 100%)',
-                  padding: '1.5rem 3rem',
-                  borderRadius: '20px',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  display: 'inline-block',
-                  backdropFilter: 'blur(15px)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                  animation: 'slideInUp 0.8s ease-out 0.4s both',
-                  minWidth: '300px'
-                }}>
-                  <div style={{ fontSize: '0.9rem', opacity: '0.8', marginBottom: '0.5rem', fontWeight: '500' }}>
-                    {getText('referenceNumber', userLang)}
-                  </div>
-                  <div style={{ 
-                    fontSize: '1.3rem', 
-                    fontWeight: '700',
-                    fontFamily: 'monospace',
-                    letterSpacing: '2px',
-                    color: '#ffffff',
-                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                  }}>
-                    {submissionId}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Request Summary */}
-            <div className="request-summary" style={{
-              marginBottom: '2rem',
-              padding: '2rem',
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%)',
-              borderRadius: '1.5rem',
-              border: '2px solid rgba(16, 185, 129, 0.1)',
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-              animation: 'slideInUp 0.8s ease-out 0.6s both'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '1rem',
-                  fontSize: '1.2rem'
-                }}>
-                  📋
-                </div>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>
-                  {getText('yourRequest', userLang)}
-                </h3>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
-                <div style={{
-                  padding: '1.5rem',
-                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.02) 100%)',
-                  borderRadius: '1rem',
-                  border: '1px solid rgba(16, 185, 129, 0.15)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: '0.75rem',
-                      fontSize: '1rem'
-                    }}>
-                      🚢
-                    </div>
-                    <h4 style={{ color: '#1f2937', fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>
-                      {getText('shipmentDetails', userLang)}
-                    </h4>
-                  </div>
-                  <div style={{ color: '#374151', lineHeight: '1.6', fontSize: '0.95rem' }}>
-                    <p style={{ margin: '0.5rem 0', display: 'flex', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1rem', marginRight: '0.5rem' }}>📍</span>
-                      <strong>{formData.city || formData.origin}</strong> → <strong>{formData.destCity || formData.country}, {COUNTRIES.find(c => c.code === formData.country)?.name}</strong>
-                    </p>
-                    <p style={{ margin: '0.5rem 0', display: 'flex', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1rem', marginRight: '0.5rem' }}>🚛</span>
-                      {getText('mode', userLang)}:&nbsp;<strong>{getText(formData.mode === 'Unsure' ? 'unsureShipping' : formData.mode === 'Sea Freight' ? 'seaFreight' : formData.mode === 'Air Freight' ? 'airFreight' : formData.mode === 'Rail Freight' ? 'railFreight' : formData.mode === 'Express' ? 'express' : 'mode', userLang)}</strong>
-                    </p>
-                    <p style={{ margin: '0.5rem 0', display: 'flex', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1rem', marginRight: '0.5rem' }}>📦</span>
-                      <strong>{formData.loads.length}</strong>&nbsp;{formData.loads.length === 1 ? getText('shipment', userLang) : getText('shipments', userLang)}
-                    </p>
-                  </div>
-                </div>
-                
-                <div style={{
-                  padding: '1.5rem',
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%)',
-                  borderRadius: '1rem',
-                  border: '1px solid rgba(59, 130, 246, 0.15)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: '0.75rem',
-                      fontSize: '1rem'
-                    }}>
-                      👤
-                    </div>
-                    <h4 style={{ color: '#1f2937', fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>
-                      {getText('contactDetails', userLang)}
-                    </h4>
-                  </div>
-                  <div style={{ color: '#374151', lineHeight: '1.6', fontSize: '0.95rem' }}>
-                    <p style={{ margin: '0.5rem 0', display: 'flex', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1rem', marginRight: '0.5rem' }}>👨‍💼</span>
-                      <strong>{formData.firstName} {formData.lastName}</strong>
-                    </p>
-                    {formData.companyName && (
-                      <p style={{ margin: '0.5rem 0', display: 'flex', alignItems: 'center' }}>
-                        <span style={{ fontSize: '1rem', marginRight: '0.5rem' }}>🏢</span>
-                        <strong>{formData.companyName}</strong>
-                      </p>
-                    )}
-                    <p style={{ margin: '0.5rem 0', display: 'flex', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1rem', marginRight: '0.5rem' }}>📧</span>
-                      <strong>{formData.email}</strong>
-                    </p>
-                    {formData.phone && (
-                      <p style={{ margin: '0.5rem 0', display: 'flex', alignItems: 'center' }}>
-                        <span style={{ fontSize: '1rem', marginRight: '0.5rem' }}>📱</span>
-                        <strong>{formData.phoneCountryCode} {formData.phone}</strong>
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Next Steps Timeline */}
-            <div className="next-steps" style={{
-              marginBottom: '3rem',
-              padding: '2.5rem',
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(99, 102, 241, 0.05) 100%)',
-              borderRadius: '1.5rem',
-              border: '2px solid rgba(59, 130, 246, 0.15)',
-              boxShadow: '0 10px 25px rgba(59, 130, 246, 0.1)',
-              animation: 'slideInUp 0.8s ease-out 0.8s both',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Background decoration */}
-              <div style={{
-                position: 'absolute',
-                top: '-20px',
-                right: '-20px',
-                width: '80px',
-                height: '80px',
-                background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
-                borderRadius: '50%'
-              }}></div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2rem', position: 'relative', zIndex: 10 }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                  borderRadius: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '1rem',
-                  fontSize: '1.5rem',
-                  boxShadow: '0 8px 16px rgba(59, 130, 246, 0.3)'
-                }}>
-                  ⏱️
-                </div>
-                <h3 style={{ fontSize: '1.6rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>
-                  {getText('nextSteps', userLang)}
-                </h3>
-              </div>
-              
-              <div style={{ position: 'relative' }}>
-                {/* Connecting line */}
-                <div style={{
-                  position: 'absolute',
-                  left: '24px',
-                  top: '40px',
-                  bottom: '40px',
-                  width: '3px',
-                  background: 'linear-gradient(to bottom, #10b981 0%, #3b82f6 50%, #94a3b8 100%)',
-                  borderRadius: '2px',
-                  opacity: 0.3
-                }}></div>
-                
-                <div style={{ display: 'grid', gap: '1.5rem', position: 'relative', zIndex: 10 }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '1.5rem',
-                    padding: '1rem',
-                    borderRadius: '12px',
-                    background: 'rgba(255, 255, 255, 0.6)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
-                    transform: 'translateX(0)',
-                    transition: 'all 0.3s ease'
-                  }}>
-                    <div style={{ 
-                      width: '48px', 
-                      height: '48px', 
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-                      borderRadius: '50%', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      color: 'white', 
-                      fontSize: '1.2rem', 
-                      fontWeight: '700',
-                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-                      border: '3px solid white'
-                    }}>✓</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1f2937', marginBottom: '0.25rem' }}>
-                        {getText('step1', userLang)}
-                      </div>
-                      <div style={{ color: '#059669', fontSize: '0.9rem', fontWeight: '500' }}>
-                        {getText('step1Time', userLang)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '1.5rem',
-                    padding: '1rem',
-                    borderRadius: '12px',
-                    background: 'rgba(255, 255, 255, 0.6)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(59, 130, 246, 0.2)',
-                    transform: 'translateX(0)',
-                    transition: 'all 0.3s ease'
-                  }}>
-                    <div style={{ 
-                      width: '48px', 
-                      height: '48px', 
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', 
-                      borderRadius: '50%', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      color: 'white', 
-                      fontSize: '1.1rem', 
-                      fontWeight: '700',
-                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
-                      border: '3px solid white',
-                      animation: 'pulse 2s ease-in-out infinite'
-                    }}>2</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1f2937', marginBottom: '0.25rem' }}>
-                        {getText('step2', userLang)}
-                      </div>
-                      <div style={{ color: '#3b82f6', fontSize: '0.9rem', fontWeight: '500' }}>
-                        {getText('step2Time', userLang)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '1.5rem',
-                    padding: '1rem',
-                    borderRadius: '12px',
-                    background: 'rgba(255, 255, 255, 0.4)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(148, 163, 184, 0.3)',
-                    opacity: 0.8
-                  }}>
-                    <div style={{ 
-                      width: '48px', 
-                      height: '48px', 
-                      background: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)', 
-                      borderRadius: '50%', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      color: 'white', 
-                      fontSize: '1.1rem', 
-                      fontWeight: '700',
-                      border: '3px solid white'
-                    }}>3</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#64748b', marginBottom: '0.25rem' }}>
-                        {getText('step3', userLang)}
-                      </div>
-                      <div style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: '500' }}>
-                        {getText('step3Time', userLang)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '1.5rem',
-                    padding: '1rem',
-                    borderRadius: '12px',
-                    background: 'rgba(255, 255, 255, 0.4)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(148, 163, 184, 0.3)',
-                    opacity: 0.8
-                  }}>
-                    <div style={{ 
-                      width: '48px', 
-                      height: '48px', 
-                      background: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)', 
-                      borderRadius: '50%', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      color: 'white', 
-                      fontSize: '1.1rem', 
-                      fontWeight: '700',
-                      border: '3px solid white'
-                    }}>4</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#64748b', marginBottom: '0.25rem' }}>
-                        {getText('step4', userLang)}
-                      </div>
-                      <div style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: '500' }}>
-                        {getText('step4Time', userLang)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* SINO Shipping & FS International Section */}
-            <div className="company-info" style={{
-              marginBottom: '2rem',
-              padding: '3rem',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 95, 70, 0.05) 100%)',
-              borderRadius: '2rem',
-              border: '2px solid rgba(16, 185, 129, 0.15)',
-              boxShadow: '0 15px 35px rgba(16, 185, 129, 0.1)',
-              animation: 'slideInUp 0.8s ease-out 1s both',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Background decoration */}
-              <div style={{
-                position: 'absolute',
-                top: '-30px',
-                left: '-30px',
-                width: '120px',
-                height: '120px',
-                background: 'radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%)',
-                borderRadius: '50%'
-              }}></div>
-              
-              <div style={{ position: 'relative', zIndex: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                  <div style={{
-                    width: '60px',
-                    height: '60px',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    borderRadius: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: '1rem',
-                    fontSize: '2rem',
-                    boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)'
-                  }}>
-                    🚢
-                  </div>
-                  <h3 style={{ fontSize: '2rem', fontWeight: '800', color: '#1f2937', margin: 0 }}>
-                    {getText('aboutSino', userLang)}
-                  </h3>
-                </div>
-                
-                <p style={{ 
-                  color: '#6b7280', 
-                  fontSize: '1.2rem', 
-                  textAlign: 'center', 
-                  marginBottom: '3rem',
-                  maxWidth: '800px',
-                  margin: '0 auto 3rem auto',
-                  lineHeight: '1.7',
-                  fontWeight: '300'
-                }}>
-                  {getText('aboutSubtitle', userLang)}
-                </p>
-
-              {/* Company Stories */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
-                <div style={{ padding: '1.5rem', backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: '0.75rem' }}>
-                  <h4 style={{ color: '#10b981', marginBottom: '1rem', fontSize: '1.2rem' }}>🇫🇷 SINO Shipping (2018)</h4>
-                  <p style={{ color: '#374151', lineHeight: '1.6' }}>
-                    {getText('sinoDescription', userLang)}
-                  </p>
-                </div>
-                <div style={{ padding: '1.5rem', backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: '0.75rem' }}>
-                  <h4 style={{ color: '#10b981', marginBottom: '1rem', fontSize: '1.2rem' }}>🇭🇰 FS International (1989)</h4>
-                  <p style={{ color: '#374151', lineHeight: '1.6' }}>
-                    {getText('fsDescription', userLang)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Expertise & Numbers */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%)',
-                  borderRadius: '1rem',
-                  padding: '1.5rem',
-                  border: '1px solid rgba(16, 185, 129, 0.1)',
-                  boxShadow: '0 8px 25px rgba(16, 185, 129, 0.1)'
-                }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    marginBottom: '1.5rem',
-                    gap: '0.75rem'
-                  }}>
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.2rem',
-                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-                    }}>
-                      🎯
-                    </div>
-                    <h4 style={{ 
-                      color: '#1f2937', 
-                      margin: 0,
-                      fontSize: '1.3rem',
-                      fontWeight: '700'
-                    }}>
-                      {getText('ourExpertise', userLang)}
-                    </h4>
-                  </div>
-                  
-                  <div style={{ 
-                    display: 'grid',
-                    gap: '1rem'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      padding: '1rem',
-                      background: 'rgba(255, 255, 255, 0.7)',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(16, 185, 129, 0.1)',
-                      transition: 'all 0.3s ease',
-                      cursor: 'default'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}>
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1rem',
-                        flexShrink: 0
-                      }}>
-                        🚢
-                      </div>
-                      <span style={{ 
-                        color: '#374151', 
-                        fontWeight: '500',
-                        lineHeight: '1.4'
-                      }}>
-                        {getText('expertise1', userLang)}
-                      </span>
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      padding: '1rem',
-                      background: 'rgba(255, 255, 255, 0.7)',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(16, 185, 129, 0.1)',
-                      transition: 'all 0.3s ease',
-                      cursor: 'default'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}>
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1rem',
-                        flexShrink: 0
-                      }}>
-                        📦
-                      </div>
-                      <span style={{ 
-                        color: '#374151', 
-                        fontWeight: '500',
-                        lineHeight: '1.4'
-                      }}>
-                        {getText('expertise2', userLang)}
-                      </span>
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      padding: '1rem',
-                      background: 'rgba(255, 255, 255, 0.7)',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(16, 185, 129, 0.1)',
-                      transition: 'all 0.3s ease',
-                      cursor: 'default'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}>
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1rem',
-                        flexShrink: 0
-                      }}>
-                        🔍
-                      </div>
-                      <span style={{ 
-                        color: '#374151', 
-                        fontWeight: '500',
-                        lineHeight: '1.4'
-                      }}>
-                        {getText('expertise3', userLang)}
-                      </span>
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      padding: '1rem',
-                      background: 'rgba(255, 255, 255, 0.7)',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(16, 185, 129, 0.1)',
-                      transition: 'all 0.3s ease',
-                      cursor: 'default'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}>
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1rem',
-                        flexShrink: 0
-                      }}>
-                        📋
-                      </div>
-                      <span style={{ 
-                        color: '#374151', 
-                        fontWeight: '500',
-                        lineHeight: '1.4'
-                      }}>
-                        {getText('expertise4', userLang)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h4 style={{ color: '#1f2937', marginBottom: '0.5rem', fontSize: '1.1rem' }}>📊 {getText('impactInNumbers', userLang)}</h4>
-                  <p style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '1rem' }}>{getText('impactDescription', userLang)}</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-                    <div style={{ textAlign: 'center', padding: '0.8rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.5rem' }}>
-                      <div style={{ fontSize: '1.3rem', fontWeight: '600', color: '#10b981' }}>55,000+</div>
-                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{getText('satisfiedCustomers', userLang)}</div>
-                    </div>
-                    <div style={{ textAlign: 'center', padding: '0.8rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.5rem' }}>
-                      <div style={{ fontSize: '1.3rem', fontWeight: '600', color: '#10b981' }}>4.8/5</div>
-                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{getText('customerSatisfaction', userLang)}</div>
-                    </div>
-                    <div style={{ textAlign: 'center', padding: '0.8rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.5rem' }}>
-                      <div style={{ fontSize: '1.3rem', fontWeight: '600', color: '#10b981' }}>400+</div>
-                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{getText('teamMembers', userLang)}</div>
-                    </div>
-                    <div style={{ textAlign: 'center', padding: '0.8rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.5rem' }}>
-                      <div style={{ fontSize: '1.3rem', fontWeight: '600', color: '#10b981' }}>140,000+</div>
-                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{getText('oceanVolume', userLang)}</div>
-                    </div>
-                    <div style={{ textAlign: 'center', padding: '0.8rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.5rem' }}>
-                      <div style={{ fontSize: '1.3rem', fontWeight: '600', color: '#10b981' }}>8</div>
-                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{getText('officesInChina', userLang)}</div>
-                    </div>
-                    <div style={{ textAlign: 'center', padding: '0.8rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.5rem' }}>
-                      <div style={{ fontSize: '1.3rem', fontWeight: '600', color: '#10b981' }}>519,000+</div>
-                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{getText('cfsFacilities', userLang)}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Global Network */}
-              <div style={{ marginTop: '2rem', padding: '1.5rem', backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: '0.75rem' }}>
-                <h4 style={{ color: '#1f2937', marginBottom: '1rem' }}>🌍 {getText('globalNetwork', userLang)}</h4>
-                <p style={{ color: '#6b7280', marginBottom: '1rem' }}>{getText('networkDescription', userLang)}</p>
-                <div style={{ fontSize: '0.9rem', color: '#374151', lineHeight: '1.6' }}>
-                  <p><strong>🇨🇳 {getText('chinaOffices', userLang)}</strong></p>
-                  <p><strong>🇭🇰 {getText('hkOffice', userLang)}</strong></p>
-                </div>
-              </div>
-              </div>
-            </div>
-
-            {/* Contact & Support */}
-            <div className="contact-support" style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-              gap: '2rem',
-              marginBottom: '2rem'
-            }}>
-              <div style={{
-                padding: '1.5rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                borderRadius: '1rem',
-                border: '1px solid #e5e7eb',
-                position: 'relative',
-                zIndex: 1
-              }}>
-                <h4 style={{ color: '#1f2937', marginBottom: '1rem', fontSize: '1rem' }}>❓ {getText('needHelp', userLang)}</h4>
-                <div style={{ fontSize: '0.9rem', color: '#374151' }}>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
-                    <span>👥</span>
-                    <span>{getText('community', userLang)}:</span>
-                    <strong>
-                      <a href="https://chat.whatsapp.com/EcOPbD18vFxHTVjECQVsRE" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px' }}>WhatsApp</a>
-                    </strong>
-                  </p>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
-                    <span>📧</span>
-                    <span>{getText('contactEmail', userLang)}:</span>
-                    <strong>
-                      <a href="mailto:info@sino-shipping.com" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px' }}>info@sino-shipping.com</a>
-                    </strong>
-                  </p>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0', color: '#6b7280', fontSize: '0.9rem' }}>
-                    <span>⏰</span>
-                    <span>{getText('available', userLang)}: {getText('businessHours', userLang)}</span>
-                  </p>
-                </div>
-              </div>
-
-              <div style={{
-                padding: '1.5rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                borderRadius: '1rem',
-                border: '1px solid #e5e7eb',
-                position: 'relative',
-                zIndex: 1
-              }}>
-                <h4 style={{ color: '#1f2937', marginBottom: '1rem', fontSize: '1rem' }}>🔗 {getText('websites', userLang)}</h4>
-                <div style={{ fontSize: '0.9rem', color: '#374151' }}>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
-                    <span>🌐</span>
-                    <strong><a href="https://sino-shipping.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>sino-shipping.com</a></strong>
-                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– Global freight forwarder</span>
-                  </p>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
-                    <span>🇭🇰</span>
-                    <strong><a href="https://fschina.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>fschina.com</a></strong>
-                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– FS International (HK)</span>
-                  </p>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
-                    <span>🇪🇸</span>
-                    <strong><a href="https://es.sino-shipping.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>es.sino-shipping.com</a></strong>
-                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– SINO Shipping (ES)</span>
-                  </p>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
-                    <span>🧩</span>
-                    <strong><a href="https://moreplusfsi.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>moreplusfsi.com</a></strong>
-                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– MorePlus (Sourcing)</span>
-                  </p>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
-                    <span>🧭</span>
-                    <strong><a href="https://eaanetwork.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>eaanetwork.com</a></strong>
-                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– EAA Network</span>
-                  </p>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
-                    <span>🤝</span>
-                    <strong><a href="https://can-qianhai.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>can-qianhai.com</a></strong>
-                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– CAN Alliance</span>
-                  </p>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
-                    <span>🚢</span>
-                    <strong><a href="https://mcc-qianhai.com" target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', textDecoration: 'underline', textUnderlineOffset: '2px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>mcc-qianhai.com</a></strong>
-                    <span style={{ color: '#6b7280', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>– Export to China</span>
-                  </p>
-                </div>
-                <h4 style={{ color: '#1f2937', marginTop: '1.5rem', marginBottom: '1rem' }}>⚡ {getText('actions', userLang)}</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      
-                      console.log('Button clicked!'); // Debug log
-                      
-                      // Complete form reset with smooth animation
-                      const resetMessage = userLang === 'fr' ? 'Nouveau formulaire prêt !' :
-                                          userLang === 'es' ? '¡Nuevo formulario listo!' :
-                                          userLang === 'de' ? 'Neues Formular bereit!' :
-                                          userLang === 'it' ? 'Nuovo modulo pronto!' :
-                                          userLang === 'nl' ? 'Nieuw formulier klaar!' :
-                                          userLang === 'zh' ? '新表单已准备!' :
-                                          userLang === 'ar' ? 'استمارة جديدة جاهزة!' :
-                                          userLang === 'pt' ? 'Novo formulário pronto!' :
-                                          userLang === 'tr' ? 'Yeni form hazır!' :
-                                          userLang === 'ru' ? 'Новая форма готова!' :
-                                          'New form ready!';
-
-                      try {
-                        // Reset main form data
-                        setFormData({
-                          country: '',
-                          origin: '',
-                          mode: '',
-                          email: '',
-                          phone: '',
-                          phoneCountryCode: '+234',
-                          locationType: '',
-                          city: '',
-                          zipCode: '',
-                          destLocationType: '',
-                          destCity: '',
-                          destZipCode: '',
-                          destPort: '',
-                          firstName: '',
-                          lastName: '',
-                          companyName: '',
-                          shipperType: '',
-                          loads: [JSON.parse(JSON.stringify(initialLoadDetails))],
-                          goodsValue: '',
-                          goodsCurrency: 'USD',
-                          isPersonalOrHazardous: false,
-                          areGoodsReady: 'yes',
-                          goodsDescription: '',
-                          specialRequirements: '',
-                          remarks: '',
-                        });
-
-                        // Reset field validation states
-                        setFieldValid({
-                          country: null,
-                          origin: null,
-                          mode: null,
-                          email: null,
-                          phone: null,
-                          phoneCountryCode: null,
-                          city: null,
-                          zipCode: null,
-                          destCity: null,
-                          destZipCode: null,
-                          destPort: null,
-                          firstName: null,
-                          lastName: null,
-                          companyName: null,
-                          shipperType: null,
-                          goodsValue: null,
-                          destLocationType: null,
-                        });
-
-                        // Reset step and submission states
-                        setCurrentStep(1);
-                        setSubmissionId('');
-
-                        // Show success toast
-                        showToast(resetMessage);
-                        
-                        console.log('Form reset completed!'); // Debug log
-                      } catch (error) {
-                        console.error('Error resetting form:', error);
-                        showToast('Error resetting form');
-                      }
-                    }}
-                    style={{
-                      padding: '0.75rem 1.25rem',
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.75rem',
-                      cursor: 'pointer',
-                      fontSize: '0.95rem',
-                      fontWeight: '600',
-                      transition: 'all 0.3s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-                      position: 'relative',
-                      zIndex: 1000,
-                      pointerEvents: 'auto',
-                      userSelect: 'none',
-                      outline: 'none'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#059669';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.35)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#10b981';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.25)';
-                    }}
-                  >
-                    ➕ {getText('newRequest', userLang)}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Thank You Message */}
-            <div style={{
-              textAlign: 'center',
-              padding: '2rem',
-              backgroundColor: 'rgba(59, 130, 246, 0.05)',
-              borderRadius: '1rem',
-              border: '1px solid rgba(59, 130, 246, 0.2)'
-            }}>
-              <h3 style={{ color: '#1f2937', marginBottom: '1rem' }}>🙏 {getText('thankYouTitle', userLang)}</h3>
-              <p style={{ color: '#6b7280', fontSize: '1.1rem' }}>
-                {getText('thankYouMessage', userLang)}
-              </p>
-            </div>
-
-          </div>
-        </FormStep>
-
-        {/* Navigation - Hidden on confirmation page */}
-        {currentStep !== 7 && (
-        <div className="form-navigation">
-          {currentStep > 1 && (
-            <button 
-              type="button" 
-              onClick={prevStep} 
-              className="btn btn-secondary glassmorphism"
-              style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
-            >
-              <ChevronLeft size={16} />
-              {I18N_TEXT[userLang].previous}
-            </button>
-          )}
-          
-          {/* Removed: Add another shipment button for step 4 */}
-          
-          {currentStep < 6 ? (
-            <button 
-              type="button" 
-              onClick={nextStep} 
-              className="btn btn-primary glassmorphism"
-              style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
-            >
-              {I18N_TEXT[userLang].next}
-              <ChevronRight size={16} />
-            </button>
-          ) : (
-            <button 
-              type="submit" 
-              className="btn btn-success glassmorphism"
-              style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
-            >
-              {getText('getMyQuote', userLang)}
-              <ChevronRight size={16} />
-            </button>
-          )}
+        
+        <div className="trust-badge glassmorphism">
+          <span>💡 {I18N_TEXT[userLang].trustBadge}</span>
         </div>
-        )}
-      </form>
-      
-      <div className="trust-badge glassmorphism">
-        <span>💡 {I18N_TEXT[userLang].trustBadge}</span>
+        
+        <Toast message={toastMessage} isVisible={!!toastMessage} />
       </div>
-      
-      <Toast message={toastMessage} isVisible={!!toastMessage} />
-    </div>
-  );
-};
-
-export default QuoteForm;
+    );
+  };
+  
+  export default QuoteForm;
