@@ -6,7 +6,6 @@ interface Option {
   value: string;
   label: string;
   flag?: string;
-  [key: string]: any;
 }
 
 interface CustomSelectProps {
@@ -37,17 +36,15 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     adjustRight: false,
     adjustLeft: false,
   });
-  
+
   const wrapperRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find(option => option.value === value);
-  
-  const filteredOptions = searchable 
-    ? options.filter(option =>
-        option.label.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+  const selectedOption = options.find((option) => option.value === value);
+
+  const filteredOptions = searchable
+    ? options.filter((option) => option.label.toLowerCase().includes(searchTerm.toLowerCase()))
     : options;
 
   // Auto-positioning logic for dropdown to prevent overflow
@@ -59,7 +56,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       const viewportHeight = window.innerHeight;
       const viewportWidth = window.innerWidth;
       const dropdownHeight = Math.min(300, filteredOptions.length * 48 + (searchable ? 60 : 0)); // Estimate dropdown height
-      
+
       // Calculate available space
       const spaceBelow = viewportHeight - triggerRect.bottom - 20; // 20px padding
       const spaceAbove = triggerRect.top - 20; // 20px padding
@@ -71,7 +68,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         adjustRight: false,
         adjustLeft: false,
       };
-      
+
       // Vertical positioning - show above if not enough space below
       if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
         newPosition.showAbove = true;
@@ -98,11 +95,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     if (isOpen) {
       // Delay to ensure dropdown is rendered
       const timer = setTimeout(adjustDropdownPosition, 10);
-      
+
       // Also adjust on window resize
       window.addEventListener('resize', adjustDropdownPosition);
       window.addEventListener('scroll', adjustDropdownPosition);
-      
+
       return () => {
         clearTimeout(timer);
         window.removeEventListener('resize', adjustDropdownPosition);
@@ -139,7 +136,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     dropdownPosition.showAbove ? 'show-above' : '',
     dropdownPosition.adjustRight ? 'adjust-right' : '',
     dropdownPosition.adjustLeft ? 'adjust-left' : '',
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={`custom-select-wrapper ${className}`} ref={wrapperRef}>
@@ -150,7 +149,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       >
         <div className="custom-select-value">
           {selectedOption ? (
-            renderValue ? renderValue(selectedOption) : selectedOption.label
+            renderValue ? (
+              renderValue(selectedOption)
+            ) : (
+              selectedOption.label
+            )
           ) : (
             <span className="placeholder">{placeholder}</span>
           )}
@@ -175,7 +178,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
           )}
           <div className="custom-select-options">
             {filteredOptions.length > 0 ? (
-              filteredOptions.map(option => (
+              filteredOptions.map((option) => (
                 <div
                   key={option.value}
                   className={`custom-select-option ${option.value === value ? 'selected' : ''}`}
@@ -194,4 +197,4 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   );
 };
 
-export default CustomSelect; 
+export default CustomSelect;
