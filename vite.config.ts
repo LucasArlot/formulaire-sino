@@ -6,6 +6,23 @@ import { resolve } from 'path';
 export default defineConfig({
   base: '/formulaire-sino/',
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'ui-icons': ['lucide-react'],
+          'lead-context': [
+            '@/features/lead/context/i18n',
+            '@/features/lead/context/ports',
+            '@/features/lead/context/types',
+          ],
+          // Ensure the React context module is bundled once and shared
+          'quote-form-context': ['@/features/lead/context/QuoteFormContext'],
+        },
+      },
+    },
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
