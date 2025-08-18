@@ -1,4 +1,36 @@
 export type I18nDict = Record<string, Record<string, string>>;
+
+// Lightweight translate helper with fallback + interpolation
+export type Locale = keyof typeof I18N_TEXT;
+export type I18nKey = keyof typeof I18N_TEXT['en'];
+export type Params = Record<string, string | number>;
+const DEFAULT_LOCALE: Locale = 'en';
+
+export function translate(locale: Locale, key: I18nKey, params?: Params) {
+  // Note: I18N_TEXT is declared later; TS allows this due to hoisting of const references at runtime
+  const dict = I18N_TEXT[locale] ?? I18N_TEXT[DEFAULT_LOCALE];
+  const template =
+    dict[key] ?? I18N_TEXT[DEFAULT_LOCALE][key] ?? (key as string);
+  if (process.env.NODE_ENV !== 'production' && template === (key as string)) {
+    // eslint-disable-next-line no-console
+    console.warn(`[i18n] Missing key "${key}" for locale "${locale}"`);
+  }
+  return template.replace(/\{(\w+)\}/g, (_, p) =>
+    params && p in params ? String(params[p]) : `{${p}}`
+  );
+}
+
+// ---- Plural + typed params -----------------------------------------------
+export function plural(
+  locale: Locale,
+  baseKey: Exclude<I18nKey, `${string}_one` | `${string}_other`>,
+  count: number,
+  params?: Omit<Params, 'count'>
+) {
+  const category = new Intl.PluralRules(locale).select(count);
+  const key = `${baseKey}_${category}` as I18nKey;
+  return translate(locale, key, { count, ...(params ?? {}) });
+}
 // Centralized I18N dictionary (migrated from QuoteFormContext.tsx)
 const EN_TEXT: Record<string, string> = {
   // Header (main hero)
@@ -74,6 +106,9 @@ const EN_TEXT: Record<string, string> = {
   discussCargoDetails: "We'll discuss your cargo details and requirements",
   personalizedRecommendations: "You'll receive personalized recommendations and pricing",
   noCommitment: 'No commitment required - just expert guidance!',
+  confirmationMainTitle: 'Request Confirmation',
+  confirmationTitle: 'Quote Request Confirmed',
+  confirmationSubtitle: 'Your request has been successfully submitted',
   selectPickupLocationType: 'Select your pickup location type',
   pickupLocationDescription: 'Choose where we should collect your goods in China',
   step6Title: 'Contact Information',
@@ -157,6 +192,7 @@ const EN_TEXT: Record<string, string> = {
   submitDescription:
     'Click the Get My Quote button below to submit your request. We will respond within 24 hours.',
   securityBadge: 'Secure and GDPR compliant',
+  submitCta: 'Get My Quote',
   // Business info (company only)
   businessInformation: 'Business Information',
   businessInfoDescription: 'Tell us about your company',
@@ -206,6 +242,7 @@ const EN_TEXT: Record<string, string> = {
   pleaseSpecifyInRemarks: 'Please specify in remarks',
   validationGoodsValue: 'Please enter the goods value',
   validationReadyDate: 'Please select when your goods will be ready',
+  validationShipperType: 'Please select your shipper type (individual or company)',
 };
 
 // Step 1 minimal locales (migrated from QuoteFormContext.tsx)
@@ -266,7 +303,7 @@ const FR_TEXT: Record<string, string> = {
   airFeedback: 'Parfait pour les marchandises sensibles au temps ou de grande valeur',
   expressFeedback: 'Idéal pour les envois urgents petits à moyens avec suivi complet',
   unsureFeedback:
-    'Pas d’inquiétude ! Notre équipe expérimentée vous guidera et recommandera la meilleure solution d’expédition pour vos besoins spécifiques. Nous nous occupons de tous les détails techniques.',
+    "Pas d'inquiétude ! Notre équipe expérimentée vous guidera et recommandera la meilleure solution d'expédition pour vos besoins spécifiques. Nous nous occupons de tous les détails techniques.",
   // Step 3 (Origin)
   step3Title: 'Sélectionner le lieu de collecte en Chine',
   selectPickupLocationType: 'Sélectionnez votre type de lieu de collecte',
@@ -285,13 +322,13 @@ const FR_TEXT: Record<string, string> = {
   teamWillHelp: 'Notre équipe vous aidera à choisir la meilleure option',
   describeLooseCargo: 'Décrivez votre marchandise en vrac',
   provideDimensionsWeight: 'Fournissez dimensions et poids pour un tarif précis',
-  calcPerUnit: 'Calculer par type d’unité',
+  calcPerUnit: "Calculer par type d'unité",
   calcTotal: 'Calculer par envoi total',
   unitInfo: 'Fournissez des détails pour chaque article ou palette pour un calcul précis.',
-  packageType: 'Type d’emballage',
+  packageType: "Type d'emballage",
   pallets: 'Palettes',
   boxes: 'Cartons/Caisses',
-  numUnits: 'Nb d’unités',
+  numUnits: "Nb d'unités",
   palletType: 'Type de palette',
   palletNonSpecified: 'Non spécifié',
   euroPallet: 'Palette Europe (120×80 cm)',
@@ -304,7 +341,7 @@ const FR_TEXT: Record<string, string> = {
   totalInfo:
     'Fournir des valeurs globales peut être moins précis. Des dimensions inexactes ou surdimensionnées peuvent entraîner des frais supplémentaires.',
   enterTotalDimWeight: 'Saisissez les dimensions et le poids totaux de votre envoi.',
-  numUnitsHelp: 'Ce volume/poids total représente combien d’unités logiques ?',
+  numUnitsHelp: "Ce volume/poids total représente combien d'unités logiques ?",
   totalVolume: 'Volume total',
   totalWeight: 'Poids total',
   configureContainer: 'Configurez votre conteneur',
@@ -320,55 +357,100 @@ const FR_TEXT: Record<string, string> = {
   container45HC: "Conteneur 45' High Cube (86 CBM)",
   // Step 4 extras
   containerFeedback:
-    'Excellent choix pour les gros volumes, les gammes de produits complètes, ou lorsque vous avez assez de marchandises pour remplir un conteneur',
+    'Excellent pour les gros volumes, des gammes complètes ou quand vous pouvez remplir un conteneur',
   looseCargoFeedback:
-    'Parfait pour les marchandises mixtes, petites à moyennes quantités, ou lorsque vous avez besoin d’un emballage flexible',
+    "Idéal pour marchandises mixtes, petites à moyennes, ou si vous avez besoin d’un emballage flexible",
   // Step 4 — what happens next
-  whatHappensNextTitle: 'Et ensuite :',
+  whatHappensNextTitle: 'Prochaines étapes :',
   contactWithin24h: 'Nos experts vous contactent sous 24h',
-  discussCargoDetails: 'Nous échangeons sur votre marchandise et vos besoins',
-  personalizedRecommendations: 'Vous recevez des recommandations et un prix personnalisés',
-  noCommitment: 'Sans engagement — un accompagnement expert !',
+  discussCargoDetails: 'Nous discuterons des détails et exigences de votre marchandise',
+  personalizedRecommendations: 'Vous recevrez des recommandations et des prix personnalisés',
+  noCommitment: 'Sans engagement — juste un accompagnement d’experts !',
+  confirmationMainTitle: 'Confirmation de demande',
+  confirmationTitle: 'Demande de devis confirmée',
+  confirmationSubtitle: 'Votre demande a été soumise avec succès',
+  // Contact form (FR)
+  firstName: 'Prénom',
+  lastName: 'Nom',
+  email: 'E-mail',
+  phone: 'Téléphone',
+  companyName: "Nom de l'entreprise",
+  firstNamePlaceholder: 'Entrez votre prénom',
+  lastNamePlaceholder: 'Entrez votre nom',
+  emailPlaceholder: 'votre.email@entreprise.com',
+  phonePlaceholder: 'Votre numéro de téléphone',
+  companyNamePlaceholder: 'Nom de votre entreprise (optionnel)',
+
+  // StepContact specific (FR)
+  step6Title: 'Informations de contact',
+  customerTypeQuestion: 'Expédiez-vous en tant que particulier ou pour une entreprise ?',
+  customerTypeDescription: 'Cela nous aide à afficher les champs les plus pertinents',
+  individualCustomer: 'Particulier',
+  individualDescription: 'Pour les envois personnels et les petits volumes',
+  companyCustomer: 'Entreprise',
+  companyDescription: 'Pour les envois professionnels et les opérations régulières',
+  personalInformation: 'Informations personnelles',
+  personalInfoDescription: 'Dites-nous qui vous êtes',
+  shippingExperience: "Expérience d’expédition",
+  selectExperience: 'Sélectionnez votre niveau d’expérience',
+  firstTimeShipper: 'Première expédition internationale',
+  upTo10Times: 'Expérience limitée',
+  moreThan10Times: 'Expéditeur expérimenté',
+  regularShipper: 'Expéditeur régulier',
+  contactInformation: 'Coordonnées',
+  contactInfoDescription: 'Comment pouvons-nous vous joindre ?',
+  emailAddress: 'Adresse e-mail',
+  emailHelp: 'Nous vous enverrons votre devis et les mises à jour à cette adresse',
+  phoneNumber: 'Numéro de téléphone',
+  phoneHelp: 'Pour les mises à jour urgentes et les clarifications',
+  additionalNotes: 'Notes supplémentaires',
+  additionalNotesDescription: 'Y a-t-il autre chose que nous devrions savoir ?',
+  remarks: 'Remarques particulières',
+  remarksPlaceholder: 'Instructions, exigences ou questions particulières…',
+  remarksHelp: 'Plus de contexte nous aide à mieux vous accompagner',
+  readyToSubmit: 'Vous êtes prêt à obtenir votre devis !',
+  submitDescription: 'Cliquez sur le bouton Obtenir mon devis ci-dessous pour envoyer votre demande. Nous répondrons sous 24 heures.',
+  securityBadge: 'Sécurisé et conforme au RGPD',
+  businessInformation: 'Informations sur l’entreprise',
+  businessInfoDescription: 'Parlez-nous de votre entreprise',
+  // Bouton (FR)
+  submitCta: 'Obtenir mon devis',
   // Step 5 (Goods Details)
   step5Title: 'Parlez-nous de vos marchandises',
   goodsValueDeclaration: 'Valeur des marchandises et déclaration',
-  goodsValueDescription:
-    'Indiquez la valeur commerciale pour la déclaration douanière et l’assurance',
+  goodsValueDescription: 'Indiquez la valeur commerciale pour la déclaration douanière et l\'assurance',
   commercialValue: 'Valeur commerciale des marchandises',
-  goodsValueHelp:
-    'Cette valeur est utilisée pour la déclaration en douane et le calcul de l’assurance',
+  goodsValueHelp: 'Cette valeur est utilisée pour la déclaration en douane et le calcul de l\'assurance',
   personalOrHazardous: 'Effets personnels ou contient des matières dangereuses/réglementées',
-  personalHazardousHelp:
-    'Cochez si vous expédiez des effets personnels ou des marchandises nécessitant une manutention spéciale',
-  shipmentReadiness: 'Disponibilité de l’envoi',
-  shipmentTimingDescription:
-    'Aidez-nous à planifier votre calendrier d’expédition et à fournir des tarifs précis',
-  timingHelp: 'Un calendrier précis nous aide à vous proposer les tarifs les plus compétitifs',
+  personalHazardousHelp: 'Cochez si vous expédiez des effets personnels ou des marchandises nécessitant une manipulation spéciale',
+  shipmentReadiness: 'Disponibilité de la marchandise',
+  shipmentTimingDescription: 'Aidez-nous à planifier votre calendrier d\'expédition et à fournir des tarifs précis',
+  timingHelp: 'Des indications précises nous aident à proposer les tarifs les plus compétitifs',
   rateValidityTitle: 'Avis sur la validité des tarifs :',
-  rateValidityText:
-    'Les tarifs indiqués sont valables jusqu’à la date d’expiration figurant sur chaque devis. Si vos marchandises ne sont pas prêtes à être enlevées à cette date, les tarifs peuvent être révisés en fonction des conditions actuelles du marché.',
-  goodsReadyQuestion: 'Quand vos marchandises seront-elles prêtes pour l’enlèvement ?',
-  readyNow: '✅ Prêt maintenant - marchandises disponibles pour enlèvement immédiat',
-  readyIn1Week: '📅 Sous 1 semaine - en préparation',
-  readyIn2Weeks: '📅 Sous 2 semaines - en production',
-  readyIn1Month: '📅 Sous 1 mois - en planification',
+  rateValidityText: 'Les tarifs indiqués sont valables jusqu\'à la date d\'expiration figurant sur chaque devis. Si vos marchandises ne sont pas prêtes à être enlevées à cette date, les tarifs peuvent être ajustés selon les conditions du marché.',
+  goodsReadyQuestion: 'Quand vos marchandises seront-elles prêtes pour l\'enlèvement ?',
+  readyNow: '✅ Prêtes maintenant — enlèvement immédiat possible',
+  readyIn1Week: '📅 Sous 1 semaine — en préparation',
+  readyIn2Weeks: '📅 Sous 2 semaines — en production',
+  readyIn1Month: '📅 Sous 1 mois — en planification',
   dateNotSet: '❔ Date non déterminée',
   additionalDetails: 'Détails supplémentaires (optionnel)',
-  additionalDetailsDescription:
-    'Indiquez toute exigence particulière ou information complémentaire',
+  additionalDetailsDescription: 'Indiquez toute exigence particulière ou information supplémentaire',
   goodsDescription: 'Brève description des marchandises (optionnel)',
-  goodsDescriptionPlaceholder: 'ex. Électronique, Meubles, Vêtements, Machines…',
-  goodsDescriptionHelp: 'Nous aide à garantir une manutention et une documentation appropriées',
+  goodsDescriptionPlaceholder: 'ex. : Électronique, Mobilier, Vêtements, Machines…',
+  goodsDescriptionHelp: 'Nous aide à garantir une manutention et une documentation adéquates',
   specialRequirements: 'Exigences de manutention particulières (optionnel)',
   noSpecialRequirements: 'Aucune exigence particulière',
-  fragileGoods: 'Marchandises fragiles - manutention avec soin',
-  temperatureControlled: 'Contrôle de température',
+  fragileGoods: 'Marchandises fragiles — manipuler avec soin',
+  temperatureControlled: 'Température contrôlée',
   urgentTimeSensitive: 'Urgent/sensible au temps',
-  highValueInsurance: 'Assurance valeur élevée requise',
+  highValueInsurance: 'Assurance haute valeur requise',
   otherSpecify: 'Autre (veuillez préciser)',
   pleaseSpecifyInRemarks: 'Veuillez préciser dans les remarques',
-  validationGoodsValue: 'Veuillez entrer la valeur des marchandises',
-  validationReadyDate: 'Veuillez sélectionner quand vos marchandises seront prêtes',
+  validationGoodsValue: 'Veuillez saisir la valeur des marchandises',
+  validationReadyDate: 'Veuillez indiquer quand vos marchandises seront prêtes',
+  validationShipperType: 'Veuillez sélectionner votre type d’expéditeur (particulier ou entreprise)',
+  
 };
 
 const DE_TEXT: Record<string, string> = {
@@ -389,6 +471,10 @@ const DE_TEXT: Record<string, string> = {
   step1Title: 'Wohin versenden Sie?',
   selectDestinationCountry: 'Wählen Sie Ihr Zielland',
   searchCountryDescription: 'Suchen Sie das Land, in das Sie Ihre Waren versenden möchten',
+  selectShippingMode: 'Wählen Sie Ihre Versandart',
+  enterContactDetails: 'Geben Sie Ihre Kontaktdaten ein',
+  modeDescription: 'Wählen Sie die für Ihre Bedürfnisse beste Transportmethode',
+  contactDescription: 'Wir benötigen Ihre Informationen, um Ihnen das Angebot zu senden',
   searchCountry: 'Land suchen...',
   popular: 'Beliebt',
   otherCountries: 'Andere Länder',
@@ -410,7 +496,9 @@ const DE_TEXT: Record<string, string> = {
   selectDestinationPortDescription:
     'Wählen Sie den spezifischen Hafen oder Flughafen für die Lieferung',
   cityPostalDescription: 'Geben Sie Stadt und Postleitzahl für genauen Versand an',
+  pickupCityPostalDescription: 'Geben Sie Abholstadt und Postleitzahl für eine präzise Abholung an',
   searchDestinationPorts: 'Zielhäfen suchen',
+  searchPortsIn: 'Häfen suchen in',
   annualVolume: 'Jährliches Volumen',
   noPortsFoundFor: 'Keine Häfen gefunden für',
   selectCountryFirst: 'Bitte wählen Sie zuerst ein Land aus',
@@ -426,6 +514,7 @@ const DE_TEXT: Record<string, string> = {
   phonePlaceholder: 'Ihre Telefonnummer',
   companyNamePlaceholder: 'Ihr Firmenname (optional)',
   // StepContact specific (DE)
+  step6Title: 'Kontaktinformationen',
   customerTypeQuestion: 'Versenden Sie als Privatperson oder für ein Unternehmen?',
   customerTypeDescription: 'Damit zeigen wir Ihnen die relevantesten Felder',
   individualCustomer: 'Privatperson',
@@ -453,8 +542,9 @@ const DE_TEXT: Record<string, string> = {
   remarksHelp: 'Zusätzlicher Kontext hilft uns, Sie besser zu unterstützen',
   readyToSubmit: 'Sie sind bereit, Ihr Angebot zu erhalten!',
   submitDescription:
-    'Klicken Sie unten auf „Mein Angebot erhalten“, um Ihre Anfrage zu senden. Wir antworten innerhalb von 24 Stunden.',
+    'Klicken Sie unten auf "Mein Angebot erhalten", um Ihre Anfrage zu senden. Wir antworten innerhalb von 24 Stunden.',
   securityBadge: 'Sicher und DSGVO-konform',
+  submitCta: 'Mein Angebot erhalten',
   destinationCity: 'Zielstadt',
   destinationZipCode: 'Ziel-Postleitzahl',
   // Step 2
@@ -490,8 +580,8 @@ const DE_TEXT: Record<string, string> = {
   teamWillHelp: 'Unser Team hilft Ihnen, die beste Option zu wählen',
   describeLooseCargo: 'Beschreiben Sie Ihre lose Fracht',
   provideDimensionsWeight: 'Geben Sie Maße und Gewicht für eine genaue Preisberechnung an',
-  calcPerUnit: 'Nach Einheitentyp berechnen',
-  calcTotal: 'Nach Gesamtsendung berechnen',
+  calcPerUnit: "Berechnung nach Einheitentyp",
+  calcTotal: 'Berechnung nach Gesamtsendung',
   unitInfo:
     'Geben Sie Details zu jedem einzelnen Artikel oder jeder Palette für eine genaue Berechnung an.',
   packageType: 'Verpackungsart',
@@ -506,66 +596,76 @@ const DE_TEXT: Record<string, string> = {
   dimensionsPerUnit: 'Abmessungen (L×B×H pro Einheit)',
   weightPerUnit: 'Gewicht (pro Einheit)',
   weight: 'Gewicht',
+  required: 'Erforderlich',
   totalInfo:
-    'Gesamtdaten können ungenauer sein. Ungenaue oder zu große Maße können zu Zusatzkosten führen.',
+    'Gesamtangaben können ungenauer sein. Unpräzise oder zu große Maße können zu Zusatzkosten führen.',
   enterTotalDimWeight: 'Geben Sie die Gesamtmaße und das Gesamtgewicht Ihrer Sendung ein.',
+  numUnitsHelp: 'Wieviele logische Einheiten entsprechen diesem Gesamtvolumen/-gewicht?',
   totalVolume: 'Gesamtvolumen',
   totalWeight: 'Gesamtgewicht',
-  configureContainer: 'Konfigurieren Sie Ihren Container',
-  selectContainerTypeQty: 'Wählen Sie Container-Typ und Anzahl für Ihre Sendung',
+  configureContainer: 'Container konfigurieren',
+  selectContainerTypeQty: 'Containertyp und -anzahl für Ihre Sendung auswählen',
   containerInfo:
-    'Wählen Sie den Containertyp und die Anzahl, die Ihrem Ladungsvolumen am besten entsprechen.',
+    'Wählen Sie den Containertyp und die Anzahl, die am besten zu Ihrem Frachtvolumen passt.',
   containerType: 'Containertyp',
-  numContainers: 'Anzahl Container',
+  numContainers: 'Anzahl der Container',
   overweightContainer: 'Überladener Container (>25 Tonnen)',
   container20Std: "20' Standard (33 CBM)",
   container40Std: "40' Standard (67 CBM)",
   container40HC: "40' High Cube (76 CBM)",
   container45HC: "45' High Cube (86 CBM)",
+  // Step 4 extras
+  containerFeedback:
+    'Hervorragend für große Volumina, vollständige Produktlinien oder wenn Sie genug Ware für einen ganzen Container haben',
+  looseCargoFeedback:
+    'Ideal für gemischte Waren, kleine bis mittlere Mengen oder wenn Sie flexible Verpackung benötigen',
   // Step 4 — what happens next
   whatHappensNextTitle: 'Wie geht es weiter:',
-  contactWithin24h: 'Unsere Experten kontaktieren Sie innerhalb von 24 Stunden',
-  discussCargoDetails: 'Wir besprechen Frachtdetails und Anforderungen',
-  personalizedRecommendations: 'Sie erhalten individuelle Empfehlungen und Preise',
-  noCommitment: 'Keine Verpflichtung — nur fachkundige Beratung!',
+  contactWithin24h: 'Unsere Experten melden sich innerhalb von 24 Stunden',
+  discussCargoDetails: 'Wir besprechen Details und Anforderungen Ihrer Fracht',
+  personalizedRecommendations: 'Sie erhalten persönliche Empfehlungen und Preise',
+  noCommitment: 'Ohne Verpflichtung — einfach Expertenrat!',
+  confirmationMainTitle: 'Anfrage-Bestätigung',
+  confirmationTitle: 'Anfrage bestätigt',
+  confirmationSubtitle: 'Ihre Anfrage wurde erfolgreich übermittelt',
   // Step 5 (Goods Details)
   step5Title: 'Erzählen Sie uns von Ihrer Ware',
-  goodsValueDeclaration: 'Warenwert & Erklärung',
-  goodsValueDescription: 'Geben Sie den Handelswert für Zollanmeldung und Versicherung an',
+  goodsValueDeclaration: 'Warenwert & Deklaration',
+  goodsValueDescription:
+    'Geben Sie den Handelswert für Zollanmeldung und Versicherung an',
   commercialValue: 'Handelswert der Waren',
-  goodsValueHelp: 'Dieser Wert wird für die Zollanmeldung und die Versicherung verwendet',
-  personalOrHazardous: 'Persönliche Gegenstände oder enthält gefährliche/reglementierte Stoffe',
-  personalHazardousHelp:
-    'Ankreuzen, wenn persönliche Gegenstände oder besondere Handhabung erforderlich ist',
+  goodsValueHelp: 'Dieser Wert wird für Zoll und Versicherungsberechnung verwendet',
+  personalOrHazardous: 'Persönliche Effekte oder gefährliche/eingeschränkte Güter',
+  personalHazardousHelp: 'Ankreuzen, wenn persönliche Effekte oder spezielle Handhabung nötig sind',
   shipmentReadiness: 'Versandbereitschaft',
-  shipmentTimingDescription:
-    'Helfen Sie uns, Ihren Versandzeitplan zu planen und genaue Preise zu liefern',
-  timingHelp: 'Präzise Zeitangaben helfen uns, die wettbewerbsfähigsten Preise anzubieten',
-  rateValidityTitle: 'Hinweis zur Preisgültigkeit:',
+  shipmentTimingDescription: 'Helfen Sie uns, den Zeitplan zu planen und genaue Tarife zu bieten',
+  timingHelp: 'Genaue Zeitangaben ermöglichen die konkurrenzfähigsten Tarife',
+  rateValidityTitle: 'Hinweis zur Tarifgültigkeit:',
   rateValidityText:
-    'Die angegebenen Preise sind bis zum auf jedem Angebot ausgewiesenen Ablaufdatum gültig. Sind Ihre Waren bis zu diesem Datum nicht abholbereit, können die Preise entsprechend der aktuellen Marktlage angepasst werden.',
-  goodsReadyQuestion: 'Wann sind Ihre Waren zur Abholung bereit?',
-  readyNow: '✅ Jetzt bereit - Waren sind zur sofortigen Abholung verfügbar',
-  readyIn1Week: '📅 Innerhalb 1 Woche - in Vorbereitung',
-  readyIn2Weeks: '📅 Innerhalb 2 Wochen - in Produktion',
-  readyIn1Month: '📅 Innerhalb 1 Monat - in Planung',
+    'Angebotene Tarife gelten bis zum angegebenen Ablaufdatum. Sind die Waren bis dahin nicht abholbereit, können sich die Tarife gemäß Marktlage ändern.',
+  goodsReadyQuestion: 'Wann sind Ihre Waren abholbereit?',
+  readyNow: '✅ Jetzt bereit – sofortige Abholung möglich',
+  readyIn1Week: '📅 Innerhalb 1 Woche – in Vorbereitung',
+  readyIn2Weeks: '📅 Innerhalb 2 Wochen – in Produktion',
+  readyIn1Month: '📅 Innerhalb 1 Monats – in Planung',
   dateNotSet: '❔ Datum noch nicht festgelegt',
-  additionalDetails: 'Zusätzliche Angaben (optional)',
-  additionalDetailsDescription:
-    'Geben Sie besondere Anforderungen oder zusätzliche Informationen an',
-  goodsDescription: 'Kurzbeschreibung der Waren (optional)',
+  additionalDetails: 'Zusätzliche Details (optional)',
+  additionalDetailsDescription: 'Besondere Anforderungen oder Zusatzinformationen angeben',
+  goodsDescription: 'Kurze Warenbeschreibung (optional)',
   goodsDescriptionPlaceholder: 'z. B. Elektronik, Möbel, Kleidung, Maschinen …',
-  goodsDescriptionHelp: 'Hilft uns, eine geeignete Handhabung und Dokumentation sicherzustellen',
+  goodsDescriptionHelp: 'Hilft bei korrekter Handhabung und Dokumentation',
   specialRequirements: 'Besondere Handhabungsanforderungen (optional)',
   noSpecialRequirements: 'Keine besonderen Anforderungen',
-  fragileGoods: 'Fragile Waren - vorsichtig behandeln',
+  fragileGoods: 'Zerbrechliche Waren – vorsichtig behandeln',
   temperatureControlled: 'Temperaturgeführt',
   urgentTimeSensitive: 'Dringend/zeitkritisch',
-  highValueInsurance: 'Versicherung für hohen Warenwert erforderlich',
-  otherSpecify: 'Andere (bitte angeben)',
+  highValueInsurance: 'Hochwertversicherung erforderlich',
+  otherSpecify: 'Sonstiges (bitte angeben)',
   pleaseSpecifyInRemarks: 'Bitte in den Bemerkungen angeben',
-  validationGoodsValue: 'Bitte geben Sie den Warenwert ein',
-  validationReadyDate: 'Bitte wählen Sie, wann Ihre Waren bereit sein werden',
+  validationGoodsValue: 'Bitte den Warenwert eingeben',
+  validationReadyDate: 'Bitte angeben, wann die Waren bereit sind',
+  validationShipperType: 'Bitte wählen Sie Ihren Versendertyp (Privatperson oder Unternehmen)',
+  
 };
 
 const ES_TEXT: Record<string, string> = {
@@ -574,7 +674,7 @@ const ES_TEXT: Record<string, string> = {
   trustBadge: 'Aprobado por 55.000+ importadores | Respuesta < 24 h | 100% Gratis',
   previous: 'Anterior',
   next: 'Siguiente',
-  timelineDestination: 'Destino',
+  timelineDestination: 'Destination',
   timelineMode: 'Modo',
   timelineOrigin: 'Origen',
   timelineCargo: 'Carga',
@@ -606,7 +706,9 @@ const ES_TEXT: Record<string, string> = {
   enterDestinationDetails: 'Ingrese detalles del destino',
   selectDestinationPortDescription: 'Elija el puerto o aeropuerto específico para la entrega',
   cityPostalDescription: 'Proporcione la ciudad y código postal para envío preciso',
+  pickupCityPostalDescription: 'Proporcione la ciudad de recogida y el código postal para una recogida precisa',
   searchDestinationPorts: 'Buscar puertos de destino',
+  searchPortsIn: 'Buscar puertos en',
   annualVolume: 'Volumen anual',
   noPortsFoundFor: 'No se encontraron puertos para',
   selectCountryFirst: 'Por favor, seleccione primero un país',
@@ -624,6 +726,7 @@ const ES_TEXT: Record<string, string> = {
   phonePlaceholder: 'Su número de teléfono',
   companyNamePlaceholder: 'Nombre de su empresa (opcional)',
   // StepContact specific (ES)
+  step6Title: 'Información de contacto',
   customerTypeQuestion: '¿Envía como particular o para una empresa?',
   customerTypeDescription: 'Esto nos ayuda a mostrar los campos más relevantes',
   individualCustomer: 'Particular',
@@ -640,6 +743,8 @@ const ES_TEXT: Record<string, string> = {
   regularShipper: 'Remitente habitual',
   contactInformation: 'Información de contacto',
   contactInfoDescription: '¿Cómo podemos contactarle?',
+  businessInformation: 'Información de la empresa',
+  businessInfoDescription: 'Cuéntenos sobre su empresa',
   emailAddress: 'Dirección de correo electrónico',
   emailHelp: 'Enviaremos su cotización y actualizaciones a esta dirección',
   phoneNumber: 'Número de teléfono',
@@ -653,8 +758,13 @@ const ES_TEXT: Record<string, string> = {
   submitDescription:
     'Haga clic en el botón Obtener mi cotización a continuación para enviar su solicitud. Responderemos en 24 horas.',
   securityBadge: 'Seguro y conforme al RGPD',
+  submitCta: 'Obtener mi cotización',
   // Step 2
   step2Title: 'Modo de envío',
+  selectShippingMode: 'Seleccione su modo de envío',
+  enterContactDetails: 'Ingrese sus datos de contacto',
+  modeDescription: 'Elija el método de transporte que mejor se adapte a sus necesidades',
+  contactDescription: 'Necesitamos su información para enviarle la cotización',
   unsureAboutChoice: '¿No estás seguro de tu elección?',
   unsureShipping: 'Aún no estoy seguro',
   unsureShippingDesc: 'Deja que los expertos ayuden',
@@ -723,11 +833,14 @@ const ES_TEXT: Record<string, string> = {
     'Perfecto para mercancías mixtas, cantidades pequeñas a medianas, o cuando necesita embalaje flexible',
   numUnitsHelp: '¿Cuántas unidades lógicas representa este volumen/peso total?',
   required: 'Obligatorio',
-  whatHappensNextTitle: '¿Qué sigue?:',
-  contactWithin24h: 'Nuestros expertos lo contactarán en 24 horas',
+  whatHappensNextTitle: 'Próximos pasos:',
+  contactWithin24h: 'Nuestros expertos se pondrán en contacto en 24 horas',
   discussCargoDetails: 'Comentaremos los detalles y requisitos de su carga',
   personalizedRecommendations: 'Recibirá recomendaciones y precios personalizados',
   noCommitment: 'Sin compromiso — solo asesoría experta',
+  confirmationMainTitle: 'Confirmación de solicitud',
+  confirmationTitle: 'Solicitud de cotización confirmada',
+  confirmationSubtitle: 'Su solicitud se ha enviado correctamente',
   // Step 5 (Goods Details)
   step5Title: 'Cuéntenos sobre sus mercancías',
   goodsValueDeclaration: 'Valor de las mercancías y declaración',
@@ -765,6 +878,8 @@ const ES_TEXT: Record<string, string> = {
   pleaseSpecifyInRemarks: 'Especifique en observaciones',
   validationGoodsValue: 'Por favor ingrese el valor de los bienes',
   validationReadyDate: 'Por favor seleccione cuándo estarán listos sus bienes',
+  validationShipperType: 'Seleccione su tipo de remitente (particular o empresa)',
+  // Step 6 (Contact) – consolidated earlier in ES block; duplicate definitions removed
 };
 
 const IT_TEXT: Record<string, string> = {
@@ -816,14 +931,15 @@ const IT_TEXT: Record<string, string> = {
   lastName: 'Cognome',
   email: 'Email',
   phone: 'Telefono',
-  companyName: 'Nome dell’azienda',
+  companyName: "Nome dell'azienda",
   firstNamePlaceholder: 'Inserisci il tuo nome',
   lastNamePlaceholder: 'Inserisci il tuo cognome',
   emailPlaceholder: 'la.tua.email@azienda.com',
   phonePlaceholder: 'Il tuo numero di telefono',
   companyNamePlaceholder: 'Nome della tua azienda (opzionale)',
   // StepContact specific (IT)
-  customerTypeQuestion: 'Spedisci come privato o per un’azienda?',
+  step6Title: 'Informazioni di contatto',
+  customerTypeQuestion: "Spedisci come privato o per un'azienda?",
   customerTypeDescription: 'Questo ci aiuta a mostrare i campi più rilevanti',
   individualCustomer: 'Privato',
   individualDescription: 'Per spedizioni personali e piccoli volumi',
@@ -844,7 +960,7 @@ const IT_TEXT: Record<string, string> = {
   phoneNumber: 'Numero di telefono',
   phoneHelp: 'Per aggiornamenti urgenti e chiarimenti',
   additionalNotes: 'Note aggiuntive',
-  additionalNotesDescription: 'C’è altro che dovremmo sapere?',
+  additionalNotesDescription: "C'è altro che dovremmo sapere?",
   remarks: 'Osservazioni speciali',
   remarksPlaceholder: 'Eventuali istruzioni, requisiti o domande speciali…',
   remarksHelp: 'Più contesto ci aiuta ad assisterti meglio',
@@ -852,6 +968,7 @@ const IT_TEXT: Record<string, string> = {
   submitDescription:
     'Fai clic sul pulsante Ottieni il mio preventivo qui sotto per inviare la tua richiesta. Risponderemo entro 24 ore.',
   securityBadge: 'Sicuro e conforme al GDPR',
+  submitCta: 'Ottieni il mio preventivo',
   // Step 2
   step2Title: 'Modalità di spedizione',
   unsureAboutChoice: 'Non sei sicuro della tua scelta?',
@@ -921,14 +1038,17 @@ const IT_TEXT: Record<string, string> = {
   discussCargoDetails: 'Discuteremo i dettagli e i requisiti del carico',
   personalizedRecommendations: 'Riceverai raccomandazioni e prezzi personalizzati',
   noCommitment: 'Nessun impegno — solo consulenza esperta!',
+  confirmationMainTitle: 'Conferma della richiesta',
+  confirmationTitle: 'Richiesta di preventivo confermata',
+  confirmationSubtitle: 'La tua richiesta è stata inviata con successo',
   // Step 5 (Goods Details)
   step5Title: 'Parlaci delle tue merci',
   goodsValueDeclaration: 'Valore delle merci e dichiarazione',
   goodsValueDescription:
-    'Indica il valore commerciale per la dichiarazione doganale e l’assicurazione',
+    "Indica il valore commerciale per la dichiarazione doganale e l'assicurazione",
   commercialValue: 'Valore commerciale delle merci',
   goodsValueHelp:
-    'Questo valore è utilizzato per la dichiarazione in dogana e il calcolo dell’assicurazione',
+    "Questo valore è utilizzato per la dichiarazione in dogana e il calcolo dell'assicurazione",
   personalOrHazardous: 'Effetti personali o contiene materiali pericolosi/regolamentati',
   personalHazardousHelp:
     'Seleziona se spedisci effetti personali o merci che richiedono una gestione speciale',
@@ -960,6 +1080,7 @@ const IT_TEXT: Record<string, string> = {
   pleaseSpecifyInRemarks: 'Specificare nelle note',
   validationGoodsValue: 'Per favore inserisci il valore delle merci',
   validationReadyDate: 'Per favore seleziona quando le tue merci saranno pronte',
+  validationShipperType: 'Seleziona il tipo di mittente (privato o azienda)',
 };
 
 const NL_TEXT: Record<string, string> = {
@@ -1000,7 +1121,9 @@ const NL_TEXT: Record<string, string> = {
   enterDestinationDetails: 'Voer bestemmingsdetails in',
   selectDestinationPortDescription: 'Kies de specifieke haven of luchthaven voor levering',
   cityPostalDescription: 'Geef stad en postcode voor nauwkeurige verzending',
+  pickupCityPostalDescription: 'Geef ophaalstad en postcode op voor een nauwkeurige afhaling',
   searchDestinationPorts: 'Zoek bestemmingshavens',
+  searchPortsIn: 'Zoek havens in',
   annualVolume: 'Jaarlijks volume',
   noPortsFoundFor: 'Geen havens gevonden voor',
   selectCountryFirst: 'Selecteer eerst een land',
@@ -1018,7 +1141,8 @@ const NL_TEXT: Record<string, string> = {
   phonePlaceholder: 'Uw telefoonnummer',
   companyNamePlaceholder: 'Uw bedrijfsnaam (optioneel)',
   // StepContact specific (NL)
-  customerTypeQuestion: 'Verzendt u als particulier of voor een bedrijf?',
+  step6Title: 'Contactinformatie',
+  customerTypeQuestion: 'Verstuurt u als particulier of voor een bedrijf?',
   customerTypeDescription: 'Zo tonen we de meest relevante velden',
   individualCustomer: 'Particulier',
   individualDescription: 'Voor persoonlijke zendingen en kleine volumes',
@@ -1047,6 +1171,7 @@ const NL_TEXT: Record<string, string> = {
   submitDescription:
     'Klik hieronder op "Mijn offerte ontvangen" om uw aanvraag te versturen. We reageren binnen 24 uur.',
   securityBadge: 'Veilig en AVG-conform',
+  submitCta: 'Mijn offerte ontvangen',
   // Step 2
   step2Title: 'Verzendmethode',
   unsureAboutChoice: 'Niet zeker van uw keuze?',
@@ -1068,7 +1193,7 @@ const NL_TEXT: Record<string, string> = {
   selectOriginPort: 'Selecteer de ophaalhaven/terminal/luchthaven',
   enterPickupDetails: 'Voer ophaalgegevens in',
   // Step 4 (Freight)
-  step4Title: 'Onder welke vorm verzendt u?',
+  step4Title: 'Wat verzendt u?',
   chooseShippingType: 'Kies uw verzendtype',
   selectPackagingMethod: 'Selecteer hoe uw goederen voor verzending zijn verpakt',
   looseCargo: 'Losse lading',
@@ -1104,17 +1229,20 @@ const NL_TEXT: Record<string, string> = {
   containerInfo: 'Selecteer het containertype en aantal dat past bij uw ladingsvolume.',
   containerType: 'Containertype',
   numContainers: 'Aantal containers',
-  overweightContainer: 'Contêiner met excesso de peso (>25 toneladas)',
-  container20Std: "Contêiner 20' Padrão (33 CBM)",
-  container40Std: "Contêiner 40' Padrão (67 CBM)",
-  container40HC: "Contêiner 40' High Cube (76 CBM)",
-  container45HC: "Contêiner 45' High Cube (86 CBM)",
+  overweightContainer: 'Overbeladen container (>25 ton)',
+  container20Std: "20' Standaard (33 CBM)",
+  container40Std: "40' Standaard (67 CBM)",
+  container40HC: "40' High Cube (76 CBM)",
+  container45HC: "45' High Cube (86 CBM)",
   // Step 4 — what happens next
   whatHappensNextTitle: 'Vervolgstappen:',
   contactWithin24h: 'Onze experts nemen binnen 24 uur contact op',
-  discussCargoDetails: 'We bespreken ladingdetails en requirements',
+  discussCargoDetails: 'We bespreken de ladingdetails en vereisten',
   personalizedRecommendations: 'U ontvangt persoonlijke aanbevelingen en prijzen',
   noCommitment: 'Geen verplichting — alleen deskundige begeleiding!',
+  confirmationMainTitle: 'Bevestiging van verzoek',
+  confirmationTitle: 'Offerteaanvraag bevestigd',
+  confirmationSubtitle: 'Uw aanvraag is succesvol verzonden',
   // Step 5 (Goods Details)
   step5Title: 'Vertel ons over uw goederen',
   goodsValueDeclaration: 'Waarde van de goederen en verklaring',
@@ -1152,6 +1280,13 @@ const NL_TEXT: Record<string, string> = {
   pleaseSpecifyInRemarks: 'Gelieve te specificeren in opmerkingen',
   validationGoodsValue: 'Voer de waarde van de goederen in',
   validationReadyDate: 'Selecteer wanneer uw goederen klaar zullen zijn',
+  validationShipperType: 'Selecteer uw verzendertype (particulier of bedrijf)',
+  selectShippingMode: 'Selecteer uw verzendmethode',
+  enterContactDetails: 'Voer uw contactgegevens in',
+  modeDescription: 'Kies de vervoersmethode die het beste bij uw behoeften past',
+  contactDescription: 'We hebben uw gegevens nodig om de offerte te sturen',
+  businessInformation: 'Bedrijfsinformatie',
+  businessInfoDescription: 'Vertel ons over uw bedrijf',
 };
 
 const ZH_TEXT: Record<string, string> = {
@@ -1191,8 +1326,10 @@ const ZH_TEXT: Record<string, string> = {
   enterDestinationDetails: '输入目的地详情',
   selectDestinationPortDescription: '选择具体的港口或机场进行交付',
   cityPostalDescription: '提供城市和邮政编码以确保准确运输',
+  pickupCityPostalDescription: '提供提货城市和邮政编码以便精准上门提货',
   searchDestinationPorts: '搜索目的港',
-  annualVolume: '年度体积',
+  searchPortsIn: '搜索以下地区的港口',
+  annualVolume: '年度货量',
   noPortsFoundFor: '未找到港口',
   selectCountryFirst: '请先选择一个国家',
   destinationCity: '目的地城市',
@@ -1205,11 +1342,12 @@ const ZH_TEXT: Record<string, string> = {
   companyName: '公司名称',
   firstNamePlaceholder: '输入您的名字',
   lastNamePlaceholder: '输入您的姓氏',
-  emailPlaceholder: '您的.邮箱@公司.com',
+  emailPlaceholder: 'your.email@company.com',
   phonePlaceholder: '您的电话号码',
   companyNamePlaceholder: '您的公司名称（可选）',
   // StepContact specific (ZH)
-  customerTypeQuestion: '您是以个人身份还是为公司发货？',
+  step6Title: '联系信息',
+  customerTypeQuestion: '您是以个人还是公司名义发货？',
   customerTypeDescription: '这有助于我们提供最相关的字段',
   individualCustomer: '个人',
   individualDescription: '适用于个人寄送和小批量',
@@ -1225,6 +1363,10 @@ const ZH_TEXT: Record<string, string> = {
   regularShipper: '常规发货人',
   contactInformation: '联系信息',
   contactInfoDescription: '我们如何与您联系？',
+  selectShippingMode: '选择运输方式',
+  enterContactDetails: '输入您的联系方式',
+  modeDescription: '选择最符合您需求的运输方式',
+  contactDescription: '我们需要您的信息以发送报价',
   emailAddress: '电子邮箱地址',
   emailHelp: '我们会将您的报价和更新发送到该地址',
   phoneNumber: '电话号码',
@@ -1235,8 +1377,11 @@ const ZH_TEXT: Record<string, string> = {
   remarksPlaceholder: '任何特殊指示、要求或问题……',
   remarksHelp: '更多背景有助于我们更好地为您服务',
   readyToSubmit: '您已准备好获取报价！',
-  submitDescription: '点击下方“获取我的报价”按钮提交您的请求。我们将在24小时内回复。',
+  submitDescription: '点击下方"获取我的报价"按钮提交您的请求。我们将在24小时内回复。',
   securityBadge: '安全且符合GDPR',
+  submitCta: '获取我的报价',
+  businessInformation: '公司信息',
+  businessInfoDescription: '请介绍一下您的公司',
   // Step 2
   step2Title: '运输方式',
   unsureAboutChoice: '不确定您的选择？',
@@ -1307,6 +1452,9 @@ const ZH_TEXT: Record<string, string> = {
   discussCargoDetails: '我们会沟通货物细节与需求',
   personalizedRecommendations: '您将获得个性化建议与报价',
   noCommitment: '无需承诺 — 仅提供专业指引！',
+  confirmationMainTitle: '申请确认',
+  confirmationTitle: '报价申请已确认',
+  confirmationSubtitle: '您的请求已成功提交',
   // Step 5 (Goods Details)
   step5Title: '请介绍您的货物',
   goodsValueDeclaration: '货物价值与申报',
@@ -1342,6 +1490,7 @@ const ZH_TEXT: Record<string, string> = {
   pleaseSpecifyInRemarks: '请在备注中说明',
   validationGoodsValue: '请输入货物价值',
   validationReadyDate: '请选择货物准备就绪时间',
+  validationShipperType: '请选择发货类型（个人或企业）',
 };
 
 const AR_TEXT: Record<string, string> = {
@@ -1399,7 +1548,8 @@ const AR_TEXT: Record<string, string> = {
   phonePlaceholder: 'رقم هاتفك',
   companyNamePlaceholder: 'اسم شركتك (اختياري)',
   // StepContact specific (AR)
-  customerTypeQuestion: 'هل تشحن كفرد أم لشركة؟',
+  step6Title: 'معلومات الاتصال',
+  customerTypeQuestion: 'هل تشحن كشخص أم لصالح شركة؟',
   customerTypeDescription: 'يساعدنا هذا على عرض الحقول الأكثر صلة',
   individualCustomer: 'فرد',
   individualDescription: 'للشحنات الشخصية والأحجام الصغيرة',
@@ -1427,6 +1577,7 @@ const AR_TEXT: Record<string, string> = {
   readyToSubmit: 'أنت جاهز للحصول على عرض السعر!',
   submitDescription: 'اضغط على زر "احصل على عرض السعر" أدناه لإرسال طلبك. سنرد خلال 24 ساعة.',
   securityBadge: 'آمن ومتوافق مع GDPR',
+  submitCta: 'احصل على عرض السعر',
   // Step 2
   step2Title: 'طريقة الشحن',
   unsureAboutChoice: 'غير متأكد من اختيارك؟',
@@ -1494,6 +1645,9 @@ const AR_TEXT: Record<string, string> = {
   discussCargoDetails: 'سنناقش تفاصيل واحتياجات الشحنة',
   personalizedRecommendations: 'ستتلقى توصيات وتسعيراً مخصصين',
   noCommitment: 'بدون التزام — فقط إرشاد احترافي!',
+  confirmationMainTitle: 'تأكيد الطلب',
+  confirmationTitle: 'تم تأكيد طلب التسعير',
+  confirmationSubtitle: 'تم إرسال طلبك بنجاح',
   // Step 5 (Goods Details)
   step5Title: 'أخبرنا عن بضائعك',
   goodsValueDeclaration: 'قيمة البضائع والتصريح',
@@ -1529,6 +1683,7 @@ const AR_TEXT: Record<string, string> = {
   pleaseSpecifyInRemarks: 'يرجى التحديد في الملاحظات',
   validationGoodsValue: 'يرجى إدخال قيمة البضائع',
   validationReadyDate: 'يرجى اختيار موعد جاهزية البضائع',
+  validationShipperType: 'يرجى اختيار نوع المُرسل (فرد أو شركة)',
 };
 
 const PT_TEXT: Record<string, string> = {
@@ -1587,6 +1742,7 @@ const PT_TEXT: Record<string, string> = {
   phonePlaceholder: 'Seu número de telefone',
   companyNamePlaceholder: 'Nome da sua empresa (opcional)',
   // StepContact specific (PT)
+  step6Title: 'Informações de contato',
   customerTypeQuestion: 'Você está enviando como pessoa física ou para uma empresa?',
   customerTypeDescription: 'Isso nos ajuda a exibir os campos mais relevantes',
   individualCustomer: 'Pessoa física',
@@ -1614,8 +1770,9 @@ const PT_TEXT: Record<string, string> = {
   remarksHelp: 'Mais contexto nos ajuda a atendê-lo melhor',
   readyToSubmit: 'Você está pronto para receber sua cotação!',
   submitDescription:
-    'Clique abaixo em “Receber minha cotação” para enviar sua solicitação. Responderemos em até 24 horas.',
+    'Clique abaixo em "Receber minha cotação" para enviar sua solicitação. Responderemos em até 24 horas.',
   securityBadge: 'Seguro e em conformidade com a LGPD/GDPR',
+  submitCta: 'Receber minha cotação',
   // Step 2
   step2Title: 'Modo de envio',
   unsureAboutChoice: 'Não tem certeza da sua escolha?',
@@ -1685,6 +1842,9 @@ const PT_TEXT: Record<string, string> = {
   discussCargoDetails: 'Vamos discutir detalhes e requisitos da sua carga',
   personalizedRecommendations: 'Você receberá recomendações e preços personalizados',
   noCommitment: 'Sem compromisso — apenas orientação especializada!',
+  confirmationMainTitle: 'Confirmação de solicitação',
+  confirmationTitle: 'Pedido de cotação confirmado',
+  confirmationSubtitle: 'Seu pedido foi enviado com sucesso',
   // Step 5 (Goods Details)
   step5Title: 'Fale-nos sobre suas mercadorias',
   goodsValueDeclaration: 'Valor das mercadorias e declaração',
@@ -1722,17 +1882,18 @@ const PT_TEXT: Record<string, string> = {
   pleaseSpecifyInRemarks: 'Especifique nas observações',
   validationGoodsValue: 'Por favor, insira o valor dos bens',
   validationReadyDate: 'Por favor, selecione quando seus bens estarão prontos',
+  validationShipperType: 'Selecione o tipo de remetente (pessoa física ou empresa)',
 };
 
 const TR_TEXT: Record<string, string> = {
-  mainTitle: 'Çin’den Nakliye Teklifi',
-  mainSubtitle: 'Çin’den gönderiniz için hızlı ve güvenilir bir teklif alın',
+  mainTitle: "Çin'den Nakliye Teklifi",
+  mainSubtitle: "Çin'den gönderiniz için hızlı ve güvenilir bir teklif alın",
   trustBadge: '55.000+ ithalatçı tarafından onaylandı | Yanıt < 24s | %100 Ücretsiz',
   previous: 'Geri',
   next: 'İleri',
   timelineDestination: 'Varış',
   timelineMode: 'Mod',
-  timelineOrigin: 'Çıkış',
+  timelineOrigin: 'Alım',
   timelineCargo: 'Yük',
   timelineGoodsDetails: 'Yük detayları',
   timelineContact: 'İletişim',
@@ -1762,7 +1923,9 @@ const TR_TEXT: Record<string, string> = {
   enterDestinationDetails: 'Hedef detaylarını girin',
   selectDestinationPortDescription: 'Teslimat için belirli liman veya havaalanını seçin',
   cityPostalDescription: 'Kesin nakliye için şehir ve posta kodu belirtin',
+  pickupCityPostalDescription: 'Doğru alım için alım şehri ve posta kodunu belirtin',
   searchDestinationPorts: 'Hedef limanları ara',
+  searchPortsIn: 'Şuradaki limanları ara',
   annualVolume: 'Yıllık hacim',
   noPortsFoundFor: 'İçin liman bulunamadı',
   selectCountryFirst: 'Lütfen önce bir ülke seçin',
@@ -1780,7 +1943,8 @@ const TR_TEXT: Record<string, string> = {
   phonePlaceholder: 'Telefon numaranız',
   companyNamePlaceholder: 'Şirket adınız (isteğe bağlı)',
   // StepContact specific (TR)
-  customerTypeQuestion: 'Bireysel olarak mı yoksa bir şirket için mi gönderim yapıyorsunuz?',
+  step6Title: 'İletişim Bilgileri',
+  customerTypeQuestion: 'Bireysel olarak mı yoksa bir şirket için mi gönderiyorsunuz?',
   customerTypeDescription: 'Bu, en ilgili alanları göstermemize yardımcı olur',
   individualCustomer: 'Bireysel',
   individualDescription: 'Kişisel gönderiler ve küçük hacimler için',
@@ -1796,6 +1960,10 @@ const TR_TEXT: Record<string, string> = {
   regularShipper: 'Düzenli gönderici',
   contactInformation: 'İletişim Bilgileri',
   contactInfoDescription: 'Size nasıl ulaşabiliriz?',
+  selectShippingMode: 'Gönderim şeklini seçin',
+  enterContactDetails: 'İletişim bilgilerinizi girin',
+  modeDescription: 'İhtiyaçlarınıza en uygun taşıma yöntemini seçin',
+  contactDescription: 'Size teklifi gönderebilmemiz için bilgilerinize ihtiyacımız var',
   emailAddress: 'E-posta Adresi',
   emailHelp: 'Teklifinizi ve güncellemeleri bu adrese göndereceğiz',
   phoneNumber: 'Telefon Numarası',
@@ -1809,6 +1977,9 @@ const TR_TEXT: Record<string, string> = {
   submitDescription:
     'Talebinizi göndermek için aşağıdaki "Teklifimi Al" düğmesine tıklayın. 24 saat içinde yanıt vereceğiz.',
   securityBadge: 'Güvenli ve GDPR ile uyumlu',
+  submitCta: 'Teklifimi Al',
+  businessInformation: 'Şirket Bilgileri',
+  businessInfoDescription: 'Bize şirketinizden bahsedin',
   // Step 2
   step2Title: 'Gönderim şekli',
   unsureAboutChoice: 'Seçiminizden emin değil misiniz?',
@@ -1824,9 +1995,9 @@ const TR_TEXT: Record<string, string> = {
   unsureFeedback:
     'Endişe etmeyin! Deneyimli ekibimiz sürecin her aşamasında size rehberlik edecek ve özel ihtiyaçlarınıza en uygun nakliye çözümünü önerecektir. Tüm teknik detayları biz hallederiz.',
   // Step 3 (Origin)
-  step3Title: 'Çin’de alım yerini seçin',
+  step3Title: "Çin'de alım yerini seçin",
   selectPickupLocationType: 'Alım yeri türünü seçin',
-  pickupLocationDescription: 'Çin’de mallarınızı nereden almamız gerektiğini seçin',
+  pickupLocationDescription: "Çin'de mallarınızı nereden almamız gerektiğini seçin",
   selectOriginPort: 'Alım limanı/terminali/havalimanını seçin',
   enterPickupDetails: 'Alım detaylarını girin',
   // Step 4 (Freight)
@@ -1877,6 +2048,9 @@ const TR_TEXT: Record<string, string> = {
   discussCargoDetails: 'Yük detayları ve gereksinimleri konuşacağız',
   personalizedRecommendations: 'Kişiselleştirilmiş öneriler ve fiyatlandırma alacaksınız',
   noCommitment: 'Zorunluluk yok — yalnızca uzman rehberliği!',
+  confirmationMainTitle: 'Talep onayı',
+  confirmationTitle: 'Teklif talebi onaylandı',
+  confirmationSubtitle: 'Talebiniz başarıyla gönderildi',
   // Step 5 (Goods Details)
   step5Title: 'Yükünüz hakkında bize anlatın',
   goodsValueDeclaration: 'Yük değeri ve beyanı',
@@ -1913,6 +2087,7 @@ const TR_TEXT: Record<string, string> = {
   pleaseSpecifyInRemarks: 'Lütfen notlarda belirtin',
   validationGoodsValue: 'Lütfen yükün değerini girin',
   validationReadyDate: 'Lütfen yükün ne zaman hazır olacağını seçin',
+  validationShipperType: 'Lütfen gönderici türünü seçin (bireysel veya şirket)',
 };
 
 const RU_TEXT: Record<string, string> = {
@@ -1971,7 +2146,8 @@ const RU_TEXT: Record<string, string> = {
   phonePlaceholder: 'Ваш номер телефона',
   companyNamePlaceholder: 'Название вашей компании (необязательно)',
   // StepContact specific (RU)
-  customerTypeQuestion: 'Отправляете ли вы как частное лицо или для компании?',
+  step6Title: 'Контактная информация',
+  customerTypeQuestion: 'Вы отправляете как частное лицо или для компании?',
   customerTypeDescription: 'Это поможет показать наиболее релевантные поля',
   individualCustomer: 'Частное лицо',
   individualDescription: 'Для личных отправлений и небольших объемов',
@@ -2000,6 +2176,7 @@ const RU_TEXT: Record<string, string> = {
   submitDescription:
     'Нажмите кнопку «Получить мой расчет» ниже, чтобы отправить запрос. Мы ответим в течение 24 часов.',
   securityBadge: 'Безопасно и в соответствии с GDPR',
+  submitCta: 'Получить мой расчёт',
   // Step 2
   step2Title: 'Способ доставки',
   unsureAboutChoice: 'Не уверены в своём выборе?',
@@ -2068,6 +2245,9 @@ const RU_TEXT: Record<string, string> = {
   discussCargoDetails: 'Обсудим детали и требования к грузу',
   personalizedRecommendations: 'Вы получите персональные рекомендации и цены',
   noCommitment: 'Никаких обязательств — только экспертная поддержка!',
+  confirmationMainTitle: 'Подтверждение запроса',
+  confirmationTitle: 'Запрос на расчёт подтверждён',
+  confirmationSubtitle: 'Ваш запрос успешно отправлен',
   // Step 5 (Goods Details)
   step5Title: 'Расскажите нам о вашем товаре',
   goodsValueDeclaration: 'Стоимость товара и декларация',
@@ -2105,6 +2285,7 @@ const RU_TEXT: Record<string, string> = {
   pleaseSpecifyInRemarks: 'Уточните в примечаниях',
   validationGoodsValue: 'Пожалуйста, введите стоимость товаров',
   validationReadyDate: 'Пожалуйста, выберите, когда товар будет готов',
+  validationShipperType: 'Выберите тип отправителя (частное лицо или компания)',
 };
 
 export const I18N_TEXT: I18nDict = {

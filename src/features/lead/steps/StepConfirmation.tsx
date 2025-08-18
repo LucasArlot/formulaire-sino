@@ -1,6 +1,7 @@
 import React from 'react';
 import FormStep from '../FormStep';
-import { useQuoteForm, initialLoadDetails } from '@/features/lead/QuoteFormContext';
+import { useQuoteForm } from '@/features/lead/context/useQuoteForm';
+import { initialLoadDetails } from '@/features/lead/context/types';
 import { COUNTRIES } from '@/data/countries';
 
 type StepConfirmationProps = {
@@ -25,8 +26,8 @@ const StepConfirmation: React.FC<StepConfirmationProps> = ({
   } = useQuoteForm();
 
   const DEFAULT_EN_TEXT: Record<string, string> = {
-    confirmationTitle: 'Quote Request Confirmed',
-    confirmationSubtitle: 'Your request has been successfully submitted',
+    confirmationTitle: ctxGetText('confirmationTitle', 'Quote Request Confirmed'),
+    confirmationSubtitle: ctxGetText('confirmationSubtitle', 'Your request has been successfully submitted'),
     referenceNumber: 'Reference Number',
     yourRequest: 'Your Request Summary',
     shipmentDetails: 'Shipment Details',

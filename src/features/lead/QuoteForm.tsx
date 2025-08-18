@@ -7481,35 +7481,6 @@ const QuoteForm: React.FC = () => {
         return currentLoadDetailsToProcess;
       });
 
-      // Determine preferred language based on lead country (ES for Spanish-speaking countries, else EN)
-      const spanishSpeakingCountryCodes = new Set([
-        'ES', // Spain
-        'MX', // Mexico
-        'AR', // Argentina
-        'CO', // Colombia
-        'CL', // Chile
-        'PE', // Peru
-        'VE', // Venezuela
-        'EC', // Ecuador
-        'BO', // Bolivia
-        'PY', // Paraguay
-        'UY', // Uruguay
-        'GT', // Guatemala
-        'CU', // Cuba
-        'DO', // Dominican Republic
-        'HN', // Honduras
-        'SV', // El Salvador
-        'NI', // Nicaragua
-        'CR', // Costa Rica
-        'PA', // Panama
-        'GQ', // Equatorial Guinea
-      ]);
-      const preferredLanguage = spanishSpeakingCountryCodes.has(
-        (formData.country || '').toUpperCase()
-      )
-        ? 'ES'
-        : 'EN';
-
       // 4. Add submission metadata and finalize payload
       const now = new Date();
       // Get date and time parts for Hong Kong timezone
@@ -7530,7 +7501,6 @@ const QuoteForm: React.FC = () => {
       const finalPayload = {
         submissionId: submissionId,
         timestamp: submissionTimestampHKT, // Utiliser le timestamp HKT
-        preferredLanguage,
         ...payloadBase, // Spread the rest of the form data (country here will be the name)
         loads: processedLoads, // Add the processed loads
       };

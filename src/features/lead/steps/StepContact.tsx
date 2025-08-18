@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
 import FormStep from '../FormStep';
-import { useQuoteForm } from '@/features/lead/QuoteFormContext';
+import { useQuoteForm } from '@/features/lead/context/useQuoteForm';
 import { CheckCircle } from 'lucide-react';
 import { COUNTRIES } from '@/data/countries';
 

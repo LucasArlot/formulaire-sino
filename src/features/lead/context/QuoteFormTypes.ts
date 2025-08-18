@@ -60,25 +60,9 @@ export interface QuoteFormContextValue {
   handleCurrencySelect: (currencyCode: string) => void;
 
   // Filtering
-  getDestinationLocationTypes: () => Array<{
-    id: string;
-    name: string;
-    icon: React.ComponentType | string;
-  }>;
-  getFilteredDestinationPorts: () => Array<{
-    code: string;
-    name: string;
-    flag: string;
-    type?: string;
-    volume?: string;
-  }>;
-  getFilteredOriginPorts: () => Array<{
-    code: string;
-    name: string;
-    flag: string;
-    type?: string;
-    volume?: string;
-  }>;
+  getDestinationLocationTypes: () => Array<{ id: string; name: string; icon: any }>;
+  getFilteredDestinationPorts: () => Array<{ code: string; name: string; flag: string; type?: string; volume?: string }>;
+  getFilteredOriginPorts: () => Array<{ code: string; name: string; flag: string; type?: string; volume?: string }>;
   filteredCountries: Array<{ code: string; name: string; flag: string }>;
   sanitizedCountrySearch: string;
 
@@ -103,3 +87,4 @@ export interface QuoteFormContextValue {
   handleDestPortSelect: (portCode: string) => void;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
+

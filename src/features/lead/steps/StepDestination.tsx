@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, memo } from 'react';
 import FormStep from '../FormStep';
-import { useQuoteForm } from '@/features/lead/QuoteFormContext';
+import { useQuoteForm } from '@/features/lead/context/useQuoteForm';
 import { Search, XCircle, MapPin, CheckCircle, Info } from 'lucide-react';
 
 const StepDestination: React.FC = () => {

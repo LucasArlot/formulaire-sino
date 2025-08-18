@@ -1,6 +1,6 @@
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FormStep from '../FormStep';
-import { useQuoteForm } from '@/features/lead/QuoteFormContext';
+import { useQuoteForm } from '@/features/lead/context/useQuoteForm';
 import { CheckCircle, Info } from 'lucide-react';
 
 const StepGoodsDetails: React.FC = () => {
@@ -23,7 +23,7 @@ const StepGoodsDetails: React.FC = () => {
   } = useQuoteForm();
 
   // Safe translator with fallback to English and a provided default
-  const t = (key: string, fallback: string): string => getText(key, fallback);
+  const t = useCallback((key: string, fallback: string): string => getText(key, fallback), [getText]);
 
   // Local UI states for Step 5 dropdowns
   const [timingSearch, setTimingSearch] = useState('');
@@ -37,52 +37,61 @@ const StepGoodsDetails: React.FC = () => {
   const requirementsListRef = useRef<HTMLDivElement>(null);
 
   // Options (copied from QuoteForm.tsx for component encapsulation)
-  const CURRENCY_OPTIONS = [
-    { code: 'USD', name: 'US Dollar', flag: '🇺🇸' },
-    { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
-    { code: 'GBP', name: 'British Pound', flag: '🇬🇧' },
-    { code: 'CNY', name: 'Chinese Yuan', flag: '🇨🇳' },
-    { code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦' },
-    { code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺' },
-    { code: 'JPY', name: 'Japanese Yen', flag: '🇯🇵' },
-  ];
+  const CURRENCY_OPTIONS = useMemo(
+    () => [
+      { code: 'USD', name: 'US Dollar', flag: '🇺🇸' },
+      { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
+      { code: 'GBP', name: 'British Pound', flag: '🇬🇧' },
+      { code: 'CNY', name: 'Chinese Yuan', flag: '🇨🇳' },
+      { code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦' },
+      { code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺' },
+      { code: 'JPY', name: 'Japanese Yen', flag: '🇯🇵' },
+    ],
+    []
+  );
 
-  const TIMING_OPTIONS = [
-    {
-      code: 'yes',
-      name: 'Ready now',
-      description: 'goods are available for immediate pickup',
-      icon: '🟢',
-    },
-    { code: 'no_in_1_week', name: 'Within 1 week', description: 'currently preparing', icon: '🗓️' },
-    {
-      code: 'no_in_2_weeks',
-      name: 'Within 2 weeks',
-      description: 'production in progress',
-      icon: '🗓️',
-    },
-    { code: 'no_in_1_month', name: 'Within 1 month', description: 'planning ahead', icon: '🗓️' },
-    { code: 'no_date_set', name: 'Date not determined yet', description: '', icon: '❔' },
-  ];
+  const TIMING_OPTIONS = useMemo(
+    () => [
+      {
+        code: 'yes',
+        name: 'Ready now',
+        description: 'goods are available for immediate pickup',
+        icon: '🟢',
+      },
+      { code: 'no_in_1_week', name: 'Within 1 week', description: 'currently preparing', icon: '🗓️' },
+      {
+        code: 'no_in_2_weeks',
+        name: 'Within 2 weeks',
+        description: 'production in progress',
+        icon: '🗓️',
+      },
+      { code: 'no_in_1_month', name: 'Within 1 month', description: 'planning ahead', icon: '🗓️' },
+      { code: 'no_date_set', name: 'Date not determined yet', description: '', icon: '❔' },
+    ],
+    []
+  );
 
-  const REQUIREMENTS_OPTIONS = [
-    { code: '', name: 'No special requirements', description: '', icon: '🟢' },
-    { code: 'fragile', name: 'Fragile goods', description: 'handle with care', icon: '📦' },
-    { code: 'temperature', name: 'Temperature controlled', description: '', icon: '🧊' },
-    { code: 'urgent', name: 'Urgent/time-sensitive', description: '', icon: '🚀' },
-    { code: 'insurance', name: 'High-value insurance required', description: '', icon: '💎' },
-    {
-      code: 'other',
-      name: 'Other',
-      description: t('pleaseSpecifyInRemarks', 'Please specify in remarks'),
-      icon: '➕',
-    },
-  ];
+  const REQUIREMENTS_OPTIONS = useMemo(
+    () => [
+      { code: '', name: 'No special requirements', description: '', icon: '🟢' },
+      { code: 'fragile', name: 'Fragile goods', description: 'handle with care', icon: '📦' },
+      { code: 'temperature', name: 'Temperature controlled', description: '', icon: '🧊' },
+      { code: 'urgent', name: 'Urgent/time-sensitive', description: '', icon: '🚀' },
+      { code: 'insurance', name: 'High-value insurance required', description: '', icon: '💎' },
+      {
+        code: 'other',
+        name: 'Other',
+        description: t('pleaseSpecifyInRemarks', 'Please specify in remarks'),
+        icon: '➕',
+      },
+    ],
+    [t]
+  );
 
-  const cleanEmojiFromText = (text: string | undefined): string => {
+  const cleanEmojiFromText = useCallback((text: string | undefined): string => {
     const safe = text ?? '';
     return safe.replace(/^\p{Extended_Pictographic}+\s*/u, '').trim();
-  };
+  }, []);
 
   const handleTimingSelect = (timingCode: string) => {
     const timing = TIMING_OPTIONS.find((t) => t.code === timingCode);
@@ -225,7 +234,18 @@ const StepGoodsDetails: React.FC = () => {
       }
       setRequirementsSearch(`${requirement.icon}  ${translatedName}`);
     }
-  }, [formData.goodsCurrency, formData.areGoodsReady, formData.specialRequirements, userLang]);
+  }, [
+    formData.goodsCurrency,
+    formData.areGoodsReady,
+    formData.specialRequirements,
+    userLang,
+    t,
+    cleanEmojiFromText,
+    CURRENCY_OPTIONS,
+    TIMING_OPTIONS,
+    REQUIREMENTS_OPTIONS,
+    setCurrencySearch,
+  ]);
 
   // Click outside to close lists
   useEffect(() => {
@@ -245,7 +265,7 @@ const StepGoodsDetails: React.FC = () => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [setIsCurrencyListVisible]);
+  }, [setIsCurrencyListVisible, setIsTimingListVisible, setIsRequirementsListVisible]);
 
   // Auto-position dropdowns
   useEffect(() => {

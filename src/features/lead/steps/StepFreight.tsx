@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import FormStep from '../FormStep';
-import { useQuoteForm } from '@/features/lead/QuoteFormContext';
+import { useQuoteForm } from '@/features/lead/context/useQuoteForm';
 import { initialLoadDetails } from '@/features/lead/context/types';
 import type { LoadDetails } from '@/features/lead/context/types';
 import { PackageOpen, Package, Container, CheckCircle, Info, Minus, Plus } from 'lucide-react';

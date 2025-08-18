@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useEffect, useRef } from 'react';
 import FormStep from '../FormStep';
-import { useQuoteForm } from '@/features/lead/QuoteFormContext';
+import { useQuoteForm } from '@/features/lead/context/useQuoteForm';
 import { Warehouse, Ship, Building2, Home, MapPin, XCircle, CheckCircle } from 'lucide-react';
 
 // Origin country is handled in context (assumed CN)

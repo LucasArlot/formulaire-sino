@@ -1,8 +1,7 @@
-import React, { memo } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import FormStep from '../FormStep';
-import { useQuoteForm } from '@/features/lead/QuoteFormContext';
+import { useQuoteForm } from '@/features/lead/context/useQuoteForm';
 import { Truck, Ship, Plane, TrainFront, CheckCircle } from 'lucide-react';
-import { useMemo } from 'react';
 
 const StepMode: React.FC = () => {
   const {
@@ -17,13 +16,16 @@ const StepMode: React.FC = () => {
 
   const t = (key: string, fallback: string): string => getText(key, fallback);
 
-  const RAIL_FREIGHT_COUNTRIES = ['DE', 'AT', 'CZ', 'HU', 'PL', 'NL', 'BE', 'FR', 'IT', 'LU'];
+  const RAIL_FREIGHT_COUNTRIES = useMemo(
+    () => ['DE', 'AT', 'CZ', 'HU', 'PL', 'NL', 'BE', 'FR', 'IT', 'LU'],
+    []
+  );
 
   // Translation for mode names, descriptions and benefits
   const MODE_INFO: Record<
     string,
     Record<string, { name: string; desc: string; benefits: string }>
-  > = {
+  > = useMemo(() => ({
     en: {
       Sea: {
         name: 'Sea Freight',
@@ -231,9 +233,12 @@ const StepMode: React.FC = () => {
       },
     },
     // Fallback: other languages default to English for now
-  };
+  }), []);
 
-  const tMode = (modeId: string) => MODE_INFO[userLang]?.[modeId] || MODE_INFO['en'][modeId];
+  const tMode = useCallback(
+    (modeId: string) => MODE_INFO[userLang]?.[modeId] || MODE_INFO['en'][modeId],
+    [userLang, MODE_INFO]
+  );
 
   const shippingModes = useMemo(
     () => [
@@ -247,7 +252,7 @@ const StepMode: React.FC = () => {
       { id: 'Air', ...tMode('Air'), icon: Plane, condition: true },
       { id: 'Express', ...tMode('Express'), icon: Truck, condition: true },
     ],
-    [userLang, formData.country]
+    [formData.country, tMode, RAIL_FREIGHT_COUNTRIES]
   );
 
   const handleModeSelect = (modeId: string) => {

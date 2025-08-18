@@ -1,24 +1,15 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { COUNTRIES } from '@/data/countries';
 import { COUNTRY_TRANSLATIONS } from '@/data/countryTranslations';
 import { Warehouse, Ship, Building2, Home } from 'lucide-react';
 import { DESTINATION_PORTS_BY_COUNTRY as PORTS_BY_COUNTRY } from '@/features/lead/context/ports';
 import { I18N_TEXT } from '@/features/lead/context/i18n';
-import {
-  FormData,
-  FieldValid,
-  initialFormData,
-  initialFieldValid,
-} from '@/features/lead/context/types';
-export type { LoadDetails, FormData, FieldValid } from '@/features/lead/context/types';
-export {
-  initialLoadDetails,
-  initialFormData,
-  initialFieldValid,
-} from '@/features/lead/context/types';
+import { FormData, FieldValid, initialFormData, initialFieldValid } from '@/features/lead/context/types';
+import type { QuoteFormContextValue as QuoteFormContextValueExt } from '@/features/lead/context/QuoteFormTypes';
+import { QuoteFormContext } from '@/features/lead/context/QuoteFormContext';
 
 // === Domain models (moved to context/types) ===
-// imported above
+// imported above. Avoid re-exporting here to keep Fast Refresh clean.
 // === End field validation state ===
 
 /*
@@ -3315,10 +3306,10 @@ export interface QuoteFormContextValue {
   ) => string;
 }
 
-const QuoteFormContext = createContext<QuoteFormContextValue | undefined>(undefined);
+// context moved to context/QuoteFormContext.ts
 
 // Helper to translate country names (copied from QuoteForm.tsx)
-export const getTranslatedCountryName = (
+const getTranslatedCountryName = (
   countryCode: string,
   userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'
 ): string => {
@@ -11838,7 +11829,7 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   }, [step5SubStep]);
 
-  const value: QuoteFormContextValue = {
+  const value: QuoteFormContextValueExt = {
     currentStep,
     setCurrentStep,
     nextStep,
@@ -11913,8 +11904,4 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   return <QuoteFormContext.Provider value={value}>{children}</QuoteFormContext.Provider>;
 };
 
-export function useQuoteForm() {
-  const ctx = useContext(QuoteFormContext);
-  if (!ctx) throw new Error('useQuoteForm must be used inside <QuoteFormProvider>');
-  return ctx;
-}
+// Hook moved to src/features/lead/context/useQuoteForm.ts
