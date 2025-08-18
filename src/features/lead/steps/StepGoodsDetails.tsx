@@ -10,7 +10,7 @@ const StepGoodsDetails: React.FC = () => {
     setFormData,
     fieldValid,
     userLang,
-    I18N_TEXT,
+    getText,
     handleInputChange,
     step5SubStep,
 
@@ -23,10 +23,7 @@ const StepGoodsDetails: React.FC = () => {
   } = useQuoteForm();
 
   // Safe translator with fallback to English and a provided default
-  const t = (key: string, fallback: string): string => {
-    const dict: any = I18N_TEXT as any;
-    return (dict?.[userLang]?.[key] ?? dict?.en?.[key] ?? fallback) as string;
-  };
+  const t = (key: string, fallback: string): string => getText(key, fallback);
 
   // Local UI states for Step 5 dropdowns
   const [timingSearch, setTimingSearch] = useState('');
@@ -51,9 +48,19 @@ const StepGoodsDetails: React.FC = () => {
   ];
 
   const TIMING_OPTIONS = [
-    { code: 'yes', name: 'Ready now', description: 'goods are available for immediate pickup', icon: '🟢' },
+    {
+      code: 'yes',
+      name: 'Ready now',
+      description: 'goods are available for immediate pickup',
+      icon: '🟢',
+    },
     { code: 'no_in_1_week', name: 'Within 1 week', description: 'currently preparing', icon: '🗓️' },
-    { code: 'no_in_2_weeks', name: 'Within 2 weeks', description: 'production in progress', icon: '🗓️' },
+    {
+      code: 'no_in_2_weeks',
+      name: 'Within 2 weeks',
+      description: 'production in progress',
+      icon: '🗓️',
+    },
     { code: 'no_in_1_month', name: 'Within 1 month', description: 'planning ahead', icon: '🗓️' },
     { code: 'no_date_set', name: 'Date not determined yet', description: '', icon: '❔' },
   ];
@@ -64,20 +71,17 @@ const StepGoodsDetails: React.FC = () => {
     { code: 'temperature', name: 'Temperature controlled', description: '', icon: '🧊' },
     { code: 'urgent', name: 'Urgent/time-sensitive', description: '', icon: '🚀' },
     { code: 'insurance', name: 'High-value insurance required', description: '', icon: '💎' },
-    { code: 'other', name: 'Other', description: t('pleaseSpecifyInRemarks', 'Please specify in remarks'), icon: '➕' },
+    {
+      code: 'other',
+      name: 'Other',
+      description: t('pleaseSpecifyInRemarks', 'Please specify in remarks'),
+      icon: '➕',
+    },
   ];
 
   const cleanEmojiFromText = (text: string | undefined): string => {
     const safe = text ?? '';
-    return safe
-      .replace(/^[\u{1F300}-\u{1F9FF}][\u{FE00}-\u{FE0F}]?\s*/u, '')
-      .replace(/^[\u{2600}-\u{26FF}][\u{FE00}-\u{FE0F}]?\s*/u, '')
-      .replace(/^[\u{2700}-\u{27BF}][\u{FE00}-\u{FE0F}]?\s*/u, '')
-      .replace(/^[\u{1F600}-\u{1F64F}][\u{FE00}-\u{FE0F}]?\s*/u, '')
-      .replace(/^[\u{1F680}-\u{1F6FF}][\u{FE00}-\u{FE0F}]?\s*/u, '')
-      .replace(/^[\u{1F1E0}-\u{1F1FF}][\u{FE00}-\u{FE0F}]?\s*/u, '')
-      .replace(/^[✅❓⚡🔸🌡️🛡️📝📅]\s*/g, '')
-      .trim();
+    return safe.replace(/^\p{Extended_Pictographic}+\s*/u, '').trim();
   };
 
   const handleTimingSelect = (timingCode: string) => {
@@ -90,13 +94,19 @@ const StepGoodsDetails: React.FC = () => {
     let translatedName = '';
     switch (timingCode) {
       case 'yes':
-        translatedName = cleanEmojiFromText(t('readyNow', 'Ready now - goods are available for immediate pickup'));
+        translatedName = cleanEmojiFromText(
+          t('readyNow', 'Ready now - goods are available for immediate pickup')
+        );
         break;
       case 'no_in_1_week':
-        translatedName = cleanEmojiFromText(t('readyIn1Week', 'Within 1 week - currently preparing'));
+        translatedName = cleanEmojiFromText(
+          t('readyIn1Week', 'Within 1 week - currently preparing')
+        );
         break;
       case 'no_in_2_weeks':
-        translatedName = cleanEmojiFromText(t('readyIn2Weeks', 'Within 2 weeks - production in progress'));
+        translatedName = cleanEmojiFromText(
+          t('readyIn2Weeks', 'Within 2 weeks - production in progress')
+        );
         break;
       case 'no_in_1_month':
         translatedName = cleanEmojiFromText(t('readyIn1Month', 'Within 1 month - planning ahead'));
@@ -131,14 +141,18 @@ const StepGoodsDetails: React.FC = () => {
         translatedName = cleanEmojiFromText(t('urgentTimeSensitive', 'Urgent/time-sensitive'));
         break;
       case 'insurance':
-        translatedName = cleanEmojiFromText(t('highValueInsurance', 'High-value insurance required'));
+        translatedName = cleanEmojiFromText(
+          t('highValueInsurance', 'High-value insurance required')
+        );
         break;
       case 'other':
         translatedName = cleanEmojiFromText(t('otherSpecify', 'Other (please specify)'));
         break;
     }
     setRequirementsSearch(
-      requirement ? `${requirement.icon}  ${translatedName}` : t('noSpecialRequirements', 'No special requirements')
+      requirement
+        ? `${requirement.icon}  ${translatedName}`
+        : t('noSpecialRequirements', 'No special requirements')
     );
     setIsRequirementsListVisible(false);
   };
@@ -155,16 +169,24 @@ const StepGoodsDetails: React.FC = () => {
       let translatedName = '';
       switch (timing.code) {
         case 'yes':
-          translatedName = cleanEmojiFromText(t('readyNow', 'Ready now - goods are available for immediate pickup'));
+          translatedName = cleanEmojiFromText(
+            t('readyNow', 'Ready now - goods are available for immediate pickup')
+          );
           break;
         case 'no_in_1_week':
-          translatedName = cleanEmojiFromText(t('readyIn1Week', 'Within 1 week - currently preparing'));
+          translatedName = cleanEmojiFromText(
+            t('readyIn1Week', 'Within 1 week - currently preparing')
+          );
           break;
         case 'no_in_2_weeks':
-          translatedName = cleanEmojiFromText(t('readyIn2Weeks', 'Within 2 weeks - production in progress'));
+          translatedName = cleanEmojiFromText(
+            t('readyIn2Weeks', 'Within 2 weeks - production in progress')
+          );
           break;
         case 'no_in_1_month':
-          translatedName = cleanEmojiFromText(t('readyIn1Month', 'Within 1 month - planning ahead'));
+          translatedName = cleanEmojiFromText(
+            t('readyIn1Month', 'Within 1 month - planning ahead')
+          );
           break;
         case 'no_date_set':
           translatedName = cleanEmojiFromText(t('dateNotSet', 'Date not determined yet'));
@@ -182,7 +204,9 @@ const StepGoodsDetails: React.FC = () => {
           translatedName = t('noSpecialRequirements', 'No special requirements');
           break;
         case 'fragile':
-          translatedName = cleanEmojiFromText(t('fragileGoods', 'Fragile goods - handle with care'));
+          translatedName = cleanEmojiFromText(
+            t('fragileGoods', 'Fragile goods - handle with care')
+          );
           break;
         case 'temperature':
           translatedName = cleanEmojiFromText(t('temperatureControlled', 'Temperature controlled'));
@@ -191,7 +215,9 @@ const StepGoodsDetails: React.FC = () => {
           translatedName = cleanEmojiFromText(t('urgentTimeSensitive', 'Urgent/time-sensitive'));
           break;
         case 'insurance':
-          translatedName = cleanEmojiFromText(t('highValueInsurance', 'High-value insurance required'));
+          translatedName = cleanEmojiFromText(
+            t('highValueInsurance', 'High-value insurance required')
+          );
           break;
         case 'other':
           translatedName = cleanEmojiFromText(t('otherSpecify', 'Other (please specify)'));
@@ -210,7 +236,10 @@ const StepGoodsDetails: React.FC = () => {
       if (timingListRef.current && !timingListRef.current.contains(event.target as Node)) {
         setIsTimingListVisible(false);
       }
-      if (requirementsListRef.current && !requirementsListRef.current.contains(event.target as Node)) {
+      if (
+        requirementsListRef.current &&
+        !requirementsListRef.current.contains(event.target as Node)
+      ) {
         setIsRequirementsListVisible(false);
       }
     };
@@ -220,7 +249,10 @@ const StepGoodsDetails: React.FC = () => {
 
   // Auto-position dropdowns
   useEffect(() => {
-    const adjustDropdownPosition = (dropdown: HTMLElement | null, inputElement: HTMLElement | null) => {
+    const adjustDropdownPosition = (
+      dropdown: HTMLElement | null,
+      inputElement: HTMLElement | null
+    ) => {
       if (!dropdown || !inputElement) return;
       const inputRect = inputElement.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
@@ -231,7 +263,8 @@ const StepGoodsDetails: React.FC = () => {
       const spaceRight = viewportWidth - inputRect.left;
       const spaceLeft = inputRect.right;
       dropdown.classList.remove('show-above', 'adjust-right', 'adjust-left');
-      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) dropdown.classList.add('show-above');
+      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow)
+        dropdown.classList.add('show-above');
       if (spaceRight < 300) dropdown.classList.add('adjust-right');
       else if (spaceLeft < 300) dropdown.classList.add('adjust-left');
       dropdown.style.setProperty('--dropdown-top', `${inputRect.bottom}px`);
@@ -273,9 +306,23 @@ const StepGoodsDetails: React.FC = () => {
   }, [isCurrencyListVisible, isTimingListVisible, isRequirementsListVisible]);
 
   return (
-    <FormStep isVisible={currentStep === 5} stepNumber={5} title={t('step5Title', 'Tell us about your goods')} emoji="📝">
+    <FormStep
+      isVisible={currentStep === 5}
+      stepNumber={5}
+      title={t('step5Title', 'Tell us about your goods')}
+      emoji="📝"
+    >
       {/* Sub-step indicator */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '3rem', gap: '0.75rem', padding: '1.5rem 0' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: '3rem',
+          gap: '0.75rem',
+          padding: '1.5rem 0',
+        }}
+      >
         {[1, 2, 3].map((step, index) => (
           <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div
@@ -308,8 +355,20 @@ const StepGoodsDetails: React.FC = () => {
               }}
             >
               {step5SubStep > step ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M20 6L9 17L4 12"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               ) : (
                 step
@@ -385,7 +444,10 @@ const StepGoodsDetails: React.FC = () => {
                 textAlign: 'center',
               }}
             >
-              {t('goodsValueDescription', 'Provide the commercial value for customs declaration and insurance purposes')}
+              {t(
+                'goodsValueDescription',
+                'Provide the commercial value for customs declaration and insurance purposes'
+              )}
             </p>
           </div>
 
@@ -413,7 +475,10 @@ const StepGoodsDetails: React.FC = () => {
                   transition: 'all 0.3s ease',
                 }}
               />
-              <div className="currency-select" style={{ minWidth: '120px', margin: 0, position: 'relative' }}>
+              <div
+                className="currency-select"
+                style={{ minWidth: '120px', margin: 0, position: 'relative' }}
+              >
                 <div className="search-input-wrapper" style={{ position: 'relative' }}>
                   <input
                     type="text"
@@ -425,7 +490,11 @@ const StepGoodsDetails: React.FC = () => {
                     style={{ cursor: 'pointer' }}
                   />
                 </div>
-                <div ref={currencyListRef} className={`port-list ${isCurrencyListVisible ? 'show' : ''}`} style={{ zIndex: 1000 }}>
+                <div
+                  ref={currencyListRef}
+                  className={`port-list ${isCurrencyListVisible ? 'show' : ''}`}
+                  style={{ zIndex: 1000 }}
+                >
                   {CURRENCY_OPTIONS.map((currency) => (
                     <div
                       key={currency.code}
@@ -443,8 +512,15 @@ const StepGoodsDetails: React.FC = () => {
               </div>
             </div>
             {fieldValid.goodsValue === true && <CheckCircle className="check-icon" />}
-            <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-              💡 {t('goodsValueHelp', 'This value is used for customs declaration and insurance calculations')}
+            <div
+              className="help-text"
+              style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}
+            >
+              💡{' '}
+              {t(
+                'goodsValueHelp',
+                'This value is used for customs declaration and insurance calculations'
+              )}
             </div>
           </div>
 
@@ -454,12 +530,26 @@ const StepGoodsDetails: React.FC = () => {
                 type="checkbox"
                 name="isPersonalOrHazardous"
                 checked={formData.isPersonalOrHazardous}
-                onChange={(e) => setFormData({ ...formData, isPersonalOrHazardous: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({ ...formData, isPersonalOrHazardous: e.target.checked })
+                }
               />
-              <span>{t('personalOrHazardous', 'Personal effects or contains hazardous/restricted materials')}</span>
+              <span>
+                {t(
+                  'personalOrHazardous',
+                  'Personal effects or contains hazardous/restricted materials'
+                )}
+              </span>
             </label>
-            <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-              ⚠️ {t('personalHazardousHelp', 'Check this if shipping personal belongings or goods requiring special handling')}
+            <div
+              className="help-text"
+              style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}
+            >
+              ⚠️{' '}
+              {t(
+                'personalHazardousHelp',
+                'Check this if shipping personal belongings or goods requiring special handling'
+              )}
             </div>
           </div>
         </div>
@@ -488,7 +578,10 @@ const StepGoodsDetails: React.FC = () => {
                 textAlign: 'center',
               }}
             >
-              {t('shipmentTimingDescription', 'Help us plan your shipment timeline and provide accurate rates')}
+              {t(
+                'shipmentTimingDescription',
+                'Help us plan your shipment timeline and provide accurate rates'
+              )}
             </p>
           </div>
 
@@ -508,7 +601,11 @@ const StepGoodsDetails: React.FC = () => {
                   style={{ cursor: 'pointer' }}
                 />
               </div>
-              <div ref={timingListRef} className={`port-list ${isTimingListVisible ? 'show' : ''}`} style={{ zIndex: 1000 }}>
+              <div
+                ref={timingListRef}
+                className={`port-list ${isTimingListVisible ? 'show' : ''}`}
+                style={{ zIndex: 1000 }}
+              >
                 {TIMING_OPTIONS.map((timing) => (
                   <div
                     key={timing.code}
@@ -518,11 +615,22 @@ const StepGoodsDetails: React.FC = () => {
                     <span className="port-icon">{timing.icon}</span>
                     <div className="port-info">
                       <span className="port-name">
-                        {timing.code === 'yes' && cleanEmojiFromText(t('readyNow', 'Ready now - goods are available for immediate pickup'))}
-                        {timing.code === 'no_in_1_week' && cleanEmojiFromText(t('readyIn1Week', 'Within 1 week - currently preparing'))}
-                        {timing.code === 'no_in_2_weeks' && cleanEmojiFromText(t('readyIn2Weeks', 'Within 2 weeks - production in progress'))}
-                        {timing.code === 'no_in_1_month' && cleanEmojiFromText(t('readyIn1Month', 'Within 1 month - planning ahead'))}
-                        {timing.code === 'no_date_set' && cleanEmojiFromText(t('dateNotSet', 'Date not determined yet'))}
+                        {timing.code === 'yes' &&
+                          cleanEmojiFromText(
+                            t('readyNow', 'Ready now - goods are available for immediate pickup')
+                          )}
+                        {timing.code === 'no_in_1_week' &&
+                          cleanEmojiFromText(
+                            t('readyIn1Week', 'Within 1 week - currently preparing')
+                          )}
+                        {timing.code === 'no_in_2_weeks' &&
+                          cleanEmojiFromText(
+                            t('readyIn2Weeks', 'Within 2 weeks - production in progress')
+                          )}
+                        {timing.code === 'no_in_1_month' &&
+                          cleanEmojiFromText(t('readyIn1Month', 'Within 1 month - planning ahead'))}
+                        {timing.code === 'no_date_set' &&
+                          cleanEmojiFromText(t('dateNotSet', 'Date not determined yet'))}
                       </span>
                     </div>
                   </div>
@@ -530,7 +638,10 @@ const StepGoodsDetails: React.FC = () => {
               </div>
             </div>
             {formData.areGoodsReady && <CheckCircle className="check-icon" />}
-            <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
+            <div
+              className="help-text"
+              style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}
+            >
               ⏰ {t('timingHelp', 'Accurate timing helps us provide the most competitive rates')}
             </div>
           </div>
@@ -560,7 +671,10 @@ const StepGoodsDetails: React.FC = () => {
                 textAlign: 'center',
               }}
             >
-              {t('additionalDetailsDescription', 'Provide any special requirements or additional information')}
+              {t(
+                'additionalDetailsDescription',
+                'Provide any special requirements or additional information'
+              )}
             </p>
           </div>
 
@@ -572,12 +686,18 @@ const StepGoodsDetails: React.FC = () => {
               type="text"
               name="goodsDescription"
               id="goodsDescription"
-              placeholder={t('goodsDescriptionPlaceholder', 'e.g., Electronics, Furniture, Clothing, Machinery...')}
+              placeholder={t(
+                'goodsDescriptionPlaceholder',
+                'e.g., Electronics, Furniture, Clothing, Machinery...'
+              )}
               value={formData.goodsDescription || ''}
               onChange={handleInputChange}
               className="input glassmorphism"
             />
-            <div className="help-text" style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
+            <div
+              className="help-text"
+              style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}
+            >
               💡 {t('goodsDescriptionHelp', 'Helps us ensure proper handling and documentation')}
             </div>
           </div>
@@ -590,7 +710,9 @@ const StepGoodsDetails: React.FC = () => {
               <div className="search-input-wrapper" style={{ position: 'relative' }}>
                 <input
                   type="text"
-                  value={requirementsSearch || t('noSpecialRequirements', 'No special requirements')}
+                  value={
+                    requirementsSearch || t('noSpecialRequirements', 'No special requirements')
+                  }
                   readOnly
                   onClick={() => setIsRequirementsListVisible(true)}
                   onFocus={() => setIsRequirementsListVisible(true)}
@@ -598,7 +720,11 @@ const StepGoodsDetails: React.FC = () => {
                   style={{ cursor: 'pointer' }}
                 />
               </div>
-              <div ref={requirementsListRef} className={`port-list ${isRequirementsListVisible ? 'show' : ''}`} style={{ zIndex: 1000 }}>
+              <div
+                ref={requirementsListRef}
+                className={`port-list ${isRequirementsListVisible ? 'show' : ''}`}
+                style={{ zIndex: 1000 }}
+              >
                 {REQUIREMENTS_OPTIONS.map((requirement) => (
                   <div
                     key={requirement.code}
@@ -608,12 +734,20 @@ const StepGoodsDetails: React.FC = () => {
                     <span className="port-icon">{requirement.icon}</span>
                     <div className="port-info">
                       <span className="port-name">
-                        {requirement.code === '' && t('noSpecialRequirements', 'No special requirements')}
-                        {requirement.code === 'fragile' && cleanEmojiFromText(t('fragileGoods', 'Fragile goods - handle with care'))}
-                        {requirement.code === 'temperature' && cleanEmojiFromText(t('temperatureControlled', 'Temperature controlled'))}
-                        {requirement.code === 'urgent' && cleanEmojiFromText(t('urgentTimeSensitive', 'Urgent/time-sensitive'))}
-                        {requirement.code === 'insurance' && cleanEmojiFromText(t('highValueInsurance', 'High-value insurance required'))}
-                        {requirement.code === 'other' && cleanEmojiFromText(t('otherSpecify', 'Other (please specify)'))}
+                        {requirement.code === '' &&
+                          t('noSpecialRequirements', 'No special requirements')}
+                        {requirement.code === 'fragile' &&
+                          cleanEmojiFromText(t('fragileGoods', 'Fragile goods - handle with care'))}
+                        {requirement.code === 'temperature' &&
+                          cleanEmojiFromText(t('temperatureControlled', 'Temperature controlled'))}
+                        {requirement.code === 'urgent' &&
+                          cleanEmojiFromText(t('urgentTimeSensitive', 'Urgent/time-sensitive'))}
+                        {requirement.code === 'insurance' &&
+                          cleanEmojiFromText(
+                            t('highValueInsurance', 'High-value insurance required')
+                          )}
+                        {requirement.code === 'other' &&
+                          cleanEmojiFromText(t('otherSpecify', 'Other (please specify)'))}
                       </span>
                     </div>
                   </div>
@@ -637,9 +771,14 @@ const StepGoodsDetails: React.FC = () => {
           >
             <Info size={20} style={{ color: '#3b82f6', marginTop: '0.1rem', flexShrink: 0 }} />
             <div style={{ fontSize: '0.9rem', color: '#1f2937' }}>
-              <strong style={{ color: '#3b82f6' }}>{t('rateValidityTitle', 'Rate Validity Notice:')}</strong>
+              <strong style={{ color: '#3b82f6' }}>
+                {t('rateValidityTitle', 'Rate Validity Notice:')}
+              </strong>
               <br />
-              {t('rateValidityText', 'Quoted rates are valid until the expiry date shown on each quote. If your goods are not ready for pickup by this date, rates may be subject to change based on current market conditions.')}
+              {t(
+                'rateValidityText',
+                'Quoted rates are valid until the expiry date shown on each quote. If your goods are not ready for pickup by this date, rates may be subject to change based on current market conditions.'
+              )}
             </div>
           </div>
         </div>
@@ -649,4 +788,3 @@ const StepGoodsDetails: React.FC = () => {
 };
 
 export default memo(StepGoodsDetails);
-

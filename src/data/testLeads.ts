@@ -16,7 +16,23 @@ export interface TestLead {
   lastName: string;
   companyName: string;
   shipperType: string;
-  loads: any[]; // Utilise le même schéma que formData.loads
+  loads: Array<{
+    shippingType: 'loose' | 'container' | 'unsure' | '';
+    calculationType: 'unit' | 'total';
+    packageType: 'pallets' | 'boxes' | '';
+    numberOfUnits: number;
+    palletType: string;
+    dimensions: { length: string; width: string; height: string };
+    dimensionUnit: string;
+    weightPerUnit: string;
+    weightUnit: string;
+    totalVolume: string;
+    totalVolumeUnit: string;
+    totalWeight: string;
+    totalWeightUnit: string;
+    containerType: "20'" | "40'" | "40'HC" | "45'HC";
+    isOverweight: boolean;
+  }>; // Aligné sur formData.loads
   goodsValue: string;
   goodsCurrency: string;
   isPersonalOrHazardous: boolean;
@@ -239,7 +255,8 @@ TEST_LEADS.push({
   goodsCurrency: 'USD',
   isPersonalOrHazardous: false,
   areGoodsReady: 'yes',
-  remarks: 'We need a quote for 40 ft container collection to place of loading and to the port. Contact me on WhatsApp or WeChat',
+  remarks:
+    'We need a quote for 40 ft container collection to place of loading and to the port. Contact me on WhatsApp or WeChat',
 });
 
 TEST_LEADS.push({
@@ -368,7 +385,8 @@ TEST_LEADS.push({
   goodsCurrency: 'USD',
   isPersonalOrHazardous: false,
   areGoodsReady: 'yes',
-  remarks: 'Questions: How long will it take? Where should we send the goods? Door to door? Customs payment in Canada? (Fake hair in bags)',
+  remarks:
+    'Questions: How long will it take? Where should we send the goods? Door to door? Customs payment in Canada? (Fake hair in bags)',
 });
 
 TEST_LEADS.push({
@@ -756,4 +774,4 @@ TEST_LEADS.push({
   isPersonalOrHazardous: false,
   areGoodsReady: 'yes',
   remarks: 'Tricycle shipment DAT to Ghana',
-}); 
+});

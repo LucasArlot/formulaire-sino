@@ -1,156 +1,44 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { COUNTRIES } from '@/data/countries';
 import { COUNTRY_TRANSLATIONS } from '@/data/countryTranslations';
 import { Warehouse, Ship, Building2, Home } from 'lucide-react';
+import { DESTINATION_PORTS_BY_COUNTRY as PORTS_BY_COUNTRY } from '@/features/lead/context/ports';
+import { I18N_TEXT } from '@/features/lead/context/i18n';
+import {
+  FormData,
+  FieldValid,
+  initialFormData,
+  initialFieldValid,
+} from '@/features/lead/context/types';
+export type { LoadDetails, FormData, FieldValid } from '@/features/lead/context/types';
+export {
+  initialLoadDetails,
+  initialFormData,
+  initialFieldValid,
+} from '@/features/lead/context/types';
 
-// === Domain models moved from QuoteForm.tsx ===
-
-export interface LoadDetails {
-  shippingType: 'loose' | 'container' | 'unsure' | '';
-  calculationType: 'unit' | 'total';
-  packageType: 'pallets' | 'boxes' | '';
-  numberOfUnits: number;
-  palletType: string;
-  dimensions: { length: string; width: string; height: string };
-  dimensionUnit: string;
-  weightPerUnit: string;
-  weightUnit: string;
-  totalVolume: string;
-  totalVolumeUnit: string;
-  totalWeight: string;
-  totalWeightUnit: string;
-  containerType: "20'" | "40'" | "40'HC" | "45'HC";
-  isOverweight: boolean;
-  specialRequirements?: string[];
-  goodsDescription?: string;
-  urgency?: string;
-}
-
-export const initialLoadDetails: LoadDetails = {
-  shippingType: '',
-  calculationType: 'total',
-  packageType: 'pallets',
-  numberOfUnits: 1,
-  palletType: 'non_specified',
-  dimensions: { length: '', width: '', height: '' },
-  dimensionUnit: 'CM',
-  weightPerUnit: '',
-  weightUnit: 'KG',
-  totalVolume: '',
-  totalVolumeUnit: 'CBM',
-  totalWeight: '',
-  totalWeightUnit: 'KG',
-  containerType: "20'",
-  isOverweight: false,
-  specialRequirements: [],
-  goodsDescription: '',
-  urgency: '',
-};
-
-export interface FormData {
-  country: string;
-  origin: string;
-  mode: string;
-  email: string;
-  phone: string;
-  phoneCountryCode: string;
-  customerType?: 'individual' | 'company' | '';
-  locationType: string;
-  city: string;
-  zipCode: string;
-  destLocationType: string;
-  destCity: string;
-  destZipCode: string;
-  destPort: string;
-  firstName: string;
-  lastName: string;
-  companyName: string;
-  shipperType: string;
-  loads: LoadDetails[];
-  goodsValue: string;
-  goodsCurrency: string;
-  isPersonalOrHazardous: boolean;
-  areGoodsReady: string;
-  goodsDescription: string;
-  specialRequirements: string;
-  remarks: string;
-}
-// === End models ===
-
-const initialFormData: FormData = {
-  country: '',
-  origin: '',
-  mode: '',
-  email: '',
-  phone: '',
-  phoneCountryCode: '+234',
-  customerType: '',
-  locationType: '',
-  city: '',
-  zipCode: '',
-  destLocationType: '',
-  destCity: '',
-  destZipCode: '',
-  destPort: '',
-  firstName: '',
-  lastName: '',
-  companyName: '',
-  shipperType: '',
-  loads: [JSON.parse(JSON.stringify(initialLoadDetails))],
-  goodsValue: '',
-  goodsCurrency: 'USD',
-  isPersonalOrHazardous: false,
-  areGoodsReady: 'yes',
-  goodsDescription: '',
-  specialRequirements: '',
-  remarks: '',
-};
-
-// === Field validation state ===
-export interface FieldValid {
-  country: boolean | null;
-  origin: boolean | null;
-  mode: boolean | null;
-  email: boolean | null;
-  phone: boolean | null; // phone number validation
-  phoneCountryCode: boolean | null; // phone country code validation
-  city: boolean | null;
-  zipCode: boolean | null;
-  destCity: boolean | null;
-  destZipCode: boolean | null;
-  destPort: boolean | null;
-  firstName: boolean | null;
-  lastName: boolean | null;
-  companyName: boolean | null;
-  shipperType: boolean | null;
-  goodsValue: boolean | null;
-  destLocationType: boolean | null;
-}
-
-const initialFieldValid: FieldValid = {
-  country: null,
-  origin: null,
-  mode: null,
-  email: null,
-  phone: null,
-  phoneCountryCode: null,
-  city: null,
-  zipCode: null,
-  destCity: null,
-  destZipCode: null,
-  destPort: null,
-  firstName: null,
-  lastName: null,
-  companyName: null,
-  shipperType: null,
-  goodsValue: null,
-  destLocationType: null,
-};
+// === Domain models (moved to context/types) ===
+// imported above
 // === End field validation state ===
 
-// I18N_TEXT (simplified but complete enough for StepDestination)
-const I18N_TEXT = {
+/*
+// Legacy I18N_TEXT (kept commented during migration)
+/* export const I18N_TEXT: Record<string, Record<string, string>> = {
   en: {
+    // Header (main hero)
+    mainTitle: 'Shipping Quote from China',
+    mainSubtitle: 'Get a fast and reliable quote for your shipment from China',
+    trustBadge: 'Approved by 55,000+ importers | Response < 24h | 100% Free',
+    previous: 'Previous',
+    next: 'Next',
+    // Timeline labels
+    timelineDestination: 'Destination',
+    timelineMode: 'Mode',
+    timelineOrigin: 'Origin',
+    timelineCargo: 'Cargo',
+    timelineGoodsDetails: 'Goods details',
+    timelineContact: 'Contact',
+    stepCounter: 'Step {current}/6',
     pickupPortFeedback: 'Great! We will arrange pickup from',
     pickupCityFeedback: 'Great! We will arrange pickup from',
     step1Title: 'Where do you ship?',
@@ -246,7 +134,8 @@ const I18N_TEXT = {
     annualVolume: 'Annual Volume',
     noPortsFoundFor: 'No ports found for',
     selectCountryFirst: 'Please select a country first',
-    
+*/
+/*
     // Contact form
     firstName: 'First Name',
     lastName: 'Last Name',
@@ -336,6 +225,20 @@ const I18N_TEXT = {
     validationReadyDate: 'Please select when your goods will be ready'
   },
   fr: {
+    // En-tête (héros)
+    mainTitle: "Devis d'expédition depuis la Chine",
+    mainSubtitle: 'Obtenez un devis rapide et fiable pour votre expédition depuis la Chine',
+    trustBadge: 'Approuvé par 55 000+ importateurs | Réponse < 24h | 100% Gratuit',
+    previous: 'Précédent',
+    next: 'Suivant',
+    // Libellés de la timeline
+    timelineDestination: 'Destination',
+    timelineMode: 'Mode',
+    timelineOrigin: 'Origine',
+    timelineCargo: 'Fret',
+    timelineGoodsDetails: 'Détails marchandises',
+    timelineContact: 'Contact',
+    stepCounter: 'Étape {current}/6',
     pickupPortFeedback: 'Parfait ! Nous organiserons l\'enlèvement depuis',
     pickupCityFeedback: 'Parfait ! Nous organiserons l\'enlèvement depuis',
     step1Title: 'Où expédiez-vous ?',
@@ -521,6 +424,19 @@ const I18N_TEXT = {
     validationReadyDate: 'Veuillez sélectionner quand vos marchandises seront prêtes'
   },
   de: {
+    // Kopfbereich (Hero)
+    mainTitle: 'Versandangebot aus China',
+    mainSubtitle: 'Erhalten Sie ein schnelles und zuverlässiges Angebot für Ihre Sendung aus China',
+    trustBadge: 'Von 55.000+ Importeuren empfohlen | Antwort < 24 Std | 100% kostenlos',
+    previous: 'Zurück',
+    next: 'Weiter',
+    timelineDestination: 'Ziel',
+    timelineMode: 'Modus',
+    timelineOrigin: 'Abholung',
+    timelineCargo: 'Fracht',
+    timelineGoodsDetails: 'Warenangaben',
+    timelineContact: 'Kontakt',
+    stepCounter: 'Schritt {current}/6',
     pickupPortFeedback: 'Perfekt! Wir organisieren die Abholung ab',
     pickupCityFeedback: 'Perfekt! Wir organisieren die Abholung ab',
     step1Title: 'Wohin versenden Sie?',
@@ -706,6 +622,19 @@ const I18N_TEXT = {
     validationReadyDate: 'Bitte wählen Sie, wann Ihre Waren bereit sein werden'
   },
   es: {
+    // Cabecera (Hero)
+    mainTitle: 'Cotización de envío desde China',
+    mainSubtitle: 'Obtén una cotización rápida y confiable para tu envío desde China',
+    trustBadge: 'Aprobado por 55.000+ importadores | Respuesta < 24 h | 100% Gratis',
+    previous: 'Anterior',
+    next: 'Siguiente',
+    timelineDestination: 'Destino',
+    timelineMode: 'Modo',
+    timelineOrigin: 'Origen',
+    timelineCargo: 'Carga',
+    timelineGoodsDetails: 'Detalles de mercancías',
+    timelineContact: 'Contacto',
+    stepCounter: 'Paso {current}/6',
     pickupPortFeedback: '¡Perfecto! Organizaremos la recogida desde',
     pickupCityFeedback: '¡Perfecto! Organizaremos la recogida desde',
     step1Title: '¿A dónde envía?',
@@ -889,6 +818,19 @@ const I18N_TEXT = {
     validationReadyDate: 'Por favor seleccione cuándo estarán listos sus bienes'
   },
   it: {
+    // Intestazione (Hero)
+    mainTitle: 'Preventivo di spedizione dalla Cina',
+    mainSubtitle: 'Ottieni un preventivo rapido e affidabile per la tua spedizione dalla Cina',
+    trustBadge: 'Approvato da oltre 55.000 importatori | Risposta < 24h | 100% Gratuito',
+    previous: 'Precedente',
+    next: 'Successivo',
+    timelineDestination: 'Destinazione',
+    timelineMode: 'Modalità',
+    timelineOrigin: 'Origine',
+    timelineCargo: 'Carico',
+    timelineGoodsDetails: 'Dettagli merce',
+    timelineContact: 'Contatto',
+    stepCounter: 'Passo {current}/6',
     pickupPortFeedback: 'Perfetto! Organizzeremo il ritiro da',
     pickupCityFeedback: 'Perfetto! Organizzeremo il ritiro da',
     step1Title: 'Dove spedisci?',
@@ -1073,6 +1015,19 @@ const I18N_TEXT = {
     validationReadyDate: 'Per favore seleziona quando le tue merci saranno pronte'
   },
   nl: {
+    // Kop (Hero)
+    mainTitle: 'Verzendofferte vanuit China',
+    mainSubtitle: 'Ontvang een snelle en betrouwbare offerte voor uw zending vanuit China',
+    trustBadge: 'Goedgekeurd door 55.000+ importeurs | Reactie < 24u | 100% Gratis',
+    previous: 'Vorige',
+    next: 'Volgende',
+    timelineDestination: 'Bestemming',
+    timelineMode: 'Modus',
+    timelineOrigin: 'Ophaalpunt',
+    timelineCargo: 'Lading',
+    timelineGoodsDetails: 'Goederendetails',
+    timelineContact: 'Contact',
+    stepCounter: 'Stap {current}/6',
     pickupPortFeedback: 'Perfect! We regelen de afhaling vanaf',
     pickupCityFeedback: 'Perfect! We regelen de afhaling vanaf',
     step1Title: 'Waar verzendt u naar?',
@@ -1258,6 +1213,19 @@ const I18N_TEXT = {
     businessInfoDescription: 'Vertel ons over uw bedrijf'
   },
   zh: {
+    // 头部 (Hero)
+    mainTitle: '来自中国的运价报价',
+    mainSubtitle: '为您从中国发货获取快速可靠的报价',
+    trustBadge: '获得 55,000+ 进口商认可 | 响应 < 24 小时 | 100% 免费',
+    previous: '上一步',
+    next: '下一步',
+    timelineDestination: '目的地',
+    timelineMode: '方式',
+    timelineOrigin: '起运',
+    timelineCargo: '货物',
+    timelineGoodsDetails: '货物详情',
+    timelineContact: '联系',
+    stepCounter: '第 {current}/6 步',
     pickupPortFeedback: '很好！我们将从以下地点提货',
     pickupCityFeedback: '很好！我们将从以下地点提货',
     step1Title: '您要运输到哪里？',
@@ -1443,6 +1411,19 @@ const I18N_TEXT = {
     businessInfoDescription: '介绍一下您的公司'
   },
   ar: {
+    // الرأس (Hero)
+    mainTitle: 'عرض شحن من الصين',
+    mainSubtitle: 'احصل على عرض سريع وموثوق لشحنتك من الصين',
+    trustBadge: 'موثوق به من 55,000+ مستورد | رد خلال < 24 ساعة | مجاني 100% ',
+    previous: 'السابق',
+    next: 'التالي',
+    timelineDestination: 'الوجهة',
+    timelineMode: 'النمط',
+    timelineOrigin: 'الاستلام',
+    timelineCargo: 'الشحنة',
+    timelineGoodsDetails: 'تفاصيل البضائع',
+    timelineContact: 'التواصل',
+    stepCounter: 'الخطوة {current}/6',
     pickupPortFeedback: 'رائع! سننظم الاستلام من',
     pickupCityFeedback: 'رائع! سننظم الاستلام من',
     step1Title: 'إلى أين تشحن؟',
@@ -1628,6 +1609,19 @@ const I18N_TEXT = {
     businessInfoDescription: 'أخبرنا عن شركتك'
   },
   pt: {
+    // Cabeçalho (Hero)
+    mainTitle: 'Cotação de envio da China',
+    mainSubtitle: 'Obtenha uma cotação rápida e confiável para seu envio da China',
+    trustBadge: 'Aprovado por 55.000+ importadores | Resposta < 24h | 100% Grátis',
+    previous: 'Anterior',
+    next: 'Próximo',
+    timelineDestination: 'Destino',
+    timelineMode: 'Modo',
+    timelineOrigin: 'Origem',
+    timelineCargo: 'Carga',
+    timelineGoodsDetails: 'Detalhes das mercadorias',
+    timelineContact: 'Contato',
+    stepCounter: 'Etapa {current}/6',
     pickupPortFeedback: 'Perfeito! Vamos organizar a coleta a partir de',
     pickupCityFeedback: 'Perfeito! Vamos organizar a coleta a partir de',
     step1Title: 'Para onde você envia?',
@@ -1813,6 +1807,19 @@ const I18N_TEXT = {
     businessInfoDescription: 'Fale-nos sobre sua empresa'
   },
   tr: {
+    // Başlık (Hero)
+    mainTitle: 'Çin’den Nakliye Teklifi',
+    mainSubtitle: 'Çin’den gönderiniz için hızlı ve güvenilir bir teklif alın',
+    trustBadge: '55.000+ ithalatçı tarafından onaylandı | Yanıt < 24s | %100 Ücretsiz',
+    previous: 'Geri',
+    next: 'İleri',
+    timelineDestination: 'Varış',
+    timelineMode: 'Mod',
+    timelineOrigin: 'Çıkış',
+    timelineCargo: 'Yük',
+    timelineGoodsDetails: 'Yük detayları',
+    timelineContact: 'İletişim',
+    stepCounter: 'Adım {current}/6',
     pickupPortFeedback: 'Harika! Alımı şu noktadan ayarlayacağız',
     pickupCityFeedback: 'Harika! Alımı şu noktadan ayarlayacağız',
     step1Title: 'Nereye gönderiyorsunuz?',
@@ -1998,6 +2005,19 @@ const I18N_TEXT = {
     businessInfoDescription: 'Bize şirketinizden bahsedin'
   },
   ru: {
+    // Заголовок (Hero)
+    mainTitle: 'Расчет стоимости доставки из Китая',
+    mainSubtitle: 'Получите быстрый и надежный расчет для вашей отправки из Китая',
+    trustBadge: 'Одобрено 55 000+ импортёрами | Ответ < 24ч | 100% бесплатно',
+    previous: 'Назад',
+    next: 'Далее',
+    timelineDestination: 'Назначение',
+    timelineMode: 'Режим',
+    timelineOrigin: 'Забор',
+    timelineCargo: 'Груз',
+    timelineGoodsDetails: 'Детали товара',
+    timelineContact: 'Контакт',
+    stepCounter: 'Шаг {current}/6',
     pickupPortFeedback: 'Отлично! Мы организуем забор из',
     pickupCityFeedback: 'Отлично! Мы организуем забор из',
     step1Title: 'Куда вы отправляете?',
@@ -2183,9 +2203,7 @@ const I18N_TEXT = {
     businessInfoDescription: 'Расскажите нам о вашей компании'
   }
 };
-
-// Destination ports by country (comprehensive list)
-export const DESTINATION_PORTS_BY_COUNTRY: Record<string, Array<{code: string, name: string, type: 'sea' | 'air' | 'rail', flag: string, volume?: string}>> = {
+/* (legacy ports block removed; data resides in context/ports.ts)
   'FR': [
     // Ports maritimes
     { code: 'FRMRS', name: 'Port de Marseille-Fos', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
@@ -3186,7 +3204,7 @@ export const DESTINATION_PORTS_BY_COUNTRY: Record<string, Array<{code: string, n
     { code: 'MVMAL_AIR', name: 'Malé Velana International Airport', type: 'air', flag: '✈️', volume: '0.08M tons' },
     { code: 'MVGAN_AIR', name: 'Gan International Airport', type: 'air', flag: '✈️', volume: '0.01M tons' }
   ]
-};
+*/
 
 export interface QuoteFormContextValue {
   // Main navigation
@@ -3213,11 +3231,13 @@ export interface QuoteFormContextValue {
 
   // Language & phone prefix for later steps
   userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru';
-  setUserLang: React.Dispatch<React.SetStateAction<'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'>>;
+  setUserLang: React.Dispatch<
+    React.SetStateAction<'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'>
+  >;
   phonePrefixSearch: string;
   setPhonePrefixSearch: React.Dispatch<React.SetStateAction<string>>;
 
-  // Additional states for Step 1 
+  // Additional states for Step 1
   debouncedCountrySearch: string;
   setDebouncedCountrySearch: React.Dispatch<React.SetStateAction<string>>;
   destPortSearch: string;
@@ -3225,16 +3245,22 @@ export interface QuoteFormContextValue {
   isDestPortListVisible: boolean;
   setIsDestPortListVisible: React.Dispatch<React.SetStateAction<boolean>>;
 
+  // Step 3 (Origin) UI list states
+  originPortSearch: string;
+  setOriginPortSearch: React.Dispatch<React.SetStateAction<string>>;
+  isOriginPortListVisible: boolean;
+  setIsOriginPortListVisible: React.Dispatch<React.SetStateAction<boolean>>;
+
   // Step 5 substep navigation
   step5SubStep: number;
   setStep5SubStep: React.Dispatch<React.SetStateAction<number>>;
-  
+
   // Cargo/Load management
   activeLoadIndex: number;
   setActiveLoadIndex: React.Dispatch<React.SetStateAction<number>>;
   shippingType: 'container' | 'pallets' | 'loose';
   setShippingType: React.Dispatch<React.SetStateAction<'container' | 'pallets' | 'loose'>>;
-  
+
   // Currency selection for Step 5
   currencySearch: string;
   setCurrencySearch: React.Dispatch<React.SetStateAction<string>>;
@@ -3247,23 +3273,46 @@ export interface QuoteFormContextValue {
   clearCountrySelection: () => void;
   handleDestLocationTypeSelect: (typeId: string) => void;
   handleDestPortSelect: (portCode: string) => void;
+  handleOriginLocationTypeSelect: (typeId: string) => void;
+  handleOriginPortSelect: (portCode: string) => void;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleCurrencySelect: (currencyCode: string) => void;
 
   // Helper functions
-  getDestinationLocationTypes: () => Array<{id: string, name: string, icon: any}>;
-  getFilteredDestinationPorts: () => Array<{code: string, name: string, type: string, flag: string, volume?: string}>;
-  filteredCountries: Array<{code: string, name: string, flag: string}>;
+  getDestinationLocationTypes: () => Array<{
+    id: string;
+    name: string;
+    icon: typeof Warehouse | typeof Ship | typeof Building2 | typeof Home;
+  }>;
+  getFilteredDestinationPorts: () => Array<{
+    code: string;
+    name: string;
+    type: string;
+    flag: string;
+    volume?: string;
+  }>;
+  getFilteredOriginPorts: () => Array<{
+    code: string;
+    name: string;
+    type: string;
+    flag: string;
+    volume?: string;
+  }>;
+  filteredCountries: Array<{ code: string; name: string; flag: string }>;
   sanitizedCountrySearch: string;
-  
+
   // I18N and helpers
   I18N_TEXT: typeof I18N_TEXT;
+  getText: (key: string, fallback?: string) => string;
   getLocationTypeName: (typeId: string, userLang: string) => string;
   getLocationTypeDescription: (typeId: string, userLang: string) => string;
-  getTranslatedPortNameLocal: (port: any, userLang: string) => string;
+  getTranslatedPortNameLocal: (port: { code: string; name: string }, userLang: string) => string;
   getTranslatedPortType: (portType: string, userLang: string) => string;
   getSearchPortsText: (countryCode: string, userLang: string) => string;
-  getTranslatedCountryName: (countryCode: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => string;
+  getTranslatedCountryName: (
+    countryCode: string,
+    userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'
+  ) => string;
 }
 
 const QuoteFormContext = createContext<QuoteFormContextValue | undefined>(undefined);
@@ -3273,7 +3322,9 @@ export const getTranslatedCountryName = (
   countryCode: string,
   userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'
 ): string => {
-  const translations = (COUNTRY_TRANSLATIONS as any)[countryCode];
+  const translations = (COUNTRY_TRANSLATIONS as Record<string, Record<string, string>>)[
+    countryCode
+  ];
   if (translations && translations[userLang]) return translations[userLang];
   if (translations && translations.en) return translations.en;
   const country = COUNTRIES.find((c) => c.code === countryCode);
@@ -3305,7 +3356,9 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [highlightedCountryIndex, setHighlightedCountryIndex] = useState(-1);
 
   // Language state (copied from QuoteForm.tsx)
-  const [userLang, setUserLang] = useState<'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'>(() => {
+  const [userLang, setUserLang] = useState<
+    'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'
+  >(() => {
     if (typeof navigator !== 'undefined') {
       const lang = navigator.language || 'en';
       if (lang.startsWith('fr')) return 'fr';
@@ -3328,12 +3381,15 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [debouncedCountrySearch, setDebouncedCountrySearch] = useState('');
   const [destPortSearch, setDestPortSearch] = useState('');
   const [isDestPortListVisible, setIsDestPortListVisible] = useState(false);
+  // Step 3 Origin states
+  const [originPortSearch, setOriginPortSearch] = useState('');
+  const [isOriginPortListVisible, setIsOriginPortListVisible] = useState(false);
 
   // Step 5 and cargo-related states
   const [step5SubStep, setStep5SubStep] = useState(1);
   const [activeLoadIndex, setActiveLoadIndex] = useState(0);
   const [shippingType, setShippingType] = useState<'container' | 'pallets' | 'loose'>('container');
-  
+
   // Currency selection states
   const [currencySearch, setCurrencySearch] = useState('USD 💵');
   const [isCurrencyListVisible, setIsCurrencyListVisible] = useState(false);
@@ -3342,24 +3398,24 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const handleCountrySelect = useCallback(
     (countryCode: string) => {
       const selected = COUNTRIES.find((c) => c.code === countryCode);
-      setFormData((prev) => ({ 
-        ...prev, 
+      setFormData((prev) => ({
+        ...prev,
         country: countryCode,
         phoneCountryCode: selected?.phonePrefix || prev.phoneCountryCode,
         // Reset destination fields when country changes
         destPort: '',
         destCity: '',
         destZipCode: '',
-        destLocationType: ''
+        destLocationType: '',
       }));
-      setFieldValid((prev) => ({ 
-        ...prev, 
+      setFieldValid((prev) => ({
+        ...prev,
         country: true,
         // Reset destination field validations
         destPort: null,
         destCity: null,
         destZipCode: null,
-        destLocationType: null
+        destLocationType: null,
       }));
       if (selected) {
         setCountrySearch(`${selected.flag} ${getTranslatedCountryName(selected.code, userLang)}`);
@@ -3368,7 +3424,7 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       }
       setIsCountryListVisible(false);
-      
+
       // Usage tracking
       if (typeof window !== 'undefined') {
         try {
@@ -3377,13 +3433,15 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           const usageObj: Record<string, number> = usageRaw ? JSON.parse(usageRaw) : {};
           usageObj[countryCode] = (usageObj[countryCode] || 0) + 1;
           localStorage.setItem(key, JSON.stringify(usageObj));
-        } catch (err) { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     },
-    [userLang, setFormData, setFieldValid, setCountrySearch, setPhonePrefixSearch, setIsCountryListVisible]
+    [userLang]
   );
 
-  // Helper functions  
+  // Helper functions
   const getDestinationLocationTypes = useCallback(() => {
     // Based on shipping mode, return appropriate location types with proper icons
     return [
@@ -3396,1051 +3454,7891 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const getFilteredDestinationPorts = useCallback(() => {
     if (!formData.country) return [];
-    
-    const countryPorts = DESTINATION_PORTS_BY_COUNTRY[formData.country] || [];
+
+    const countryPorts = PORTS_BY_COUNTRY[formData.country] || [];
     if (!destPortSearch.trim()) return countryPorts;
-    
+
     // If a port is already selected, show all ports (don't filter based on the displayed value)
     if (formData.destPort) return countryPorts;
-    
-    // Clean search term by removing emojis and extra spaces
-    const cleanSearchTerm = destPortSearch.replace(/[🚢✈️🚂]/g, '').trim().toLowerCase();
+
+    // Clean search term by removing emojis and extra spaces (Extended_Pictographic captures emoji set)
+    const cleanSearchTerm = destPortSearch
+      .replace(/\p{Extended_Pictographic}/gu, '')
+      .trim()
+      .toLowerCase();
     if (!cleanSearchTerm) return countryPorts;
-    
-    return countryPorts.filter(port => 
-      port.name.toLowerCase().includes(cleanSearchTerm) ||
-      port.code.toLowerCase().includes(cleanSearchTerm) ||
-      port.type.toLowerCase().includes(cleanSearchTerm)
+
+    return countryPorts.filter(
+      (port) =>
+        port.name.toLowerCase().includes(cleanSearchTerm) ||
+        port.code.toLowerCase().includes(cleanSearchTerm) ||
+        port.type.toLowerCase().includes(cleanSearchTerm)
     );
   }, [formData.country, destPortSearch, formData.destPort]);
 
   // Helper functions for location types and names (using I18N_TEXT)
+  const getText = useCallback(
+    (key: string, fallback?: string) => {
+      const dict =
+        (I18N_TEXT as Record<string, Record<string, string>>)[userLang] ||
+        (I18N_TEXT as Record<string, Record<string, string>>).en ||
+        {};
+      const value = dict?.[key];
+      if (typeof value === 'string' && value.trim().length > 0) return value;
+      const en = (I18N_TEXT as Record<string, Record<string, string>>).en || {};
+      const enValue = en[key];
+      if (typeof enValue === 'string' && enValue.trim().length > 0) return enValue;
+      return typeof fallback === 'string' && fallback.length > 0 ? fallback : key;
+    },
+    [userLang]
+  );
   const getLocationTypeName = useCallback((typeId: string, userLang: string) => {
-    const translations = (I18N_TEXT as any)[userLang];
+    const translations = (I18N_TEXT as Record<string, Record<string, string>>)[userLang];
     switch (typeId) {
-      case 'factory': return translations?.factoryWarehouse || 'Factory/Warehouse';
-      case 'port': return translations?.portAirport || 'Port/Airport';
-      case 'business': return translations?.businessAddress || 'Business address';
-      case 'residential': return translations?.residentialAddress || 'Residential address';
-      default: return typeId;
+      case 'factory':
+        return translations?.factoryWarehouse || 'Factory/Warehouse';
+      case 'port':
+        return translations?.portAirport || 'Port/Airport';
+      case 'business':
+        return translations?.businessAddress || 'Business address';
+      case 'residential':
+        return translations?.residentialAddress || 'Residential address';
+      default:
+        return typeId;
     }
   }, []);
-  
+
   const getLocationTypeDescription = useCallback((typeId: string, userLang: string) => {
-    const translations = (I18N_TEXT as any)[userLang];
+    const translations = (I18N_TEXT as Record<string, Record<string, string>>)[userLang];
     switch (typeId) {
-      case 'factory': return translations?.factoryWarehouseDesc || 'Factory, distribution center, warehouse';
-      case 'port': return translations?.portAirportDesc || 'Direct to port/airport pickup';
-      case 'business': return translations?.businessAddressDesc || 'Company address, office building';
-      case 'residential': return translations?.residentialAddressDesc || 'House, apartment, personal address';
-      default: return '';
+      case 'factory':
+        return translations?.factoryWarehouseDesc || 'Factory, distribution center, warehouse';
+      case 'port':
+        return translations?.portAirportDesc || 'Direct to port/airport pickup';
+      case 'business':
+        return translations?.businessAddressDesc || 'Company address, office building';
+      case 'residential':
+        return translations?.residentialAddressDesc || 'House, apartment, personal address';
+      default:
+        return '';
     }
   }, []);
-  
-  const getTranslatedPortNameLocal = useCallback((port: any, userLang: string) => {
-    // Smart translation system using patterns and fallbacks
-    const portCode = port.code;
-    const portName = port.name;
-    
-    // Manual translations for specific important ports
-    const manualTranslations: Record<string, Record<string, string>> = {
-      // Major German ports
-      'DEHAM': { en: 'Port of Hamburg', de: 'Hafen Hamburg', fr: 'Port de Hambourg', es: 'Puerto de Hamburgo', it: 'Porto di Amburgo', nl: 'Haven van Hamburg', pt: 'Porto de Hamburgo', tr: 'Hamburg Limanı', ru: 'Порт Гамбург', zh: '汉堡港', ar: 'ميناء هامبورغ' },
-      'DEBRE': { en: 'Port of Bremen', de: 'Hafen Bremen', fr: 'Port de Brême', es: 'Puerto de Bremen', it: 'Porto di Brema', nl: 'Haven van Bremen', pt: 'Porto de Bremen', tr: 'Bremen Limanı', ru: 'Порт Бремен', zh: '不来梅港', ar: 'ميناء بريمن' },
-      'DEFRA': { en: 'Frankfurt Airport', de: 'Flughafen Frankfurt', fr: 'Aéroport de Francfort', es: 'Aeropuerto de Fráncfort', it: 'Aeroporto di Francoforte', nl: 'Luchthaven Frankfurt', pt: 'Aeroporto de Frankfurt', tr: 'Frankfurt Havaalanı', ru: 'Аэропорт Франкфурт', zh: '法兰克福机场', ar: 'مطار فرانكفورت' },
-      'DEMUC': { en: 'Munich Airport', de: 'Flughafen München', fr: 'Aéroport de Munich', es: 'Aeropuerto de Múnich', it: 'Aeroporto di Monaco', nl: 'Luchthaven München', pt: 'Aeroporto de Munique', tr: 'Münih Havaalanı', ru: 'Аэропорт Мюнхен', zh: '慕尼黑机场', ar: 'مطار ميونيخ' },
-      
-      // Major Asian ports
-      'TWKHH': { en: 'Port of Kaohsiung', fr: 'Port de Kaohsiung', de: 'Hafen Kaohsiung', es: 'Puerto de Kaohsiung', it: 'Porto di Kaohsiung', nl: 'Haven van Kaohsiung', pt: 'Porto de Kaohsiung', tr: 'Kaohsiung Limanı', ru: 'Порт Гаосюн', zh: '高雄港', ar: 'ميناء كاوشيونغ' },
-      'TWTPE_AIR': { en: 'Taipei Taoyuan Airport', fr: 'Aéroport de Taipei Taoyuan', de: 'Flughafen Taipei Taoyuan', es: 'Aeropuerto de Taipéi Taoyuan', it: 'Aeroporto di Taipei Taoyuan', nl: 'Luchthaven Taipei Taoyuan', pt: 'Aeroporto de Taipei Taoyuan', tr: 'Taipei Taoyuan Havaalanı', ru: 'Аэропорт Тайбэй Таоюань', zh: '台北桃园机场', ar: 'مطار تايبيه تاويوان' },
-      
-      // Major Middle East ports
-      'QADOH_AIR': { en: 'Doha Hamad International Airport', fr: 'Aéroport international de Doha Hamad', de: 'Internationaler Flughafen Doha Hamad', es: 'Aeropuerto Internacional de Doha Hamad', it: 'Aeroporto Internazionale di Doha Hamad', nl: 'Internationale Luchthaven Doha Hamad', pt: 'Aeroporto Internacional de Doha Hamad', tr: 'Doha Hamad Uluslararası Havaalanı', ru: 'Международный аэропорт Доха Хамад', zh: '多哈哈马德国际机场', ar: 'مطار حمد الدولي' },
-      'SAJED': { en: 'Port of Jeddah', fr: 'Port de Jeddah', de: 'Hafen Dschidda', es: 'Puerto de Jeddah', it: 'Porto di Jeddah', nl: 'Haven van Jeddah', pt: 'Porto de Jeddah', tr: 'Cidde Limanı', ru: 'Порт Джидда', zh: '吉达港', ar: 'ميناء جدة' },
-      'SARUH': { en: 'Riyadh King Khalid Airport', fr: 'Aéroport de Riyadh King Khalid', de: 'Flughafen Riad King Khalid', es: 'Aeropuerto de Riad King Khalid', it: 'Aeroporto di Riyadh King Khalid', nl: 'Luchthaven Riyadh King Khalid', pt: 'Aeroporto de Riyadh King Khalid', tr: 'Riyad Kral Halid Havaalanı', ru: 'Аэропорт Эр-Рияд имени короля Халида', zh: '利雅得哈立德国王机场', ar: 'مطار الملك خالد الدولي' },
-      
-      // New major hubs - Luxembourg
-      'LULUX': { en: 'Luxembourg Findel Airport', fr: 'Aéroport de Luxembourg Findel', de: 'Flughafen Luxemburg Findel', es: 'Aeropuerto de Luxemburgo Findel', it: 'Aeroporto di Lussemburgo Findel', nl: 'Luchthaven Luxemburg Findel', pt: 'Aeroporto de Luxemburgo Findel', tr: 'Lüksemburg Findel Havaalanı', ru: 'Аэропорт Люксембург Финдель', zh: '卢森堡芬德尔机场', ar: 'مطار لوكسمبورغ فيندل' },
-      
-      // Monaco
-      'MCMON': { en: 'Port of Monaco', fr: 'Port de Monaco', de: 'Hafen Monaco', es: 'Puerto de Mónaco', it: 'Porto di Monaco', nl: 'Haven van Monaco', pt: 'Porto do Mônaco', tr: 'Monako Limanı', ru: 'Порт Монако', zh: '摩纳哥港', ar: 'ميناء موناكو' },
-      
-      // Iceland
-      'ISKEF': { en: 'Reykjavik Keflavik Airport', fr: 'Aéroport de Reykjavik Keflavik', de: 'Flughafen Reykjavik Keflavik', es: 'Aeropuerto de Reykjavik Keflavik', it: 'Aeroporto di Reykjavik Keflavik', nl: 'Luchthaven Reykjavik Keflavik', pt: 'Aeroporto de Reykjavik Keflavik', tr: 'Reykjavik Keflavik Havaalanı', ru: 'Аэропорт Рейкьявик Кефлавик', zh: '雷克雅未克凯夫拉维克机场', ar: 'مطار ريكيافيك كيفلافيك' },
-      'ISREY': { en: 'Port of Reykjavik', fr: 'Port de Reykjavik', de: 'Hafen Reykjavik', es: 'Puerto de Reykjavik', it: 'Porto di Reykjavik', nl: 'Haven van Reykjavik', pt: 'Porto de Reykjavik', tr: 'Reykjavik Limanı', ru: 'Порт Рейкьявик', zh: '雷克雅未克港', ar: 'ميناء ريكيافيك' },
-      
-      // Malta
-      'MTMLA': { en: 'Port of Valletta', fr: 'Port de La Valette', de: 'Hafen Valletta', es: 'Puerto de La Valeta', it: 'Porto di La Valletta', nl: 'Haven van Valletta', pt: 'Porto de Valletta', tr: 'Valletta Limanı', ru: 'Порт Валлетта', zh: '瓦莱塔港', ar: 'ميناء فاليتا' },
-      'MTMRS': { en: 'Port of Marsaxlokk', fr: 'Port de Marsaxlokk', de: 'Hafen Marsaxlokk', es: 'Puerto de Marsaxlokk', it: 'Porto di Marsaxlokk', nl: 'Haven van Marsaxlokk', pt: 'Porto de Marsaxlokk', tr: 'Marsaxlokk Limanı', ru: 'Порт Марсашлокк', zh: '马尔萨什洛克港', ar: 'ميناء مارساشلوك' },
-      
-      // Cyprus
-      'CYLIM': { en: 'Port of Limassol', fr: 'Port de Limassol', de: 'Hafen Limassol', es: 'Puerto de Limassol', it: 'Porto di Limassol', nl: 'Haven van Limassol', pt: 'Porto de Limassol', tr: 'Limasol Limanı', ru: 'Порт Лимассол', zh: '利马索尔港', ar: 'ميناء ليماسول' },
-      
-      // African hubs
-      'TZDAR': { en: 'Port of Dar es Salaam', fr: 'Port de Dar es Salaam', de: 'Hafen Dar es Salaam', es: 'Puerto de Dar es Salaam', it: 'Porto di Dar es Salaam', nl: 'Haven van Dar es Salaam', pt: 'Porto de Dar es Salaam', tr: 'Dar es Salaam Limanı', ru: 'Порт Дар-эс-Салам', zh: '达累斯萨拉姆港', ar: 'ميناء دار السلام' },
-      'RWKGL': { en: 'Kigali International Airport', fr: 'Aéroport international de Kigali', de: 'Internationaler Flughafen Kigali', es: 'Aeropuerto Internacional de Kigali', it: 'Aeroporto Internazionale di Kigali', nl: 'Internationale Luchthaven Kigali', pt: 'Aeroporto Internacional de Kigali', tr: 'Kigali Uluslararası Havaalanı', ru: 'Международный аэропорт Кигали', zh: '基加利国际机场', ar: 'مطار كيغالي الدولي' },
-      'UGENT_AIR': { en: 'Entebbe International Airport', fr: 'Aéroport international d\'Entebbe', de: 'Internationaler Flughafen Entebbe', es: 'Aeropuerto Internacional de Entebbe', it: 'Aeroporto Internazionale di Entebbe', nl: 'Internationale Luchthaven Entebbe', pt: 'Aeroporto Internacional de Entebbe', tr: 'Entebbe Uluslararası Havaalanı', ru: 'Международный аэропорт Энтеббе', zh: '恩德培国际机场', ar: 'مطار عنتيبي الدولي' },
-      
-      // Pacific hubs
-      'FJNAN': { en: 'Nadi Airport', fr: 'Aéroport de Nadi', de: 'Flughafen Nadi', es: 'Aeropuerto de Nadi', it: 'Aeroporto di Nadi', nl: 'Luchthaven Nadi', pt: 'Aeroporto de Nadi', tr: 'Nadi Havaalanı', ru: 'Аэропорт Нади', zh: '楠迪机场', ar: 'مطار نادي' },
-      'FJSUV': { en: 'Port of Suva', fr: 'Port de Suva', de: 'Hafen Suva', es: 'Puerto de Suva', it: 'Porto di Suva', nl: 'Haven van Suva', pt: 'Porto de Suva', tr: 'Suva Limanı', ru: 'Порт Сува', zh: '苏瓦港', ar: 'ميناء سوفا' },
-      
-      // Indian Ocean hubs
-      'MUPTS': { en: 'Port Louis', fr: 'Port Louis', de: 'Port Louis', es: 'Puerto Louis', it: 'Port Louis', nl: 'Port Louis', pt: 'Port Louis', tr: 'Port Louis', ru: 'Порт-Луи', zh: '路易港', ar: 'بورت لويس' },
-      'MUPTS_AIR': { en: 'Mauritius Airport', fr: 'Aéroport de Maurice', de: 'Flughafen Mauritius', es: 'Aeropuerto de Mauricio', it: 'Aeroporto di Mauritius', nl: 'Luchthaven Mauritius', pt: 'Aeroporto de Maurício', tr: 'Mauritius Havaalanı', ru: 'Аэропорт Маврикий', zh: '毛里求斯机场', ar: 'مطار موريشيوس' },
-      'SCVIC': { en: 'Port of Victoria', fr: 'Port de Victoria', de: 'Hafen Victoria', es: 'Puerto de Victoria', it: 'Porto di Victoria', nl: 'Haven van Victoria', pt: 'Porto de Victoria', tr: 'Victoria Limanı', ru: 'Порт Виктория', zh: '维多利亚港', ar: 'ميناء فيكتوريا' },
-      'MVMAL_AIR': { en: 'Malé Velana Airport', fr: 'Aéroport de Malé Velana', de: 'Flughafen Malé Velana', es: 'Aeropuerto de Malé Velana', it: 'Aeroporto di Malé Velana', nl: 'Luchthaven Malé Velana', pt: 'Aeroporto de Malé Velana', tr: 'Malé Velana Havaalanı', ru: 'Аэропорт Мале Велана', zh: '马累维拉纳机场', ar: 'مطار مالي فيلانا' },
-      
-      // Romanian hubs (for the issues shown in the screenshot)
-      'ROCND': { en: 'Port of Constanta', fr: 'Port de Constanta', de: 'Hafen Konstanza', es: 'Puerto de Constanza', it: 'Porto di Costanza', nl: 'Haven van Constanta', pt: 'Porto de Constanta', tr: 'Köstence Limanı', ru: 'Порт Констанца', zh: '康斯坦察港', ar: 'ميناء كونستانتا' },
-      'ROGLT': { en: 'Port of Galati', fr: 'Port de Galati', de: 'Hafen Galați', es: 'Puerto de Galați', it: 'Porto di Galați', nl: 'Haven van Galați', pt: 'Porto de Galați', tr: 'Galați Limanı', ru: 'Порт Галац', zh: '加拉茨港', ar: 'ميناء غالاتي' },
-      'ROBUH': { en: 'Bucharest Henri Coandă Airport', fr: 'Aéroport de Bucarest Henri Coandă', de: 'Flughafen Bukarest Henri Coandă', es: 'Aeropuerto de Bucarest Henri Coandă', it: 'Aeroporto di Bucarest Henri Coandă', nl: 'Luchthaven Boekarest Henri Coandă', pt: 'Aeroporto de Bucareste Henri Coandă', tr: 'Bükreş Henri Coandă Havaalanı', ru: 'Аэропорт Бухарест Анри Коандэ', zh: '布加勒斯特亨利·科安德机场', ar: 'مطار بوخارست هنري كواندا' },
-      
-      // Other European hubs that users might see
-      'BGVAR': { en: 'Port of Varna', fr: 'Port de Varna', de: 'Hafen Warna', es: 'Puerto de Varna', it: 'Porto di Varna', nl: 'Haven van Varna', pt: 'Porto de Varna', tr: 'Varna Limanı', ru: 'Порт Варна', zh: '瓦尔纳港', ar: 'ميناء فارنا' },
-      'BGSOF': { en: 'Sofia Airport', fr: 'Aéroport de Sofia', de: 'Flughafen Sofia', es: 'Aeropuerto de Sofía', it: 'Aeroporto di Sofia', nl: 'Luchthaven Sofia', pt: 'Aeroporto de Sofia', tr: 'Sofya Havaalanı', ru: 'Аэропорт София', zh: '索菲亚机场', ar: 'مطار صوفيا' },
-      'PLWAR': { en: 'Port of Warsaw', fr: 'Port de Varsovie', de: 'Hafen Warschau', es: 'Puerto de Varsovia', it: 'Porto di Varsavia', nl: 'Haven van Warschau', pt: 'Porto de Varsóvia', tr: 'Varşova Limanı', ru: 'Порт Варшава', zh: '华沙港', ar: 'ميناء وارسو' },
-      'PLGDN': { en: 'Port of Gdansk', fr: 'Port de Gdansk', de: 'Hafen Danzig', es: 'Puerto de Gdansk', it: 'Porto di Danzica', nl: 'Haven van Gdansk', pt: 'Porto de Gdansk', tr: 'Gdansk Limanı', ru: 'Порт Гданьск', zh: '格但斯克港', ar: 'ميناء غدانسك' },
-      'CZKRK': { en: 'Port of Krakow', fr: 'Port de Cracovie', de: 'Hafen Krakau', es: 'Puerto de Cracovia', it: 'Porto di Cracovia', nl: 'Haven van Krakau', pt: 'Porto de Cracóvia', tr: 'Krakow Limanı', ru: 'Порт Краков', zh: '克拉科夫港', ar: 'ميناء كراكوف' },
-      'CZPRG_AIR': { en: 'Prague Airport', fr: 'Aéroport de Prague', de: 'Flughafen Prag', es: 'Aeropuerto de Praga', it: 'Aeroporto di Praga', nl: 'Luchthaven Praag', pt: 'Aeroporto de Praga', tr: 'Prag Havaalanı', ru: 'Аэропорт Прага', zh: '布拉格机场', ar: 'مطار براغ' },
-      
-      // === PAYS EN A - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇦🇪 UAE (Émirats Arabes Unis) - Hubs majeurs du Moyen-Orient
-      'AEJEA': { en: 'Port of Jebel Ali', fr: 'Port de Jebel Ali', de: 'Hafen Jebel Ali', es: 'Puerto de Jebel Ali', it: 'Porto di Jebel Ali', nl: 'Haven van Jebel Ali', pt: 'Porto de Jebel Ali', tr: 'Jebel Ali Limanı', ru: 'Порт Джебель-Али', zh: '杰贝阿里港', ar: 'ميناء جبل علي' },
-      'AESHJ': { en: 'Port of Sharjah', fr: 'Port de Sharjah', de: 'Hafen Schardscha', es: 'Puerto de Sharjah', it: 'Porto di Sharjah', nl: 'Haven van Sharjah', pt: 'Porto de Sharjah', tr: 'Şarjah Limanı', ru: 'Порт Шарджа', zh: '沙迦港', ar: 'ميناء الشارقة' },
-      'AEDXB': { en: 'Dubai International Airport', fr: 'Aéroport international de Dubaï', de: 'Internationaler Flughafen Dubai', es: 'Aeropuerto Internacional de Dubái', it: 'Aeroporto Internazionale di Dubai', nl: 'Internationale Luchthaven Dubai', pt: 'Aeroporto Internacional de Dubai', tr: 'Dubai Uluslararası Havaalanı', ru: 'Международный аэропорт Дубай', zh: '迪拜国际机场', ar: 'مطار دبي الدولي' },
-      'AEAUH': { en: 'Abu Dhabi International Airport', fr: 'Aéroport international d\'Abu Dhabi', de: 'Internationaler Flughafen Abu Dhabi', es: 'Aeropuerto Internacional de Abu Dhabi', it: 'Aeroporto Internazionale di Abu Dhabi', nl: 'Internationale Luchthaven Abu Dhabi', pt: 'Aeroporto Internacional de Abu Dhabi', tr: 'Abu Dabi Uluslararası Havaalanı', ru: 'Международный аэропорт Абу-Даби', zh: '阿布扎比国际机场', ar: 'مطار أبوظبي الدولي' },
-      
-      // 🇦🇺 Australia (Australie) - Hubs majeurs du Pacifique
-      'AUSYD': { en: 'Port of Sydney', fr: 'Port de Sydney', de: 'Hafen Sydney', es: 'Puerto de Sídney', it: 'Porto di Sydney', nl: 'Haven van Sydney', pt: 'Porto de Sydney', tr: 'Sidney Limanı', ru: 'Порт Сидней', zh: '悉尼港', ar: 'ميناء سيدني' },
-      'AUMEL': { en: 'Port of Melbourne', fr: 'Port de Melbourne', de: 'Hafen Melbourne', es: 'Puerto de Melbourne', it: 'Porto di Melbourne', nl: 'Haven van Melbourne', pt: 'Porto de Melbourne', tr: 'Melbourne Limanı', ru: 'Порт Мельбурн', zh: '墨尔本港', ar: 'ميناء ملبورن' },
-      'AUBNE': { en: 'Port of Brisbane', fr: 'Port de Brisbane', de: 'Hafen Brisbane', es: 'Puerto de Brisbane', it: 'Porto di Brisbane', nl: 'Haven van Brisbane', pt: 'Porto de Brisbane', tr: 'Brisbane Limanı', ru: 'Порт Брисбен', zh: '布里斯班港', ar: 'ميناء بريسبان' },
-      'AUFRE': { en: 'Port of Fremantle', fr: 'Port de Fremantle', de: 'Hafen Fremantle', es: 'Puerto de Fremantle', it: 'Porto di Fremantle', nl: 'Haven van Fremantle', pt: 'Porto de Fremantle', tr: 'Fremantle Limanı', ru: 'Порт Фримантл', zh: '弗里曼特尔港', ar: 'ميناء فريمانتل' },
-      'AUSYD_AIR': { en: 'Sydney Kingsford Smith Airport', fr: 'Aéroport de Sydney Kingsford Smith', de: 'Flughafen Sydney Kingsford Smith', es: 'Aeropuerto de Sídney Kingsford Smith', it: 'Aeroporto di Sydney Kingsford Smith', nl: 'Luchthaven Sydney Kingsford Smith', pt: 'Aeroporto de Sydney Kingsford Smith', tr: 'Sidney Kingsford Smith Havaalanı', ru: 'Аэропорт Сидней Кингсфорд Смит', zh: '悉尼金斯福德·史密斯机场', ar: 'مطار سيدني كينجسفورد سميث' },
-      'AUMEL_AIR': { en: 'Melbourne Airport', fr: 'Aéroport de Melbourne', de: 'Flughafen Melbourne', es: 'Aeropuerto de Melbourne', it: 'Aeroporto di Melbourne', nl: 'Luchthaven Melbourne', pt: 'Aeroporto de Melbourne', tr: 'Melbourne Havaalanı', ru: 'Аэропорт Мельбурн', zh: '墨尔本机场', ar: 'مطار ملبورن' },
-      'AUBNE_AIR': { en: 'Brisbane Airport', fr: 'Aéroport de Brisbane', de: 'Flughafen Brisbane', es: 'Aeropuerto de Brisbane', it: 'Aeroporto di Brisbane', nl: 'Luchthaven Brisbane', pt: 'Aeroporto de Brisbane', tr: 'Brisbane Havaalanı', ru: 'Аэропорт Брисбен', zh: '布里斯班机场', ar: 'مطار بريسبان' },
-      'AUPER_AIR': { en: 'Perth Airport', fr: 'Aéroport de Perth', de: 'Flughafen Perth', es: 'Aeropuerto de Perth', it: 'Aeroporto di Perth', nl: 'Luchthaven Perth', pt: 'Aeroporto de Perth', tr: 'Perth Havaalanı', ru: 'Аэропорт Перт', zh: '珀斯机场', ar: 'مطار بيرث' },
-      
-      // 🇦🇷 Argentina (Argentine) - Hub d'Amérique du Sud
-      'ARBUE': { en: 'Port of Buenos Aires', fr: 'Port de Buenos Aires', de: 'Hafen Buenos Aires', es: 'Puerto de Buenos Aires', it: 'Porto di Buenos Aires', nl: 'Haven van Buenos Aires', pt: 'Porto de Buenos Aires', tr: 'Buenos Aires Limanı', ru: 'Порт Буэнос-Айрес', zh: '布宜诺斯艾利斯港', ar: 'ميناء بوينس آيرس' },
-      'AREZE': { en: 'Ezeiza International Airport', fr: 'Aéroport international d\'Ezeiza', de: 'Internationaler Flughafen Ezeiza', es: 'Aeropuerto Internacional de Ezeiza', it: 'Aeroporto Internazionale di Ezeiza', nl: 'Internationale Luchthaven Ezeiza', pt: 'Aeroporto Internacional de Ezeiza', tr: 'Ezeiza Uluslararası Havaalanı', ru: 'Международный аэропорт Эсейса', zh: '埃塞萨国际机场', ar: 'مطار إيزيزا الدولي' },
-      
-      // 🇦🇹 Austria (Autriche) - Hub européen central
-      'ATVIE': { en: 'Vienna International Airport', fr: 'Aéroport international de Vienne', de: 'Flughafen Wien-Schwechat', es: 'Aeropuerto Internacional de Viena', it: 'Aeroporto Internazionale di Vienna', nl: 'Internationale Luchthaven Wenen', pt: 'Aeroporto Internacional de Viena', tr: 'Viyana Uluslararası Havaalanı', ru: 'Международный аэропорт Вена', zh: '维也纳国际机场', ar: 'مطار فيينا الدولي' },
-      'ATVIE_RAIL': { en: 'Vienna Central Station', fr: 'Gare centrale de Vienne', de: 'Wien Hauptbahnhof', es: 'Estación Central de Viena', it: 'Stazione Centrale di Vienna', nl: 'Centraal Station Wenen', pt: 'Estação Central de Viena', tr: 'Viyana Merkez İstasyonu', ru: 'Центральный вокзал Вены', zh: '维也纳中央火车站', ar: 'محطة فيينا المركزية' },
-      
-      // 🇦🇴 Angola - Hub d'Afrique australe
-      'AOLAD': { en: 'Port of Luanda', fr: 'Port de Luanda', de: 'Hafen Luanda', es: 'Puerto de Luanda', it: 'Porto di Luanda', nl: 'Haven van Luanda', pt: 'Porto de Luanda', tr: 'Luanda Limanı', ru: 'Порт Луанда', zh: '罗安达港', ar: 'ميناء لواندا' },
-      'AOLOS': { en: 'Port of Lobito', fr: 'Port de Lobito', de: 'Hafen Lobito', es: 'Puerto de Lobito', it: 'Porto di Lobito', nl: 'Haven van Lobito', pt: 'Porto do Lobito', tr: 'Lobito Limanı', ru: 'Порт Лобито', zh: '洛比托港', ar: 'ميناء لوبيتو' },
-      'AOLAD_AIR': { en: 'Luanda Quatro de Fevereiro Airport', fr: 'Aéroport de Luanda Quatro de Fevereiro', de: 'Flughafen Luanda Quatro de Fevereiro', es: 'Aeropuerto de Luanda Quatro de Fevereiro', it: 'Aeroporto di Luanda Quatro de Fevereiro', nl: 'Luchthaven Luanda Quatro de Fevereiro', pt: 'Aeroporto de Luanda Quatro de Fevereiro', tr: 'Luanda Quatro de Fevereiro Havaalanı', ru: 'Аэропорт Луанда Куатро-де-Февереиру', zh: '罗安达二月四日机场', ar: 'مطار لواندا كواترو دي فيفيريرو' },
-      'AOLAD_RAIL': { en: 'Luanda Railway Station', fr: 'Gare ferroviaire de Luanda', de: 'Bahnhof Luanda', es: 'Estación de Ferrocarril de Luanda', it: 'Stazione Ferroviaria di Luanda', nl: 'Treinstation Luanda', pt: 'Estação Ferroviária de Luanda', tr: 'Luanda Tren İstasyonu', ru: 'Железнодорожная станция Луанда', zh: '罗安达火车站', ar: 'محطة لواندا للسكك الحديدية' },
-      
-      // === PAYS EN B - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇧🇪 Belgium (Belgique) - Hub européen majeur
-      'BEANR': { en: 'Port of Antwerp', fr: 'Port d\'Anvers', de: 'Hafen Antwerpen', es: 'Puerto de Amberes', it: 'Porto di Anversa', nl: 'Haven van Antwerpen', pt: 'Porto de Antuérpia', tr: 'Anvers Limanı', ru: 'Порт Антверпен', zh: '安特卫普港', ar: 'ميناء أنتويرب' },
-      'BEZEE': { en: 'Port of Zeebrugge', fr: 'Port de Zeebruges', de: 'Hafen Zeebrügge', es: 'Puerto de Zeebrugge', it: 'Porto di Zeebrugge', nl: 'Haven van Zeebrugge', pt: 'Porto de Zeebrugge', tr: 'Zeebrugge Limanı', ru: 'Порт Зебрюгге', zh: '泽布吕赫港', ar: 'ميناء زيبروج' },
-      'BEBRU': { en: 'Brussels Airport', fr: 'Aéroport de Bruxelles', de: 'Flughafen Brüssel', es: 'Aeropuerto de Bruselas', it: 'Aeroporto di Bruxelles', nl: 'Luchthaven Brussel', pt: 'Aeroporto de Bruxelas', tr: 'Brüksel Havaalanı', ru: 'Аэропорт Брюссель', zh: '布鲁塞尔机场', ar: 'مطار بروكسل' },
-      'BELIE': { en: 'Liège Airport', fr: 'Aéroport de Liège', de: 'Flughafen Lüttich', es: 'Aeropuerto de Lieja', it: 'Aeroporto di Liegi', nl: 'Luchthaven Luik', pt: 'Aeroporto de Liège', tr: 'Liège Havaalanı', ru: 'Аэропорт Льеж', zh: '列日机场', ar: 'مطار لييج' },
-      'BEBRU_RAIL': { en: 'Brussels Central Station', fr: 'Gare centrale de Bruxelles', de: 'Brüssel-Zentral', es: 'Estación Central de Bruselas', it: 'Stazione Centrale di Bruxelles', nl: 'Brussel-Centraal', pt: 'Estação Central de Bruxelas', tr: 'Brüksel Merkez İstasyonu', ru: 'Центральный вокзал Брюсселя', zh: '布鲁塞尔中央车站', ar: 'محطة بروكسل المركزية' },
-      'BEANR_RAIL': { en: 'Antwerp Central Station', fr: 'Gare centrale d\'Anvers', de: 'Antwerpen-Zentral', es: 'Estación Central de Amberes', it: 'Stazione Centrale di Anversa', nl: 'Antwerpen-Centraal', pt: 'Estação Central de Antuérpia', tr: 'Anvers Merkez İstasyonu', ru: 'Центральный вокзал Антверпена', zh: '安特卫普中央车站', ar: 'محطة أنتويرب المركزية' },
-      
-      // 🇧🇷 Brazil (Brésil) - Hub d'Amérique du Sud
-      'BRSFS': { en: 'Port of Santos', fr: 'Port de Santos', de: 'Hafen Santos', es: 'Puerto de Santos', it: 'Porto di Santos', nl: 'Haven van Santos', pt: 'Porto de Santos', tr: 'Santos Limanı', ru: 'Порт Сантос', zh: '桑托斯港', ar: 'ميناء سانتوس' },
-      'BRRIO': { en: 'Port of Rio de Janeiro', fr: 'Port de Rio de Janeiro', de: 'Hafen Rio de Janeiro', es: 'Puerto de Río de Janeiro', it: 'Porto di Rio de Janeiro', nl: 'Haven van Rio de Janeiro', pt: 'Porto do Rio de Janeiro', tr: 'Rio de Janeiro Limanı', ru: 'Порт Рио-де-Жанейро', zh: '里约热内卢港', ar: 'ميناء ريو دي جانيرو' },
-      'BRPAR': { en: 'Port of Paranaguá', fr: 'Port de Paranaguá', de: 'Hafen Paranaguá', es: 'Puerto de Paranaguá', it: 'Porto di Paranaguá', nl: 'Haven van Paranaguá', pt: 'Porto de Paranaguá', tr: 'Paranaguá Limanı', ru: 'Порт Паранагуа', zh: '巴拉那瓜港', ar: 'ميناء باراناغوا' },
-      'BRGRU': { en: 'São Paulo Guarulhos International Airport', fr: 'Aéroport international de São Paulo Guarulhos', de: 'Internationaler Flughafen São Paulo Guarulhos', es: 'Aeropuerto Internacional de São Paulo Guarulhos', it: 'Aeroporto Internazionale di São Paulo Guarulhos', nl: 'Internationale Luchthaven São Paulo Guarulhos', pt: 'Aeroporto Internacional de São Paulo Guarulhos', tr: 'São Paulo Guarulhos Uluslararası Havaalanı', ru: 'Международный аэропорт Сан-Паулу Гуарульос', zh: '圣保罗瓜鲁柳斯国际机场', ar: 'مطار ساو باولو غواروليوس الدولي' },
-      'BRRIO_AIR': { en: 'Rio de Janeiro Galeão International Airport', fr: 'Aéroport international de Rio de Janeiro Galeão', de: 'Internationaler Flughafen Rio de Janeiro Galeão', es: 'Aeropuerto Internacional de Río de Janeiro Galeão', it: 'Aeroporto Internazionale di Rio de Janeiro Galeão', nl: 'Internationale Luchthaven Rio de Janeiro Galeão', pt: 'Aeroporto Internacional do Rio de Janeiro Galeão', tr: 'Rio de Janeiro Galeão Uluslararası Havaalanı', ru: 'Международный аэропорт Рио-де-Жанейро Галеао', zh: '里约热内卢加利昂国际机场', ar: 'مطار ريو دي جانيرو غالياو الدولي' },
-      'BRBSB': { en: 'Brasília International Airport', fr: 'Aéroport international de Brasília', de: 'Internationaler Flughafen Brasília', es: 'Aeropuerto Internacional de Brasilia', it: 'Aeroporto Internazionale di Brasília', nl: 'Internationale Luchthaven Brasília', pt: 'Aeroporto Internacional de Brasília', tr: 'Brasília Uluslararası Havaalanı', ru: 'Международный аэропорт Бразилиа', zh: '巴西利亚国际机场', ar: 'مطار برازيليا الدولي' },
-      
-      // 🇧🇩 Bangladesh - Hub d'Asie du Sud
-      'BDCGP': { en: 'Port of Chittagong', fr: 'Port de Chittagong', de: 'Hafen Chittagong', es: 'Puerto de Chittagong', it: 'Porto di Chittagong', nl: 'Haven van Chittagong', pt: 'Porto de Chittagong', tr: 'Chittagong Limanı', ru: 'Порт Читтагонг', zh: '吉大港港', ar: 'ميناء شيتاغونغ' },
-      'BDDHA': { en: 'Port of Dhaka', fr: 'Port de Dhaka', de: 'Hafen Dhaka', es: 'Puerto de Daca', it: 'Porto di Dhaka', nl: 'Haven van Dhaka', pt: 'Porto de Dhaka', tr: 'Dakka Limanı', ru: 'Порт Дакка', zh: '达卡港', ar: 'ميناء دكا' },
-      'BDMGL': { en: 'Port of Mongla', fr: 'Port de Mongla', de: 'Hafen Mongla', es: 'Puerto de Mongla', it: 'Porto di Mongla', nl: 'Haven van Mongla', pt: 'Porto de Mongla', tr: 'Mongla Limanı', ru: 'Порт Монгла', zh: '蒙格拉港', ar: 'ميناء مونغلا' },
-      'BDDAC': { en: 'Dhaka Hazrat Shahjalal International Airport', fr: 'Aéroport international de Dhaka Hazrat Shahjalal', de: 'Internationaler Flughafen Dhaka Hazrat Shahjalal', es: 'Aeropuerto Internacional de Daca Hazrat Shahjalal', it: 'Aeroporto Internazionale di Dhaka Hazrat Shahjalal', nl: 'Internationale Luchthaven Dhaka Hazrat Shahjalal', pt: 'Aeroporto Internacional de Dhaka Hazrat Shahjalal', tr: 'Dakka Hazrat Shahjalal Uluslararası Havaalanı', ru: 'Международный аэропорт Дакка Хазрат Шахджалал', zh: '达卡哈兹拉特·沙贾拉勒国际机场', ar: 'مطار دكا حضرة شاه جلال الدولي' },
-      'BDCGP_AIR': { en: 'Chittagong Shah Amanat International Airport', fr: 'Aéroport international de Chittagong Shah Amanat', de: 'Internationaler Flughafen Chittagong Shah Amanat', es: 'Aeropuerto Internacional de Chittagong Shah Amanat', it: 'Aeroporto Internazionale di Chittagong Shah Amanat', nl: 'Internationale Luchthaven Chittagong Shah Amanat', pt: 'Aeroporto Internacional de Chittagong Shah Amanat', tr: 'Chittagong Shah Amanat Uluslararası Havaalanı', ru: 'Международный аэропорт Читтагонг Шах Аманат', zh: '吉大港沙阿马纳特国际机场', ar: 'مطار شيتاغونغ شاه أمانات الدولي' },
-      'BDDHA_RAIL': { en: 'Dhaka Railway Station', fr: 'Gare ferroviaire de Dhaka', de: 'Bahnhof Dhaka', es: 'Estación de Ferrocarril de Daca', it: 'Stazione Ferroviaria di Dhaka', nl: 'Treinstation Dhaka', pt: 'Estação Ferroviária de Dhaka', tr: 'Dakka Tren İstasyonu', ru: 'Железнодорожная станция Дакка', zh: '达卡火车站', ar: 'محطة دكا للسكك الحديدية' },
-      'BDCGP_RAIL': { en: 'Chittagong Railway Station', fr: 'Gare ferroviaire de Chittagong', de: 'Bahnhof Chittagong', es: 'Estación de Ferrocarril de Chittagong', it: 'Stazione Ferroviaria di Chittagong', nl: 'Treinstation Chittagong', pt: 'Estação Ferroviária de Chittagong', tr: 'Chittagong Tren İstasyonu', ru: 'Железнодорожная станция Читтагонг', zh: '吉大港火车站', ar: 'محطة شيتاغونغ للسكك الحديدية' },
-      
-      // 🇧🇬 Bulgaria (Bulgarie) - Hub des Balkans
-      'BGBOJ': { en: 'Port of Bourgas', fr: 'Port de Bourgas', de: 'Hafen Burgas', es: 'Puerto de Burgas', it: 'Porto di Burgas', nl: 'Haven van Burgas', pt: 'Porto de Burgas', tr: 'Burgas Limanı', ru: 'Порт Бургас', zh: '布尔加斯港', ar: 'ميناء بورغاس' },
-      'BGVAR_AIR': { en: 'Varna Airport', fr: 'Aéroport de Varna', de: 'Flughafen Warna', es: 'Aeropuerto de Varna', it: 'Aeroporto di Varna', nl: 'Luchthaven Varna', pt: 'Aeroporto de Varna', tr: 'Varna Havaalanı', ru: 'Аэропорт Варна', zh: '瓦尔纳机场', ar: 'مطار فارنا' },
-      'BGSOF_RAIL': { en: 'Sofia Central Station', fr: 'Gare centrale de Sofia', de: 'Sofia Hauptbahnhof', es: 'Estación Central de Sofía', it: 'Stazione Centrale di Sofia', nl: 'Centraal Station Sofia', pt: 'Estação Central de Sofia', tr: 'Sofya Merkez İstasyonu', ru: 'Центральный вокзал Софии', zh: '索菲亚中央车站', ar: 'محطة صوفيا المركزية' },
-      
-      // === PAYS EN C - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇨🇦 Canada - Hub nord-américain majeur
-      'CAVAN': { en: 'Port of Vancouver', fr: 'Port de Vancouver', de: 'Hafen Vancouver', es: 'Puerto de Vancouver', it: 'Porto di Vancouver', nl: 'Haven van Vancouver', pt: 'Porto de Vancouver', tr: 'Vancouver Limanı', ru: 'Порт Ванкувер', zh: '温哥华港', ar: 'ميناء فانكوفر' },
-      'CAMON': { en: 'Port of Montreal', fr: 'Port de Montréal', de: 'Hafen Montreal', es: 'Puerto de Montreal', it: 'Porto di Montreal', nl: 'Haven van Montreal', pt: 'Porto de Montreal', tr: 'Montreal Limanı', ru: 'Порт Монреаль', zh: '蒙特利尔港', ar: 'ميناء مونتريال' },
-      'CAHAL': { en: 'Port of Halifax', fr: 'Port de Halifax', de: 'Hafen Halifax', es: 'Puerto de Halifax', it: 'Porto di Halifax', nl: 'Haven van Halifax', pt: 'Porto de Halifax', tr: 'Halifax Limanı', ru: 'Порт Галифакс', zh: '哈利法克斯港', ar: 'ميناء هاليفاكس' },
-      'CAYVR': { en: 'Vancouver International Airport', fr: 'Aéroport international de Vancouver', de: 'Internationaler Flughafen Vancouver', es: 'Aeropuerto Internacional de Vancouver', it: 'Aeroporto Internazionale di Vancouver', nl: 'Internationale Luchthaven Vancouver', pt: 'Aeroporto Internacional de Vancouver', tr: 'Vancouver Uluslararası Havaalanı', ru: 'Международный аэропорт Ванкувер', zh: '温哥华国际机场', ar: 'مطار فانكوفر الدولي' },
-      'CAYYZ': { en: 'Toronto Pearson International Airport', fr: 'Aéroport international de Toronto Pearson', de: 'Internationaler Flughafen Toronto Pearson', es: 'Aeropuerto Internacional de Toronto Pearson', it: 'Aeroporto Internazionale di Toronto Pearson', nl: 'Internationale Luchthaven Toronto Pearson', pt: 'Aeroporto Internacional de Toronto Pearson', tr: 'Toronto Pearson Uluslararası Havaalanı', ru: 'Международный аэропорт Торонто Пирсон', zh: '多伦多皮尔逊国际机场', ar: 'مطار تورونتو بيرسون الدولي' },
-      'CAYMQ': { en: 'Montreal Pierre Elliott Trudeau International Airport', fr: 'Aéroport international de Montréal Pierre Elliott Trudeau', de: 'Internationaler Flughafen Montreal Pierre Elliott Trudeau', es: 'Aeropuerto Internacional de Montreal Pierre Elliott Trudeau', it: 'Aeroporto Internazionale di Montreal Pierre Elliott Trudeau', nl: 'Internationale Luchthaven Montreal Pierre Elliott Trudeau', pt: 'Aeroporto Internacional de Montreal Pierre Elliott Trudeau', tr: 'Montreal Pierre Elliott Trudeau Uluslararası Havaalanı', ru: 'Международный аэропорт Монреаль Пьер Эллиот Трюдо', zh: '蒙特利尔皮埃尔·埃利奥特·特鲁多国际机场', ar: 'مطار مونتريال بيير إليوت ترودو الدولي' },
-      'CAYYC': { en: 'Calgary International Airport', fr: 'Aéroport international de Calgary', de: 'Internationaler Flughafen Calgary', es: 'Aeropuerto Internacional de Calgary', it: 'Aeroporto Internazionale di Calgary', nl: 'Internationale Luchthaven Calgary', pt: 'Aeroporto Internacional de Calgary', tr: 'Calgary Uluslararası Havaalanı', ru: 'Международный аэропорт Калгари', zh: '卡尔加里国际机场', ar: 'مطار كالغاري الدولي' },
-      'CAVAN_RAIL': { en: 'Vancouver Pacific Central Station', fr: 'Gare centrale du Pacifique de Vancouver', de: 'Vancouver Pacific Central Bahnhof', es: 'Estación Central del Pacífico de Vancouver', it: 'Stazione Centrale del Pacifico di Vancouver', nl: 'Vancouver Pacific Centraal Station', pt: 'Estação Central do Pacífico de Vancouver', tr: 'Vancouver Pasifik Merkez İstasyonu', ru: 'Центральная тихоокеанская станция Ванкувера', zh: '温哥华太平洋中央车站', ar: 'محطة فانكوفر المركزية للمحيط الهادئ' },
-      'CATOR_RAIL': { en: 'Toronto Union Station', fr: 'Gare Union de Toronto', de: 'Toronto Union Station', es: 'Estación Union de Toronto', it: 'Stazione Union di Toronto', nl: 'Toronto Union Station', pt: 'Estação Union de Toronto', tr: 'Toronto Union İstasyonu', ru: 'Юнион Стейшн Торонто', zh: '多伦多联合车站', ar: 'محطة تورونتو يونيون' },
-      
-      // 🇨🇳 China (Chine) - Superpuissance logistique mondiale
-      'CNSHA': { en: 'Port of Shanghai', fr: 'Port de Shanghai', de: 'Hafen Shanghai', es: 'Puerto de Shanghái', it: 'Porto di Shanghai', nl: 'Haven van Shanghai', pt: 'Porto de Xangai', tr: 'Şanghay Limanı', ru: 'Порт Шанхай', zh: '上海港', ar: 'ميناء شنغهاي' },
-      'CNSZX': { en: 'Port of Shenzhen', fr: 'Port de Shenzhen', de: 'Hafen Shenzhen', es: 'Puerto de Shenzhen', it: 'Porto di Shenzhen', nl: 'Haven van Shenzhen', pt: 'Porto de Shenzhen', tr: 'Shenzhen Limanı', ru: 'Порт Шэньчжэнь', zh: '深圳港', ar: 'ميناء شنتشن' },
-      'CNNGB': { en: 'Port of Ningbo-Zhoushan', fr: 'Port de Ningbo-Zhoushan', de: 'Hafen Ningbo-Zhoushan', es: 'Puerto de Ningbo-Zhoushan', it: 'Porto di Ningbo-Zhoushan', nl: 'Haven van Ningbo-Zhoushan', pt: 'Porto de Ningbo-Zhoushan', tr: 'Ningbo-Zhoushan Limanı', ru: 'Порт Нинбо-Чжоушань', zh: '宁波舟山港', ar: 'ميناء نينغبو-تشوشان' },
-      'CNQIN': { en: 'Port of Qingdao', fr: 'Port de Qingdao', de: 'Hafen Qingdao', es: 'Puerto de Qingdao', it: 'Porto di Qingdao', nl: 'Haven van Qingdao', pt: 'Porto de Qingdao', tr: 'Qingdao Limanı', ru: 'Порт Циндао', zh: '青岛港', ar: 'ميناء تشينغداو' },
-      'CNGUA': { en: 'Port of Guangzhou', fr: 'Port de Guangzhou', de: 'Hafen Guangzhou', es: 'Puerto de Guangzhou', it: 'Porto di Guangzhou', nl: 'Haven van Guangzhou', pt: 'Porto de Guangzhou', tr: 'Guangzhou Limanı', ru: 'Порт Гуанчжоу', zh: '广州港', ar: 'ميناء غوانغتشو' },
-      'CNTIA': { en: 'Port of Tianjin', fr: 'Port de Tianjin', de: 'Hafen Tianjin', es: 'Puerto de Tianjin', it: 'Porto di Tianjin', nl: 'Haven van Tianjin', pt: 'Porto de Tianjin', tr: 'Tianjin Limanı', ru: 'Порт Тяньцзинь', zh: '天津港', ar: 'ميناء تيانجين' },
-      'CNPVG': { en: 'Shanghai Pudong International Airport', fr: 'Aéroport international de Shanghai Pudong', de: 'Internationaler Flughafen Shanghai Pudong', es: 'Aeropuerto Internacional de Shanghái Pudong', it: 'Aeroporto Internazionale di Shanghai Pudong', nl: 'Internationale Luchthaven Shanghai Pudong', pt: 'Aeroporto Internacional de Xangai Pudong', tr: 'Şanghay Pudong Uluslararası Havaalanı', ru: 'Международный аэропорт Шанхай Пудун', zh: '上海浦东国际机场', ar: 'مطار شنغهاي بودونغ الدولي' },
-      'CNPEK': { en: 'Beijing Capital International Airport', fr: 'Aéroport international de Pékin Capital', de: 'Internationaler Flughafen Peking Capital', es: 'Aeropuerto Internacional de Pekín Capital', it: 'Aeroporto Internazionale di Pechino Capital', nl: 'Internationale Luchthaven Beijing Capital', pt: 'Aeroporto Internacional de Pequim Capital', tr: 'Pekin Capital Uluslararası Havaalanı', ru: 'Международный аэропорт Пекин Столичный', zh: '北京首都国际机场', ar: 'مطار بكين العاصمة الدولي' },
-      'CNCAN': { en: 'Guangzhou Baiyun International Airport', fr: 'Aéroport international de Guangzhou Baiyun', de: 'Internationaler Flughafen Guangzhou Baiyun', es: 'Aeropuerto Internacional de Guangzhou Baiyun', it: 'Aeroporto Internazionale di Guangzhou Baiyun', nl: 'Internationale Luchthaven Guangzhou Baiyun', pt: 'Aeroporto Internacional de Guangzhou Baiyun', tr: 'Guangzhou Baiyun Uluslararası Havaalanı', ru: 'Международный аэропорт Гуанчжоу Байюнь', zh: '广州白云国际机场', ar: 'مطار غوانغتشو بايون الدولي' },
-      'CNSZX_AIR': { en: 'Shenzhen Bao\'an International Airport', fr: 'Aéroport international de Shenzhen Bao\'an', de: 'Internationaler Flughafen Shenzhen Bao\'an', es: 'Aeropuerto Internacional de Shenzhen Bao\'an', it: 'Aeroporto Internazionale di Shenzhen Bao\'an', nl: 'Internationale Luchthaven Shenzhen Bao\'an', pt: 'Aeroporto Internacional de Shenzhen Bao\'an', tr: 'Shenzhen Bao\'an Uluslararası Havaalanı', ru: 'Международный аэропорт Шэньчжэнь Баоань', zh: '深圳宝安国际机场', ar: 'مطار شنتشن باوآن الدولي' },
-      'CNHGH': { en: 'Hangzhou Xiaoshan International Airport', fr: 'Aéroport international de Hangzhou Xiaoshan', de: 'Internationaler Flughafen Hangzhou Xiaoshan', es: 'Aeropuerto Internacional de Hangzhou Xiaoshan', it: 'Aeroporto Internazionale di Hangzhou Xiaoshan', nl: 'Internationale Luchthaven Hangzhou Xiaoshan', pt: 'Aeroporto Internacional de Hangzhou Xiaoshan', tr: 'Hangzhou Xiaoshan Uluslararası Havaalanı', ru: 'Международный аэропорт Ханчжоу Сяошань', zh: '杭州萧山国际机场', ar: 'مطار هانغتشو شياوشان الدولي' },
-      'CNBEI_RAIL': { en: 'Beijing Railway Station', fr: 'Gare ferroviaire de Pékin', de: 'Bahnhof Peking', es: 'Estación de Ferrocarril de Pekín', it: 'Stazione Ferroviaria di Pechino', nl: 'Treinstation Beijing', pt: 'Estação Ferroviária de Pequim', tr: 'Pekin Tren İstasyonu', ru: 'Железнодорожная станция Пекин', zh: '北京火车站', ar: 'محطة بكين للسكك الحديدية' },
-      'CNSHA_RAIL': { en: 'Shanghai Railway Station', fr: 'Gare ferroviaire de Shanghai', de: 'Bahnhof Shanghai', es: 'Estación de Ferrocarril de Shanghái', it: 'Stazione Ferroviaria di Shanghai', nl: 'Treinstation Shanghai', pt: 'Estação Ferroviária de Xangai', tr: 'Şanghay Tren İstasyonu', ru: 'Железнодорожная станция Шанхай', zh: '上海火车站', ar: 'محطة شنغهاي للسكك الحديدية' },
-      'CNGUA_RAIL': { en: 'Guangzhou Railway Station', fr: 'Gare ferroviaire de Guangzhou', de: 'Bahnhof Guangzhou', es: 'Estación de Ferrocarril de Guangzhou', it: 'Stazione Ferroviaria di Guangzhou', nl: 'Treinstation Guangzhou', pt: 'Estação Ferroviária de Guangzhou', tr: 'Guangzhou Tren İstasyonu', ru: 'Железнодорожная станция Гуанчжоу', zh: '广州火车站', ar: 'محطة غوانغتشو للسكك الحديدية' },
-      
-      // 🇨🇱 Chile (Chili) - Hub du Pacifique Sud
-      'CLVAP': { en: 'Port of Valparaíso', fr: 'Port de Valparaíso', de: 'Hafen Valparaíso', es: 'Puerto de Valparaíso', it: 'Porto di Valparaíso', nl: 'Haven van Valparaíso', pt: 'Porto de Valparaíso', tr: 'Valparaíso Limanı', ru: 'Порт Вальпараисо', zh: '瓦尔帕莱索港', ar: 'ميناء فالبارايسو' },
-      'CLSAI': { en: 'Port of San Antonio', fr: 'Port de San Antonio', de: 'Hafen San Antonio', es: 'Puerto de San Antonio', it: 'Porto di San Antonio', nl: 'Haven van San Antonio', pt: 'Porto de San Antonio', tr: 'San Antonio Limanı', ru: 'Порт Сан-Антонио', zh: '圣安东尼奥港', ar: 'ميناء سان أنطونيو' },
-      'CLSCL': { en: 'Santiago International Airport', fr: 'Aéroport international de Santiago', de: 'Internationaler Flughafen Santiago', es: 'Aeropuerto Internacional de Santiago', it: 'Aeroporto Internazionale di Santiago', nl: 'Internationale Luchthaven Santiago', pt: 'Aeroporto Internacional de Santiago', tr: 'Santiago Uluslararası Havaalanı', ru: 'Международный аэропорт Сантьяго', zh: '圣地亚哥国际机场', ar: 'مطار سانتياغو الدولي' },
-      
-      // 🇨🇴 Colombia (Colombie) - Hub d'Amérique du Sud
-      'COCTG': { en: 'Port of Cartagena', fr: 'Port de Cartagena', de: 'Hafen Cartagena', es: 'Puerto de Cartagena', it: 'Porto di Cartagena', nl: 'Haven van Cartagena', pt: 'Porto de Cartagena', tr: 'Cartagena Limanı', ru: 'Порт Картахена', zh: '卡塔赫纳港', ar: 'ميناء قرطاجنة' },
-      'COBAR': { en: 'Port of Barranquilla', fr: 'Port de Barranquilla', de: 'Hafen Barranquilla', es: 'Puerto de Barranquilla', it: 'Porto di Barranquilla', nl: 'Haven van Barranquilla', pt: 'Porto de Barranquilla', tr: 'Barranquilla Limanı', ru: 'Порт Барранкилья', zh: '巴兰基亚港', ar: 'ميناء بارانكيا' },
-      'COBOG': { en: 'Bogotá El Dorado International Airport', fr: 'Aéroport international de Bogotá El Dorado', de: 'Internationaler Flughafen Bogotá El Dorado', es: 'Aeropuerto Internacional de Bogotá El Dorado', it: 'Aeroporto Internazionale di Bogotá El Dorado', nl: 'Internationale Luchthaven Bogotá El Dorado', pt: 'Aeroporto Internacional de Bogotá El Dorado', tr: 'Bogotá El Dorado Uluslararası Havaalanı', ru: 'Международный аэропорт Богота Эль-Дорадо', zh: '波哥大埃尔多拉多国际机场', ar: 'مطار بوغوتا إل دورادو الدولي' },
-      
-      // 🇨🇿 Czech Republic (République tchèque) - Hub d'Europe centrale
-      'CZPRG': { en: 'Prague Václav Havel Airport', fr: 'Aéroport de Prague Václav Havel', de: 'Flughafen Prag Václav Havel', es: 'Aeropuerto de Praga Václav Havel', it: 'Aeroporto di Praga Václav Havel', nl: 'Luchthaven Praag Václav Havel', pt: 'Aeroporto de Praga Václav Havel', tr: 'Prag Václav Havel Havaalanı', ru: 'Аэропорт Прага Вацлав Гавел', zh: '布拉格瓦茨拉夫·哈维尔机场', ar: 'مطار براغ فاتسلاف هافيل' },
-      'CZPRG_RAIL': { en: 'Prague Central Station', fr: 'Gare centrale de Prague', de: 'Prag Hauptbahnhof', es: 'Estación Central de Praga', it: 'Stazione Centrale di Praga', nl: 'Centraal Station Praag', pt: 'Estação Central de Praga', tr: 'Prag Merkez İstasyonu', ru: 'Центральный вокзал Праги', zh: '布拉格中央车站', ar: 'محطة براغ المركزية' },
-      
-      // 🇨🇭 Switzerland (Suisse) - Hub alpin européen
-      'CHZUR': { en: 'Zurich Airport', fr: 'Aéroport de Zürich', de: 'Flughafen Zürich', es: 'Aeropuerto de Zúrich', it: 'Aeroporto di Zurigo', nl: 'Luchthaven Zürich', pt: 'Aeroporto de Zurique', tr: 'Zürih Havaalanı', ru: 'Аэропорт Цюрих', zh: '苏黎世机场', ar: 'مطار زيورخ' },
-      'CHGVA': { en: 'Geneva Airport', fr: 'Aéroport de Genève', de: 'Flughafen Genf', es: 'Aeropuerto de Ginebra', it: 'Aeroporto di Ginevra', nl: 'Luchthaven Genève', pt: 'Aeroporto de Genebra', tr: 'Cenevre Havaalanı', ru: 'Аэропорт Женева', zh: '日内瓦机场', ar: 'مطار جنيف' },
-      'CHZUR_RAIL': { en: 'Zurich Central Station', fr: 'Gare centrale de Zürich', de: 'Zürich Hauptbahnhof', es: 'Estación Central de Zúrich', it: 'Stazione Centrale di Zurigo', nl: 'Centraal Station Zürich', pt: 'Estação Central de Zurique', tr: 'Zürih Merkez İstasyonu', ru: 'Центральный вокзал Цюриха', zh: '苏黎世中央车站', ar: 'محطة زيورخ المركزية' },
-      'CHGVA_RAIL': { en: 'Geneva Cornavin Station', fr: 'Gare de Genève-Cornavin', de: 'Bahnhof Genf Cornavin', es: 'Estación de Ginebra Cornavin', it: 'Stazione di Ginevra Cornavin', nl: 'Station Genève-Cornavin', pt: 'Estação de Genebra Cornavin', tr: 'Cenevre Cornavin İstasyonu', ru: 'Вокзал Женева Корнавен', zh: '日内瓦科尔纳万车站', ar: 'محطة جنيف كورنافين' },
-      
-      // 🇨🇮 Ivory Coast (Côte d'Ivoire) - Hub d'Afrique de l'Ouest
-      'CIABJ': { en: 'Port of Abidjan', fr: 'Port d\'Abidjan', de: 'Hafen Abidjan', es: 'Puerto de Abiyán', it: 'Porto di Abidjan', nl: 'Haven van Abidjan', pt: 'Porto de Abidjan', tr: 'Abidjan Limanı', ru: 'Порт Абиджан', zh: '阿比让港', ar: 'ميناء أبيدجان' },
-      'CISAN': { en: 'Port of San-Pédro', fr: 'Port de San-Pédro', de: 'Hafen San-Pédro', es: 'Puerto de San-Pédro', it: 'Porto di San-Pédro', nl: 'Haven van San-Pédro', pt: 'Porto de San-Pédro', tr: 'San-Pédro Limanı', ru: 'Порт Сан-Педро', zh: '圣佩德罗港', ar: 'ميناء سان بيدرو' },
-      'CIABJ_AIR': { en: 'Abidjan Félix Houphouët-Boigny International Airport', fr: 'Aéroport international d\'Abidjan Félix Houphouët-Boigny', de: 'Internationaler Flughafen Abidjan Félix Houphouët-Boigny', es: 'Aeropuerto Internacional de Abiyán Félix Houphouët-Boigny', it: 'Aeroporto Internazionale di Abidjan Félix Houphouët-Boigny', nl: 'Internationale Luchthaven Abidjan Félix Houphouët-Boigny', pt: 'Aeroporto Internacional de Abidjan Félix Houphouët-Boigny', tr: 'Abidjan Félix Houphouët-Boigny Uluslararası Havaalanı', ru: 'Международный аэропорт Абиджан Феликс Уфуэ-Буаньи', zh: '阿比让费利克斯·乌弗埃-博瓦尼国际机场', ar: 'مطار أبيدجان فيليكس هوفويت بوانيي الدولي' },
-      
-      // 🇨🇷 Costa Rica - Hub d'Amérique centrale
-      'CRLIM': { en: 'Port of Limón', fr: 'Port de Limón', de: 'Hafen Limón', es: 'Puerto de Limón', it: 'Porto di Limón', nl: 'Haven van Limón', pt: 'Porto de Limón', tr: 'Limón Limanı', ru: 'Порт Лимон', zh: '利蒙港', ar: 'ميناء ليمون' },
-      'CRPUN': { en: 'Port of Puntarenas', fr: 'Port de Puntarenas', de: 'Hafen Puntarenas', es: 'Puerto de Puntarenas', it: 'Porto di Puntarenas', nl: 'Haven van Puntarenas', pt: 'Porto de Puntarenas', tr: 'Puntarenas Limanı', ru: 'Порт Пунтаренас', zh: '蓬塔雷纳斯港', ar: 'ميناء بونتاريناس' },
-      'CRSJO': { en: 'Juan Santamaría International Airport', fr: 'Aéroport international Juan Santamaría', de: 'Internationaler Flughafen Juan Santamaría', es: 'Aeropuerto Internacional Juan Santamaría', it: 'Aeroporto Internazionale Juan Santamaría', nl: 'Internationale Luchthaven Juan Santamaría', pt: 'Aeroporto Internacional Juan Santamaría', tr: 'Juan Santamaría Uluslararası Havaalanı', ru: 'Международный аэропорт Хуан Сантамария', zh: '胡安·圣玛丽亚国际机场', ar: 'مطار خوان سانتاماريا الدولي' },
-      
-      // 🇨🇾 Cyprus (Chypre) - Hub méditerranéen
-      'CYLCA': { en: 'Port of Larnaca', fr: 'Port de Larnaca', de: 'Hafen Larnaka', es: 'Puerto de Lárnaca', it: 'Porto di Larnaca', nl: 'Haven van Larnaca', pt: 'Porto de Larnaca', tr: 'Larnaka Limanı', ru: 'Порт Ларнака', zh: '拉纳卡港', ar: 'ميناء لارنكا' },
-      'CYPAF': { en: 'Port of Paphos', fr: 'Port de Paphos', de: 'Hafen Paphos', es: 'Puerto de Pafos', it: 'Porto di Pafo', nl: 'Haven van Paphos', pt: 'Porto de Pafos', tr: 'Baf Limanı', ru: 'Порт Пафос', zh: '帕福斯港', ar: 'ميناء بافوس' },
-      'CYLCA_AIR': { en: 'Larnaca International Airport', fr: 'Aéroport international de Larnaca', de: 'Internationaler Flughafen Larnaka', es: 'Aeropuerto Internacional de Lárnaca', it: 'Aeroporto Internazionale di Larnaca', nl: 'Internationale Luchthaven Larnaca', pt: 'Aeroporto Internacional de Larnaca', tr: 'Larnaka Uluslararası Havaalanı', ru: 'Международный аэропорт Ларнака', zh: '拉纳卡国际机场', ar: 'مطار لارنكا الدولي' },
-      'CYPAF_AIR': { en: 'Paphos International Airport', fr: 'Aéroport international de Paphos', de: 'Internationaler Flughafen Paphos', es: 'Aeropuerto Internacional de Pafos', it: 'Aeroporto Internazionale di Pafo', nl: 'Internationale Luchthaven Paphos', pt: 'Aeroporto Internacional de Pafos', tr: 'Baf Uluslararası Havaalanı', ru: 'Международный аэропорт Пафос', zh: '帕福斯国际机场', ar: 'مطار بافوس الدولي' },
-      
-      // === PAYS EN E - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇪🇸 Spain (Espagne) - Hub européen majeur
-      'ESALG': { en: 'Port of Algeciras', fr: 'Port d\'Algésiras', de: 'Hafen Algeciras', es: 'Puerto de Algeciras', it: 'Porto di Algeciras', nl: 'Haven van Algeciras', pt: 'Porto de Algeciras', tr: 'Algeciras Limanı', ru: 'Порт Альхесирас', zh: '阿尔赫西拉斯港', ar: 'ميناء الجزيرة الخضراء' },
-      'ESVLC': { en: 'Port of Valencia', fr: 'Port de Valence', de: 'Hafen Valencia', es: 'Puerto de Valencia', it: 'Porto di Valencia', nl: 'Haven van Valencia', pt: 'Porto de Valência', tr: 'Valencia Limanı', ru: 'Порт Валенсия', zh: '瓦伦西亚港', ar: 'ميناء بلنسية' },
-      'ESBCN': { en: 'Port of Barcelona', fr: 'Port de Barcelone', de: 'Hafen Barcelona', es: 'Puerto de Barcelona', it: 'Porto di Barcellona', nl: 'Haven van Barcelona', pt: 'Porto de Barcelona', tr: 'Barselona Limanı', ru: 'Порт Барселона', zh: '巴塞罗那港', ar: 'ميناء برشلونة' },
-      'ESBIL': { en: 'Port of Bilbao', fr: 'Port de Bilbao', de: 'Hafen Bilbao', es: 'Puerto de Bilbao', it: 'Porto di Bilbao', nl: 'Haven van Bilbao', pt: 'Porto de Bilbau', tr: 'Bilbao Limanı', ru: 'Порт Бильбао', zh: '毕尔巴鄂港', ar: 'ميناء بلباو' },
-      'ESLAS': { en: 'Port of Las Palmas', fr: 'Port de Las Palmas', de: 'Hafen Las Palmas', es: 'Puerto de Las Palmas', it: 'Porto di Las Palmas', nl: 'Haven van Las Palmas', pt: 'Porto de Las Palmas', tr: 'Las Palmas Limanı', ru: 'Порт Лас-Пальмас', zh: '拉斯帕尔马斯港', ar: 'ميناء لاس بالماس' },
-      'ESMAD': { en: 'Madrid-Barajas Airport', fr: 'Aéroport de Madrid-Barajas', de: 'Flughafen Madrid-Barajas', es: 'Aeropuerto de Madrid-Barajas', it: 'Aeroporto di Madrid-Barajas', nl: 'Luchthaven Madrid-Barajas', pt: 'Aeroporto de Madrid-Barajas', tr: 'Madrid-Barajas Havaalanı', ru: 'Аэропорт Мадрид-Барахас', zh: '马德里-巴拉哈斯机场', ar: 'مطار مدريد-باراخاس' },
-      'ESBCN_AIR': { en: 'Barcelona Airport', fr: 'Aéroport de Barcelone', de: 'Flughafen Barcelona', es: 'Aeropuerto de Barcelona', it: 'Aeroporto di Barcellona', nl: 'Luchthaven Barcelona', pt: 'Aeroporto de Barcelona', tr: 'Barselona Havaalanı', ru: 'Аэропорт Барселона', zh: '巴塞罗那机场', ar: 'مطار برشلونة' },
-      'ESVLC_AIR': { en: 'Valencia Airport', fr: 'Aéroport de Valence', de: 'Flughafen Valencia', es: 'Aeropuerto de Valencia', it: 'Aeroporto di Valencia', nl: 'Luchthaven Valencia', pt: 'Aeroporto de Valência', tr: 'Valencia Havaalanı', ru: 'Аэропорт Валенсия', zh: '瓦伦西亚机场', ar: 'مطار بلنسية' },
-      'ESBIL_AIR': { en: 'Bilbao Airport', fr: 'Aéroport de Bilbao', de: 'Flughafen Bilbao', es: 'Aeropuerto de Bilbao', it: 'Aeroporto di Bilbao', nl: 'Luchthaven Bilbao', pt: 'Aeroporto de Bilbau', tr: 'Bilbao Havaalanı', ru: 'Аэропорт Бильбао', zh: '毕尔巴鄂机场', ar: 'مطار بلباو' },
-      'ESMAD_RAIL': { en: 'Madrid Atocha Station', fr: 'Gare de Madrid Atocha', de: 'Bahnhof Madrid Atocha', es: 'Estación de Madrid Atocha', it: 'Stazione di Madrid Atocha', nl: 'Station Madrid Atocha', pt: 'Estação de Madrid Atocha', tr: 'Madrid Atocha İstasyonu', ru: 'Вокзал Мадрид Аточа', zh: '马德里阿托查车站', ar: 'محطة مدريد أتوتشا' },
-      'ESBCN_RAIL': { en: 'Barcelona Sants Station', fr: 'Gare de Barcelona Sants', de: 'Bahnhof Barcelona Sants', es: 'Estación de Barcelona Sants', it: 'Stazione di Barcelona Sants', nl: 'Station Barcelona Sants', pt: 'Estação de Barcelona Sants', tr: 'Barcelona Sants İstasyonu', ru: 'Вокзал Барселона Сантс', zh: '巴塞罗那桑茨车站', ar: 'محطة برشلونة سانتس' },
-      'ESVLC_RAIL': { en: 'Valencia Joaquín Sorolla Station', fr: 'Gare de Valencia Joaquín Sorolla', de: 'Bahnhof Valencia Joaquín Sorolla', es: 'Estación de Valencia Joaquín Sorolla', it: 'Stazione di Valencia Joaquín Sorolla', nl: 'Station Valencia Joaquín Sorolla', pt: 'Estação de Valencia Joaquín Sorolla', tr: 'Valencia Joaquín Sorolla İstasyonu', ru: 'Вокзал Валенсия Хоакин Сорола', zh: '瓦伦西亚华金·索罗拉车站', ar: 'محطة بلنسية خواكين سورولا' },
-      
-      // 🇪🇬 Egypt (Égypte) - Hub du canal de Suez
-      'EGALY': { en: 'Port of Alexandria', fr: 'Port d\'Alexandrie', de: 'Hafen Alexandria', es: 'Puerto de Alejandría', it: 'Porto di Alessandria', nl: 'Haven van Alexandrië', pt: 'Porto de Alexandria', tr: 'İskenderiye Limanı', ru: 'Порт Александрия', zh: '亚历山大港', ar: 'ميناء الإسكندرية' },
-      'EGDKH': { en: 'Port of Damietta', fr: 'Port de Damiette', de: 'Hafen Damiette', es: 'Puerto de Damieta', it: 'Porto di Damietta', nl: 'Haven van Damietta', pt: 'Porto de Damieta', tr: 'Dimyat Limanı', ru: 'Порт Дамиетта', zh: '达米埃塔港', ar: 'ميناء دمياط' },
-      'EGSEZ': { en: 'Port of Suez', fr: 'Port de Suez', de: 'Hafen Suez', es: 'Puerto de Suez', it: 'Porto di Suez', nl: 'Haven van Suez', pt: 'Porto de Suez', tr: 'Süveyş Limanı', ru: 'Порт Суэц', zh: '苏伊士港', ar: 'ميناء السويس' },
-      'EGCAI': { en: 'Cairo International Airport', fr: 'Aéroport international du Caire', de: 'Internationaler Flughafen Kairo', es: 'Aeropuerto Internacional de El Cairo', it: 'Aeroporto Internazionale del Cairo', nl: 'Internationale Luchthaven Caïro', pt: 'Aeroporto Internacional do Cairo', tr: 'Kahire Uluslararası Havaalanı', ru: 'Международный аэропорт Каир', zh: '开罗国际机场', ar: 'مطار القاهرة الدولي' },
-      
-      // 🇪🇪 Estonia (Estonie) - Hub balte
-      'EETLL': { en: 'Port of Tallinn', fr: 'Port de Tallinn', de: 'Hafen Tallinn', es: 'Puerto de Tallin', it: 'Porto di Tallinn', nl: 'Haven van Tallinn', pt: 'Porto de Tallinn', tr: 'Tallinn Limanı', ru: 'Порт Таллинн', zh: '塔林港', ar: 'ميناء تالين' },
-      'EETLL_AIR': { en: 'Tallinn Lennart Meri Airport', fr: 'Aéroport de Tallinn Lennart Meri', de: 'Flughafen Tallinn Lennart Meri', es: 'Aeropuerto de Tallin Lennart Meri', it: 'Aeroporto di Tallinn Lennart Meri', nl: 'Luchthaven Tallinn Lennart Meri', pt: 'Aeroporto de Tallinn Lennart Meri', tr: 'Tallinn Lennart Meri Havaalanı', ru: 'Аэропорт Таллинн Леннарт Мери', zh: '塔林伦纳特·梅里机场', ar: 'مطار تالين لينارت ميري' },
-      'EETLL_RAIL': { en: 'Tallinn Railway Station', fr: 'Gare ferroviaire de Tallinn', de: 'Bahnhof Tallinn', es: 'Estación de Ferrocarril de Tallin', it: 'Stazione Ferroviaria di Tallinn', nl: 'Treinstation Tallinn', pt: 'Estação Ferroviária de Tallinn', tr: 'Tallinn Tren İstasyonu', ru: 'Железнодорожная станция Таллинн', zh: '塔林火车站', ar: 'محطة تالين للسكك الحديدية' },
-      
-      // 🇪🇹 Ethiopia (Éthiopie) - Hub de la Corne de l'Afrique
-      'ETADD': { en: 'Addis Ababa Bole International Airport', fr: 'Aéroport international d\'Addis-Abeba Bole', de: 'Internationaler Flughafen Addis Abeba Bole', es: 'Aeropuerto Internacional de Addis Abeba Bole', it: 'Aeroporto Internazionale di Addis Abeba Bole', nl: 'Internationale Luchthaven Addis Abeba Bole', pt: 'Aeroporto Internacional de Addis Abeba Bole', tr: 'Addis Ababa Bole Uluslararası Havaalanı', ru: 'Международный аэропорт Аддис-Абеба Боле', zh: '亚的斯亚贝巴博莱国际机场', ar: 'مطار أديس أبابا بولي الدولي' },
-      'ETADD_RAIL': { en: 'Addis Ababa Railway Station', fr: 'Gare ferroviaire d\'Addis-Abeba', de: 'Bahnhof Addis Abeba', es: 'Estación de Ferrocarril de Addis Abeba', it: 'Stazione Ferroviaria di Addis Abeba', nl: 'Treinstation Addis Abeba', pt: 'Estação Ferroviária de Addis Abeba', tr: 'Addis Ababa Tren İstasyonu', ru: 'Железнодорожная станция Аддис-Абеба', zh: '亚的斯亚贝巴火车站', ar: 'محطة أديس أبابا للسكك الحديدية' },
-      
-      // 🇪🇨 Ecuador (Équateur) - Hub du Pacifique
-      'ECGYE': { en: 'Port of Guayaquil', fr: 'Port de Guayaquil', de: 'Hafen Guayaquil', es: 'Puerto de Guayaquil', it: 'Porto di Guayaquil', nl: 'Haven van Guayaquil', pt: 'Porto de Guayaquil', tr: 'Guayaquil Limanı', ru: 'Порт Гуаякиль', zh: '瓜亚基尔港', ar: 'ميناء غواياكيل' },
-      'ECMNT': { en: 'Port of Manta', fr: 'Port de Manta', de: 'Hafen Manta', es: 'Puerto de Manta', it: 'Porto di Manta', nl: 'Haven van Manta', pt: 'Porto de Manta', tr: 'Manta Limanı', ru: 'Порт Манта', zh: '曼塔港', ar: 'ميناء مانتا' },
-      'ECUIO': { en: 'Quito Mariscal Sucre International Airport', fr: 'Aéroport international de Quito Mariscal Sucre', de: 'Internationaler Flughafen Quito Mariscal Sucre', es: 'Aeropuerto Internacional de Quito Mariscal Sucre', it: 'Aeroporto Internazionale di Quito Mariscal Sucre', nl: 'Internationale Luchthaven Quito Mariscal Sucre', pt: 'Aeroporto Internacional de Quito Mariscal Sucre', tr: 'Quito Mariscal Sucre Uluslararası Havaalanı', ru: 'Международный аэропорт Кито Марискаль Сукре', zh: '基多马里斯卡尔苏克雷国际机场', ar: 'مطار كيتو ماريسكال سوكري الدولي' },
-      'ECGYE_AIR': { en: 'Guayaquil José Joaquín de Olmedo International Airport', fr: 'Aéroport international de Guayaquil José Joaquín de Olmedo', de: 'Internationaler Flughafen Guayaquil José Joaquín de Olmedo', es: 'Aeropuerto Internacional de Guayaquil José Joaquín de Olmedo', it: 'Aeroporto Internazionale di Guayaquil José Joaquín de Olmedo', nl: 'Internationale Luchthaven Guayaquil José Joaquín de Olmedo', pt: 'Aeroporto Internacional de Guayaquil José Joaquín de Olmedo', tr: 'Guayaquil José Joaquín de Olmedo Uluslararası Havaalanı', ru: 'Международный аэропорт Гуаякиль Хосе Хоакин де Ольмедо', zh: '瓜亚基尔何塞·华金·德·奥尔梅多国际机场', ar: 'مطار غواياكيل خوسيه خواكين دي أولميدو الدولي' },
-      'ECUIO_RAIL': { en: 'Quito Railway Station', fr: 'Gare ferroviaire de Quito', de: 'Bahnhof Quito', es: 'Estación de Ferrocarril de Quito', it: 'Stazione Ferroviaria di Quito', nl: 'Treinstation Quito', pt: 'Estação Ferroviária de Quito', tr: 'Quito Tren İstasyonu', ru: 'Железнодорожная станция Кито', zh: '基多火车站', ar: 'محطة كيتو للسكك الحديدية' },
-      
-      // === PAYS EN F - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇫🇷 France - Hub européen majeur
-      'FRMRS': { en: 'Port of Marseille-Fos', fr: 'Port de Marseille-Fos', de: 'Hafen Marseille-Fos', es: 'Puerto de Marsella-Fos', it: 'Porto di Marsiglia-Fos', nl: 'Haven van Marseille-Fos', pt: 'Porto de Marselha-Fos', tr: 'Marsilya-Fos Limanı', ru: 'Порт Марсель-Фос', zh: '马赛-福斯港', ar: 'ميناء مرسيليا-فوس' },
-      'FRLEH': { en: 'Port of Le Havre', fr: 'Port du Havre', de: 'Hafen Le Havre', es: 'Puerto de Le Havre', it: 'Porto di Le Havre', nl: 'Haven van Le Havre', pt: 'Porto de Le Havre', tr: 'Le Havre Limanı', ru: 'Порт Гавр', zh: '勒阿弗尔港', ar: 'ميناء لو هافر' },
-      'FRDKK': { en: 'Port of Dunkirk', fr: 'Port de Dunkerque', de: 'Hafen Dünkirchen', es: 'Puerto de Dunkerque', it: 'Porto di Dunkerque', nl: 'Haven van Duinkerke', pt: 'Porto de Dunquerque', tr: 'Dunkerque Limanı', ru: 'Порт Дюнкерк', zh: '敦刻尔克港', ar: 'ميناء دونكيرك' },
-      'FRLRT': { en: 'Port of La Rochelle', fr: 'Port de La Rochelle', de: 'Hafen La Rochelle', es: 'Puerto de La Rochelle', it: 'Porto di La Rochelle', nl: 'Haven van La Rochelle', pt: 'Porto de La Rochelle', tr: 'La Rochelle Limanı', ru: 'Порт Ла-Рошель', zh: '拉罗谢尔港', ar: 'ميناء لا روشيل' },
-      'FRNTS': { en: 'Port of Nantes Saint-Nazaire', fr: 'Port de Nantes Saint-Nazaire', de: 'Hafen Nantes Saint-Nazaire', es: 'Puerto de Nantes Saint-Nazaire', it: 'Porto di Nantes Saint-Nazaire', nl: 'Haven van Nantes Saint-Nazaire', pt: 'Porto de Nantes Saint-Nazaire', tr: 'Nantes Saint-Nazaire Limanı', ru: 'Порт Нант Сен-Назер', zh: '南特圣纳泽尔港', ar: 'ميناء نانت سان نازير' },
-      'FRBOD': { en: 'Port of Bordeaux', fr: 'Port de Bordeaux', de: 'Hafen Bordeaux', es: 'Puerto de Burdeos', it: 'Porto di Bordeaux', nl: 'Haven van Bordeaux', pt: 'Porto de Bordéus', tr: 'Bordeaux Limanı', ru: 'Порт Бордо', zh: '波尔多港', ar: 'ميناء بوردو' },
-      'FRCDG': { en: 'Charles de Gaulle Airport', fr: 'Aéroport Charles de Gaulle', de: 'Flughafen Charles de Gaulle', es: 'Aeropuerto Charles de Gaulle', it: 'Aeroporto Charles de Gaulle', nl: 'Luchthaven Charles de Gaulle', pt: 'Aeroporto Charles de Gaulle', tr: 'Charles de Gaulle Havaalanı', ru: 'Аэропорт Шарль де Голль', zh: '戴高乐机场', ar: 'مطار شارل ديغول' },
-      'FRORY': { en: 'Paris-Orly Airport', fr: 'Aéroport Paris-Orly', de: 'Flughafen Paris-Orly', es: 'Aeropuerto París-Orly', it: 'Aeroporto Parigi-Orly', nl: 'Luchthaven Parijs-Orly', pt: 'Aeroporto Paris-Orly', tr: 'Paris-Orly Havaalanı', ru: 'Аэропорт Париж-Орли', zh: '巴黎-奥利机场', ar: 'مطار باريس-أورلي' },
-      'FRLYS': { en: 'Lyon Saint-Exupéry Airport', fr: 'Aéroport Lyon Saint-Exupéry', de: 'Flughafen Lyon Saint-Exupéry', es: 'Aeropuerto Lyon Saint-Exupéry', it: 'Aeroporto Lione Saint-Exupéry', nl: 'Luchthaven Lyon Saint-Exupéry', pt: 'Aeroporto Lyon Saint-Exupéry', tr: 'Lyon Saint-Exupéry Havaalanı', ru: 'Аэропорт Лион Сент-Экзюпери', zh: '里昂圣埃克苏佩里机场', ar: 'مطار ليون سان إكزوبيري' },
-      'FRMRS_AIR': { en: 'Marseille Provence Airport', fr: 'Aéroport Marseille Provence', de: 'Flughafen Marseille Provence', es: 'Aeropuerto Marsella Provenza', it: 'Aeroporto Marsiglia Provenza', nl: 'Luchthaven Marseille Provence', pt: 'Aeroporto Marselha Provence', tr: 'Marsilya Provence Havaalanı', ru: 'Аэропорт Марсель Прованс', zh: '马赛普罗旺斯机场', ar: 'مطار مرسيليا بروفانس' },
-      'FRNTE': { en: 'Nice Côte d\'Azur Airport', fr: 'Aéroport Nice Côte d\'Azur', de: 'Flughafen Nizza Côte d\'Azur', es: 'Aeropuerto Niza Costa Azul', it: 'Aeroporto Nizza Costa Azzurra', nl: 'Luchthaven Nice Côte d\'Azur', pt: 'Aeroporto Nice Côte d\'Azur', tr: 'Nice Côte d\'Azur Havaalanı', ru: 'Аэропорт Ницца Лазурный Берег', zh: '尼斯蓝色海岸机场', ar: 'مطار نيس كوت دازور' },
-      'FRTLS': { en: 'Toulouse-Blagnac Airport', fr: 'Aéroport Toulouse-Blagnac', de: 'Flughafen Toulouse-Blagnac', es: 'Aeropuerto Toulouse-Blagnac', it: 'Aeroporto Tolosa-Blagnac', nl: 'Luchthaven Toulouse-Blagnac', pt: 'Aeroporto Toulouse-Blagnac', tr: 'Toulouse-Blagnac Havaalanı', ru: 'Аэропорт Тулуза-Бланьяк', zh: '图卢兹-布拉尼亚克机场', ar: 'مطار تولوز-بلانياك' },
-      'FRPARIS_RAIL': { en: 'Paris Railway Terminals', fr: 'Gares de Paris', de: 'Bahnhöfe Paris', es: 'Estaciones de París', it: 'Stazioni di Parigi', nl: 'Stations Parijs', pt: 'Estações de Paris', tr: 'Paris Tren İstasyonları', ru: 'Железнодорожные вокзалы Парижа', zh: '巴黎火车站', ar: 'محطات باريس للسكك الحديدية' },
-      'FRLYON_RAIL': { en: 'Lyon Part-Dieu Station', fr: 'Gare de Lyon Part-Dieu', de: 'Bahnhof Lyon Part-Dieu', es: 'Estación de Lyon Part-Dieu', it: 'Stazione di Lione Part-Dieu', nl: 'Station Lyon Part-Dieu', pt: 'Estação de Lyon Part-Dieu', tr: 'Lyon Part-Dieu İstasyonu', ru: 'Вокзал Лион Пар-Дьё', zh: '里昂帕丢车站', ar: 'محطة ليون بارت ديو' },
-      'FRMARS_RAIL': { en: 'Marseille Saint-Charles Station', fr: 'Gare de Marseille Saint-Charles', de: 'Bahnhof Marseille Saint-Charles', es: 'Estación de Marsella Saint-Charles', it: 'Stazione di Marsiglia Saint-Charles', nl: 'Station Marseille Saint-Charles', pt: 'Estação de Marselha Saint-Charles', tr: 'Marsilya Saint-Charles İstasyonu', ru: 'Вокзал Марсель Сен-Шарль', zh: '马赛圣夏尔车站', ar: 'محطة مرسيليا سان شارل' },
-      
-      // 🇫🇮 Finland (Finlande) - Hub nordique
-      'FIHAM': { en: 'Port of Hamina-Kotka', fr: 'Port de Hamina-Kotka', de: 'Hafen Hamina-Kotka', es: 'Puerto de Hamina-Kotka', it: 'Porto di Hamina-Kotka', nl: 'Haven van Hamina-Kotka', pt: 'Porto de Hamina-Kotka', tr: 'Hamina-Kotka Limanı', ru: 'Порт Хамина-Котка', zh: '哈米纳-科特卡港', ar: 'ميناء هامينا-كوتكا' },
-      'FIHEL': { en: 'Port of Helsinki', fr: 'Port d\'Helsinki', de: 'Hafen Helsinki', es: 'Puerto de Helsinki', it: 'Porto di Helsinki', nl: 'Haven van Helsinki', pt: 'Porto de Helsinki', tr: 'Helsinki Limanı', ru: 'Порт Хельсинки', zh: '赫尔辛基港', ar: 'ميناء هلسنكي' },
-      'FIHEL_AIR': { en: 'Helsinki-Vantaa Airport', fr: 'Aéroport d\'Helsinki-Vantaa', de: 'Flughafen Helsinki-Vantaa', es: 'Aeropuerto de Helsinki-Vantaa', it: 'Aeroporto di Helsinki-Vantaa', nl: 'Luchthaven Helsinki-Vantaa', pt: 'Aeroporto de Helsinki-Vantaa', tr: 'Helsinki-Vantaa Havaalanı', ru: 'Аэропорт Хельсинки-Вантаа', zh: '赫尔辛基-万塔机场', ar: 'مطار هلسنكي-فانتا' },
-      'FIHEL_RAIL': { en: 'Helsinki Central Station', fr: 'Gare centrale d\'Helsinki', de: 'Hauptbahnhof Helsinki', es: 'Estación Central de Helsinki', it: 'Stazione Centrale di Helsinki', nl: 'Centraal Station Helsinki', pt: 'Estação Central de Helsinki', tr: 'Helsinki Merkez İstasyonu', ru: 'Центральный вокзал Хельсинки', zh: '赫尔辛基中央车站', ar: 'محطة هلسنكي المركزية' },
-      
-      // 🇫🇯 Fiji (Fidji) - Hub du Pacifique Sud
-      'FJLAU': { en: 'Port of Lautoka', fr: 'Port de Lautoka', de: 'Hafen Lautoka', es: 'Puerto de Lautoka', it: 'Porto di Lautoka', nl: 'Haven van Lautoka', pt: 'Porto de Lautoka', tr: 'Lautoka Limanı', ru: 'Порт Лаутока', zh: '劳托卡港', ar: 'ميناء لاوتوكا' },
-      'FJSUV_AIR': { en: 'Suva Nausori Airport', fr: 'Aéroport de Suva Nausori', de: 'Flughafen Suva Nausori', es: 'Aeropuerto de Suva Nausori', it: 'Aeroporto di Suva Nausori', nl: 'Luchthaven Suva Nausori', pt: 'Aeroporto de Suva Nausori', tr: 'Suva Nausori Havaalanı', ru: 'Аэропорт Сува Наусори', zh: '苏瓦瑙索里机场', ar: 'مطار سوفا ناوسوري' },
-      
-      // === PAYS EN G - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇬🇧 United Kingdom (Royaume-Uni) - Hub européen majeur
-      'GBFXT': { en: 'Port of Felixstowe', fr: 'Port de Felixstowe', de: 'Hafen Felixstowe', es: 'Puerto de Felixstowe', it: 'Porto di Felixstowe', nl: 'Haven van Felixstowe', pt: 'Porto de Felixstowe', tr: 'Felixstowe Limanı', ru: 'Порт Феликстоу', zh: '费利克斯托港', ar: 'ميناء فيليكستو' },
-      'GBSOU': { en: 'Port of Southampton', fr: 'Port de Southampton', de: 'Hafen Southampton', es: 'Puerto de Southampton', it: 'Porto di Southampton', nl: 'Haven van Southampton', pt: 'Porto de Southampton', tr: 'Southampton Limanı', ru: 'Порт Саутгемптон', zh: '南安普敦港', ar: 'ميناء ساوثهامبتون' },
-      'GBLIV': { en: 'Port of Liverpool', fr: 'Port de Liverpool', de: 'Hafen Liverpool', es: 'Puerto de Liverpool', it: 'Porto di Liverpool', nl: 'Haven van Liverpool', pt: 'Porto de Liverpool', tr: 'Liverpool Limanı', ru: 'Порт Ливерпуль', zh: '利物浦港', ar: 'ميناء ليفربول' },
-      'GBLOND': { en: 'Port of London', fr: 'Port de Londres', de: 'Hafen London', es: 'Puerto de Londres', it: 'Porto di Londra', nl: 'Haven van Londen', pt: 'Porto de Londres', tr: 'Londra Limanı', ru: 'Порт Лондон', zh: '伦敦港', ar: 'ميناء لندن' },
-      'GBIMM': { en: 'Port of Immingham', fr: 'Port d\'Immingham', de: 'Hafen Immingham', es: 'Puerto de Immingham', it: 'Porto di Immingham', nl: 'Haven van Immingham', pt: 'Porto de Immingham', tr: 'Immingham Limanı', ru: 'Порт Иммингем', zh: '伊明汉姆港', ar: 'ميناء إيمنغهام' },
-      'GBDOV': { en: 'Port of Dover', fr: 'Port de Douvres', de: 'Hafen Dover', es: 'Puerto de Dover', it: 'Porto di Dover', nl: 'Haven van Dover', pt: 'Porto de Dover', tr: 'Dover Limanı', ru: 'Порт Дувр', zh: '多佛港', ar: 'ميناء دوفر' },
-      'GBLHR': { en: 'London Heathrow Airport', fr: 'Aéroport de Londres Heathrow', de: 'Flughafen London Heathrow', es: 'Aeropuerto de Londres Heathrow', it: 'Aeroporto di Londra Heathrow', nl: 'Luchthaven Londen Heathrow', pt: 'Aeroporto de Londres Heathrow', tr: 'Londra Heathrow Havaalanı', ru: 'Аэропорт Лондон Хитроу', zh: '伦敦希思罗机场', ar: 'مطار لندن هيثرو' },
-      'GBLGW': { en: 'London Gatwick Airport', fr: 'Aéroport de Londres Gatwick', de: 'Flughafen London Gatwick', es: 'Aeropuerto de Londres Gatwick', it: 'Aeroporto di Londra Gatwick', nl: 'Luchthaven Londen Gatwick', pt: 'Aeroporto de Londres Gatwick', tr: 'Londra Gatwick Havaalanı', ru: 'Аэропорт Лондон Гатвик', zh: '伦敦盖特威克机场', ar: 'مطار لندن غاتويك' },
-      'GBSTN': { en: 'London Stansted Airport', fr: 'Aéroport de Londres Stansted', de: 'Flughafen London Stansted', es: 'Aeropuerto de Londres Stansted', it: 'Aeroporto di Londra Stansted', nl: 'Luchthaven Londen Stansted', pt: 'Aeroporto de Londres Stansted', tr: 'Londra Stansted Havaalanı', ru: 'Аэропорт Лондон Станстед', zh: '伦敦斯坦斯特德机场', ar: 'مطار لندن ستانستيد' },
-      'GBLUTON': { en: 'London Luton Airport', fr: 'Aéroport de Londres Luton', de: 'Flughafen London Luton', es: 'Aeropuerto de Londres Luton', it: 'Aeroporto di Londra Luton', nl: 'Luchthaven Londen Luton', pt: 'Aeroporto de Londres Luton', tr: 'Londra Luton Havaalanı', ru: 'Аэропорт Лондон Лутон', zh: '伦敦卢顿机场', ar: 'مطار لندن لوتون' },
-      'GBMAN': { en: 'Manchester Airport', fr: 'Aéroport de Manchester', de: 'Flughafen Manchester', es: 'Aeropuerto de Manchester', it: 'Aeroporto di Manchester', nl: 'Luchthaven Manchester', pt: 'Aeroporto de Manchester', tr: 'Manchester Havaalanı', ru: 'Аэропорт Манчестер', zh: '曼彻斯特机场', ar: 'مطار مانشستر' },
-      'GBEDI': { en: 'Edinburgh Airport', fr: 'Aéroport d\'Édimbourg', de: 'Flughafen Edinburgh', es: 'Aeropuerto de Edimburgo', it: 'Aeroporto di Edimburgo', nl: 'Luchthaven Edinburgh', pt: 'Aeroporto de Edimburgo', tr: 'Edinburgh Havaalanı', ru: 'Аэропорт Эдинбург', zh: '爱丁堡机场', ar: 'مطار إدنبرة' },
-      'GBBHM': { en: 'Birmingham Airport', fr: 'Aéroport de Birmingham', de: 'Flughafen Birmingham', es: 'Aeropuerto de Birmingham', it: 'Aeroporto di Birmingham', nl: 'Luchthaven Birmingham', pt: 'Aeroporto de Birmingham', tr: 'Birmingham Havaalanı', ru: 'Аэропорт Бирмингем', zh: '伯明翰机场', ar: 'مطار برمنغهام' },
-      'GBLOND_RAIL': { en: 'London St Pancras International', fr: 'Gare de Londres St Pancras International', de: 'Bahnhof London St Pancras International', es: 'Estación de Londres St Pancras International', it: 'Stazione di Londra St Pancras International', nl: 'Station Londen St Pancras International', pt: 'Estação de Londres St Pancras International', tr: 'Londra St Pancras International İstasyonu', ru: 'Вокзал Лондон Сент-Панкрас Интернешнл', zh: '伦敦圣潘克拉斯国际车站', ar: 'محطة لندن سانت بانكراس الدولية' },
-      'GBMAN_RAIL': { en: 'Manchester Piccadilly Station', fr: 'Gare de Manchester Piccadilly', de: 'Bahnhof Manchester Piccadilly', es: 'Estación de Manchester Piccadilly', it: 'Stazione di Manchester Piccadilly', nl: 'Station Manchester Piccadilly', pt: 'Estação de Manchester Piccadilly', tr: 'Manchester Piccadilly İstasyonu', ru: 'Вокзал Манчестер Пикадилли', zh: '曼彻斯特皮卡迪利车站', ar: 'محطة مانشستر بيكاديلي' },
-      'GBBHM_RAIL': { en: 'Birmingham New Street Station', fr: 'Gare de Birmingham New Street', de: 'Bahnhof Birmingham New Street', es: 'Estación de Birmingham New Street', it: 'Stazione di Birmingham New Street', nl: 'Station Birmingham New Street', pt: 'Estação de Birmingham New Street', tr: 'Birmingham New Street İstasyonu', ru: 'Вокзал Бирмингем Нью-Стрит', zh: '伯明翰新街车站', ar: 'محطة برمنغهام نيو ستريت' },
-      
-      // 🇬🇷 Greece (Grèce) - Hub méditerranéen
-      'GRPIR': { en: 'Port of Piraeus', fr: 'Port du Pirée', de: 'Hafen Piräus', es: 'Puerto del Pireo', it: 'Porto del Pireo', nl: 'Haven van Piraeus', pt: 'Porto do Pireu', tr: 'Pire Limanı', ru: 'Порт Пирей', zh: '比雷埃夫斯港', ar: 'ميناء بيريوس' },
-      'GRTHE': { en: 'Port of Thessaloniki', fr: 'Port de Thessalonique', de: 'Hafen Thessaloniki', es: 'Puerto de Tesalónica', it: 'Porto di Salonicco', nl: 'Haven van Thessaloniki', pt: 'Porto de Tessalônica', tr: 'Selanik Limanı', ru: 'Порт Салоники', zh: '塞萨洛尼基港', ar: 'ميناء سالونيك' },
-      'GRATH': { en: 'Athens Eleftherios Venizelos Airport', fr: 'Aéroport d\'Athènes Elefthérios Venizélos', de: 'Flughafen Athen Eleftherios Venizelos', es: 'Aeropuerto de Atenas Eleftherios Venizelos', it: 'Aeroporto di Atene Eleftherios Venizelos', nl: 'Luchthaven Athene Eleftherios Venizelos', pt: 'Aeroporto de Atenas Eleftherios Venizelos', tr: 'Atina Eleftherios Venizelos Havaalanı', ru: 'Аэропорт Афины Элефтериос Венизелос', zh: '雅典埃莱夫塞里奥斯·韦尼泽洛斯机场', ar: 'مطار أثينا إليفثيريوس فينيزيلوس' },
-      'GRATH_RAIL': { en: 'Athens Railway Station', fr: 'Gare d\'Athènes', de: 'Bahnhof Athen', es: 'Estación de Atenas', it: 'Stazione di Atene', nl: 'Station Athene', pt: 'Estação de Atenas', tr: 'Atina Tren İstasyonu', ru: 'Железнодорожная станция Афины', zh: '雅典火车站', ar: 'محطة أثينا للسكك الحديدية' },
-      
-      // 🇬🇭 Ghana - Hub ouest-africain
-      'GHTEM': { en: 'Port of Tema', fr: 'Port de Tema', de: 'Hafen Tema', es: 'Puerto de Tema', it: 'Porto di Tema', nl: 'Haven van Tema', pt: 'Porto de Tema', tr: 'Tema Limanı', ru: 'Порт Тема', zh: '特马港', ar: 'ميناء تيما' },
-      'GHTKO': { en: 'Port of Takoradi', fr: 'Port de Takoradi', de: 'Hafen Takoradi', es: 'Puerto de Takoradi', it: 'Porto di Takoradi', nl: 'Haven van Takoradi', pt: 'Porto de Takoradi', tr: 'Takoradi Limanı', ru: 'Порт Такоради', zh: '塔科拉迪港', ar: 'ميناء تاكورادي' },
-      'GHACC': { en: 'Accra Kotoka International Airport', fr: 'Aéroport international d\'Accra Kotoka', de: 'Internationaler Flughafen Accra Kotoka', es: 'Aeropuerto Internacional de Accra Kotoka', it: 'Aeroporto Internazionale di Accra Kotoka', nl: 'Internationale Luchthaven Accra Kotoka', pt: 'Aeroporto Internacional de Accra Kotoka', tr: 'Accra Kotoka Uluslararası Havaalanı', ru: 'Международный аэропорт Аккра Котока', zh: '阿克拉科托卡国际机场', ar: 'مطار أكرا كوتوكا الدولي' },
-      
-      // 🇬🇹 Guatemala - Hub centraméricain
-      'GTGUA': { en: 'Port of Guatemala', fr: 'Port de Guatemala', de: 'Hafen Guatemala', es: 'Puerto de Guatemala', it: 'Porto di Guatemala', nl: 'Haven van Guatemala', pt: 'Porto da Guatemala', tr: 'Guatemala Limanı', ru: 'Порт Гватемала', zh: '危地马拉港', ar: 'ميناء غواتيمالا' },
-      'GTPAC': { en: 'Port Quetzal', fr: 'Port Quetzal', de: 'Hafen Quetzal', es: 'Puerto Quetzal', it: 'Porto Quetzal', nl: 'Haven Quetzal', pt: 'Porto Quetzal', tr: 'Quetzal Limanı', ru: 'Порт Кетсаль', zh: '克萨尔港', ar: 'ميناء كيتزال' },
-      'GTGUA_AIR': { en: 'Guatemala City La Aurora International Airport', fr: 'Aéroport international de Guatemala City La Aurora', de: 'Internationaler Flughafen Guatemala City La Aurora', es: 'Aeropuerto Internacional La Aurora de Ciudad de Guatemala', it: 'Aeroporto Internazionale La Aurora di Città del Guatemala', nl: 'Internationale Luchthaven Guatemala City La Aurora', pt: 'Aeroporto Internacional de Guatemala City La Aurora', tr: 'Guatemala City La Aurora Uluslararası Havaalanı', ru: 'Международный аэропорт Гватемала Сити Ла Аурора', zh: '危地马拉城拉奥罗拉国际机场', ar: 'مطار مدينة غواتيمالا لا أورورا الدولي' },
-      
-      // === PAYS EN H - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇭🇰 Hong Kong - Hub asiatique majeur
-      'HKHKG_AIR': { en: 'Hong Kong International Airport', fr: 'Aéroport international de Hong Kong', de: 'Internationaler Flughafen Hongkong', es: 'Aeropuerto Internacional de Hong Kong', it: 'Aeroporto Internazionale di Hong Kong', nl: 'Internationale Luchthaven Hong Kong', pt: 'Aeroporto Internacional de Hong Kong', tr: 'Hong Kong Uluslararası Havaalanı', ru: 'Международный аэропорт Гонконг', zh: '香港国际机场', ar: 'مطار هونغ كونغ الدولي' },
-      
-      // 🇭🇷 Croatia (Croatie) - Hub adriatique
-      'HRRJK': { en: 'Port of Rijeka', fr: 'Port de Rijeka', de: 'Hafen Rijeka', es: 'Puerto de Rijeka', it: 'Porto di Rijeka', nl: 'Haven van Rijeka', pt: 'Porto de Rijeka', tr: 'Rijeka Limanı', ru: 'Порт Риека', zh: '里耶卡港', ar: 'ميناء رييكا' },
-      'HRSPT': { en: 'Port of Split', fr: 'Port de Split', de: 'Hafen Split', es: 'Puerto de Split', it: 'Porto di Spalato', nl: 'Haven van Split', pt: 'Porto de Split', tr: 'Split Limanı', ru: 'Порт Сплит', zh: '斯普利特港', ar: 'ميناء سبليت' },
-      'HRZAG': { en: 'Port of Zadar', fr: 'Port de Zadar', de: 'Hafen Zadar', es: 'Puerto de Zadar', it: 'Porto di Zara', nl: 'Haven van Zadar', pt: 'Porto de Zadar', tr: 'Zadar Limanı', ru: 'Порт Задар', zh: '扎达尔港', ar: 'ميناء زادار' },
-      'HRZAG_AIR': { en: 'Zagreb Franjo Tuđman Airport', fr: 'Aéroport de Zagreb Franjo Tuđman', de: 'Flughafen Zagreb Franjo Tuđman', es: 'Aeropuerto de Zagreb Franjo Tuđman', it: 'Aeroporto di Zagabria Franjo Tuđman', nl: 'Luchthaven Zagreb Franjo Tuđman', pt: 'Aeroporto de Zagreb Franjo Tuđman', tr: 'Zagreb Franjo Tuđman Havaalanı', ru: 'Аэропорт Загреб Франьо Туджман', zh: '萨格勒布弗拉尼奥·图季曼机场', ar: 'مطار زغرب فرانيو توجمان' },
-      'HRSPT_AIR': { en: 'Split Airport', fr: 'Aéroport de Split', de: 'Flughafen Split', es: 'Aeropuerto de Split', it: 'Aeroporto di Spalato', nl: 'Luchthaven Split', pt: 'Aeroporto de Split', tr: 'Split Havaalanı', ru: 'Аэропорт Сплит', zh: '斯普利特机场', ar: 'مطار سبليت' },
-      'HRZAG_RAIL': { en: 'Zagreb Central Station', fr: 'Gare centrale de Zagreb', de: 'Hauptbahnhof Zagreb', es: 'Estación Central de Zagreb', it: 'Stazione Centrale di Zagabria', nl: 'Centraal Station Zagreb', pt: 'Estação Central de Zagreb', tr: 'Zagreb Merkez İstasyonu', ru: 'Центральный вокзал Загреб', zh: '萨格勒布中央车站', ar: 'محطة زغرب المركزية' },
-      
-      // 🇭🇺 Hungary (Hongrie) - Hub fluvial
-      'HUBUD': { en: 'Port of Budapest', fr: 'Port de Budapest', de: 'Hafen Budapest', es: 'Puerto de Budapest', it: 'Porto di Budapest', nl: 'Haven van Boedapest', pt: 'Porto de Budapeste', tr: 'Budapeşte Limanı', ru: 'Порт Будапешт', zh: '布达佩斯港', ar: 'ميناء بودابست' },
-      'HUBUD_AIR': { en: 'Budapest Liszt Ferenc International Airport', fr: 'Aéroport international de Budapest Liszt Ferenc', de: 'Internationaler Flughafen Budapest Liszt Ferenc', es: 'Aeropuerto Internacional de Budapest Liszt Ferenc', it: 'Aeroporto Internazionale di Budapest Liszt Ferenc', nl: 'Internationale Luchthaven Budapest Liszt Ferenc', pt: 'Aeroporto Internacional de Budapeste Liszt Ferenc', tr: 'Budapeşte Liszt Ferenc Uluslararası Havaalanı', ru: 'Международный аэропорт Будапешт Лист Ференц', zh: '布达佩斯李斯特·费伦茨国际机场', ar: 'مطار بودابست ليست فيرينتس الدولي' },
-      'HUBUD_RAIL': { en: 'Budapest Keleti Railway Station', fr: 'Gare de Budapest Keleti', de: 'Bahnhof Budapest Keleti', es: 'Estación de Budapest Keleti', it: 'Stazione di Budapest Keleti', nl: 'Station Budapest Keleti', pt: 'Estação de Budapeste Keleti', tr: 'Budapeşte Keleti İstasyonu', ru: 'Вокзал Будапешт Келети', zh: '布达佩斯东站', ar: 'محطة بودابست كيليتي' },
-      
-      // === PAYS EN I - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇮🇹 Italy (Italie) - Hub méditerranéen majeur
-      'ITGOA': { en: 'Port of Genoa', fr: 'Port de Gênes', de: 'Hafen Genua', es: 'Puerto de Génova', it: 'Porto di Genova', nl: 'Haven van Genua', pt: 'Porto de Gênova', tr: 'Cenova Limanı', ru: 'Порт Генуя', zh: '热那亚港', ar: 'ميناء جنوة' },
-      'ITLSP': { en: 'Port of La Spezia', fr: 'Port de La Spezia', de: 'Hafen La Spezia', es: 'Puerto de La Spezia', it: 'Porto della Spezia', nl: 'Haven van La Spezia', pt: 'Porto de La Spezia', tr: 'La Spezia Limanı', ru: 'Порт Ла-Специя', zh: '拉斯佩齐亚港', ar: 'ميناء لا سبيتسيا' },
-      'ITLIV': { en: 'Port of Livorno', fr: 'Port de Livourne', de: 'Hafen Livorno', es: 'Puerto de Livorno', it: 'Porto di Livorno', nl: 'Haven van Livorno', pt: 'Porto de Livorno', tr: 'Livorno Limanı', ru: 'Порт Ливорно', zh: '里窝那港', ar: 'ميناء ليفورنو' },
-      'ITNAS': { en: 'Port of Naples', fr: 'Port de Naples', de: 'Hafen Neapel', es: 'Puerto de Nápoles', it: 'Porto di Napoli', nl: 'Haven van Napels', pt: 'Porto de Nápoles', tr: 'Napoli Limanı', ru: 'Порт Неаполь', zh: '那不勒斯港', ar: 'ميناء نابولي' },
-      'ITVEN': { en: 'Port of Venice', fr: 'Port de Venise', de: 'Hafen Venedig', es: 'Puerto de Venecia', it: 'Porto di Venezia', nl: 'Haven van Venetië', pt: 'Porto de Veneza', tr: 'Venedik Limanı', ru: 'Порт Венеция', zh: '威尼斯港', ar: 'ميناء البندقية' },
-      'ITROM': { en: 'Rome Fiumicino Airport', fr: 'Aéroport de Rome Fiumicino', de: 'Flughafen Rom Fiumicino', es: 'Aeropuerto de Roma Fiumicino', it: 'Aeroporto di Roma Fiumicino', nl: 'Luchthaven Rome Fiumicino', pt: 'Aeroporto de Roma Fiumicino', tr: 'Roma Fiumicino Havaalanı', ru: 'Аэропорт Рим Фьюмичино', zh: '罗马菲乌米奇诺机场', ar: 'مطار روما فيوميتشينو' },
-      'ITMIL': { en: 'Milan Malpensa Airport', fr: 'Aéroport de Milan Malpensa', de: 'Flughafen Mailand Malpensa', es: 'Aeropuerto de Milán Malpensa', it: 'Aeroporto di Milano Malpensa', nl: 'Luchthaven Milaan Malpensa', pt: 'Aeroporto de Milão Malpensa', tr: 'Milano Malpensa Havaalanı', ru: 'Аэропорт Милан Мальпенса', zh: '米兰马尔彭萨机场', ar: 'مطار ميلان مالبينسا' },
-      'ITVEN_AIR': { en: 'Venice Marco Polo Airport', fr: 'Aéroport de Venise Marco Polo', de: 'Flughafen Venedig Marco Polo', es: 'Aeropuerto de Venecia Marco Polo', it: 'Aeroporto di Venezia Marco Polo', nl: 'Luchthaven Venetië Marco Polo', pt: 'Aeroporto de Veneza Marco Polo', tr: 'Venedik Marco Polo Havaalanı', ru: 'Аэропорт Венеция Марко Поло', zh: '威尼斯马可波罗机场', ar: 'مطار البندقية ماركو بولو' },
-      'ITNAS_AIR': { en: 'Naples Airport', fr: 'Aéroport de Naples', de: 'Flughafen Neapel', es: 'Aeropuerto de Nápoles', it: 'Aeroporto di Napoli', nl: 'Luchthaven Napels', pt: 'Aeroporto de Nápoles', tr: 'Napoli Havaalanı', ru: 'Аэропорт Неаполь', zh: '那不勒斯机场', ar: 'مطار نابولي' },
-      'ITROM_RAIL': { en: 'Roma Termini Station', fr: 'Gare de Roma Termini', de: 'Bahnhof Roma Termini', es: 'Estación Roma Termini', it: 'Stazione Roma Termini', nl: 'Station Roma Termini', pt: 'Estação Roma Termini', tr: 'Roma Termini İstasyonu', ru: 'Вокзал Рома Термини', zh: '罗马特米尼车站', ar: 'محطة روما تيرميني' },
-      'ITMIL_RAIL': { en: 'Milano Centrale Station', fr: 'Gare Milano Centrale', de: 'Bahnhof Milano Centrale', es: 'Estación Milano Centrale', it: 'Stazione Milano Centrale', nl: 'Station Milano Centrale', pt: 'Estação Milano Centrale', tr: 'Milano Centrale İstasyonu', ru: 'Вокзал Милано Чентрале', zh: '米兰中央车站', ar: 'محطة ميلانو تشنترالي' },
-      'ITVEN_RAIL': { en: 'Venezia Santa Lucia Station', fr: 'Gare Venezia Santa Lucia', de: 'Bahnhof Venezia Santa Lucia', es: 'Estación Venezia Santa Lucia', it: 'Stazione Venezia Santa Lucia', nl: 'Station Venezia Santa Lucia', pt: 'Estação Venezia Santa Lucia', tr: 'Venezia Santa Lucia İstasyonu', ru: 'Вокзал Венеция Санта-Лючия', zh: '威尼斯圣露西亚车站', ar: 'محطة البندقية سانتا لوتشيا' },
-      
-      // 🇮🇳 India (Inde) - Hub asiatique majeur
-      'INJNP': { en: 'Jawaharlal Nehru Port', fr: 'Port de Jawaharlal Nehru', de: 'Hafen Jawaharlal Nehru', es: 'Puerto de Jawaharlal Nehru', it: 'Porto di Jawaharlal Nehru', nl: 'Haven van Jawaharlal Nehru', pt: 'Porto de Jawaharlal Nehru', tr: 'Jawaharlal Nehru Limanı', ru: 'Порт Джавахарлал Неру', zh: '贾瓦哈拉尔尼赫鲁港', ar: 'ميناء جواهرلال نهرو' },
-      'INMUN': { en: 'Port of Mumbai', fr: 'Port de Mumbai', de: 'Hafen Mumbai', es: 'Puerto de Mumbai', it: 'Porto di Mumbai', nl: 'Haven van Mumbai', pt: 'Porto de Mumbai', tr: 'Mumbai Limanı', ru: 'Порт Мумбаи', zh: '孟买港', ar: 'ميناء مومباي' },
-      'INCHE': { en: 'Port of Chennai', fr: 'Port de Chennai', de: 'Hafen Chennai', es: 'Puerto de Chennai', it: 'Porto di Chennai', nl: 'Haven van Chennai', pt: 'Porto de Chennai', tr: 'Chennai Limanı', ru: 'Порт Ченнаи', zh: '钦奈港', ar: 'ميناء تشيناي' },
-      'INCOK': { en: 'Port of Cochin', fr: 'Port de Cochin', de: 'Hafen Cochin', es: 'Puerto de Cochín', it: 'Porto di Cochin', nl: 'Haven van Cochin', pt: 'Porto de Cochim', tr: 'Cochin Limanı', ru: 'Порт Кочин', zh: '科钦港', ar: 'ميناء كوتشين' },
-      'INDEL': { en: 'Delhi Indira Gandhi International Airport', fr: 'Aéroport international de Delhi Indira Gandhi', de: 'Internationaler Flughafen Delhi Indira Gandhi', es: 'Aeropuerto Internacional de Delhi Indira Gandhi', it: 'Aeroporto Internazionale di Delhi Indira Gandhi', nl: 'Internationale Luchthaven Delhi Indira Gandhi', pt: 'Aeroporto Internacional de Delhi Indira Gandhi', tr: 'Delhi Indira Gandhi Uluslararası Havaalanı', ru: 'Международный аэропорт Дели Индира Ганди', zh: '德里英迪拉·甘地国际机场', ar: 'مطار دلهي إنديرا غاندي الدولي' },
-      'INMUN_AIR': { en: 'Mumbai Chhatrapati Shivaji Maharaj International Airport', fr: 'Aéroport international de Mumbai Chhatrapati Shivaji Maharaj', de: 'Internationaler Flughafen Mumbai Chhatrapati Shivaji Maharaj', es: 'Aeropuerto Internacional de Mumbai Chhatrapati Shivaji Maharaj', it: 'Aeroporto Internazionale di Mumbai Chhatrapati Shivaji Maharaj', nl: 'Internationale Luchthaven Mumbai Chhatrapati Shivaji Maharaj', pt: 'Aeroporto Internacional de Mumbai Chhatrapati Shivaji Maharaj', tr: 'Mumbai Chhatrapati Shivaji Maharaj Uluslararası Havaalanı', ru: 'Международный аэропорт Мумбаи Чхатрапати Шиваджи Махарадж', zh: '孟买贾特拉帕蒂·希瓦吉·马哈拉杰国际机场', ar: 'مطار مومباي تشاتراباتي شيفاجي ماهاراج الدولي' },
-      'INBLR': { en: 'Bangalore Kempegowda International Airport', fr: 'Aéroport international de Bangalore Kempegowda', de: 'Internationaler Flughafen Bangalore Kempegowda', es: 'Aeropuerto Internacional de Bangalore Kempegowda', it: 'Aeroporto Internazionale di Bangalore Kempegowda', nl: 'Internationale Luchthaven Bangalore Kempegowda', pt: 'Aeroporto Internacional de Bangalore Kempegowda', tr: 'Bangalore Kempegowda Uluslararası Havaalanı', ru: 'Международный аэропорт Бангалор Кемпегоуда', zh: '班加罗尔肯佩戈达国际机场', ar: 'مطار بنغالور كيمبيغودا الدولي' },
-      'INCHE_AIR': { en: 'Chennai International Airport', fr: 'Aéroport international de Chennai', de: 'Internationaler Flughafen Chennai', es: 'Aeropuerto Internacional de Chennai', it: 'Aeroporto Internazionale di Chennai', nl: 'Internationale Luchthaven Chennai', pt: 'Aeroporto Internacional de Chennai', tr: 'Chennai Uluslararası Havaalanı', ru: 'Международный аэропорт Ченнаи', zh: '钦奈国际机场', ar: 'مطار تشيناي الدولي' },
-      
-      // 🇮🇪 Ireland (Irlande) - Hub européen
-      'IEDUB': { en: 'Port of Dublin', fr: 'Port de Dublin', de: 'Hafen Dublin', es: 'Puerto de Dublín', it: 'Porto di Dublino', nl: 'Haven van Dublin', pt: 'Porto de Dublin', tr: 'Dublin Limanı', ru: 'Порт Дублин', zh: '都柏林港', ar: 'ميناء دبلن' },
-      'IECOR': { en: 'Port of Cork', fr: 'Port de Cork', de: 'Hafen Cork', es: 'Puerto de Cork', it: 'Porto di Cork', nl: 'Haven van Cork', pt: 'Porto de Cork', tr: 'Cork Limanı', ru: 'Порт Корк', zh: '科克港', ar: 'ميناء كورك' },
-      'IEDUB_AIR': { en: 'Dublin Airport', fr: 'Aéroport de Dublin', de: 'Flughafen Dublin', es: 'Aeropuerto de Dublín', it: 'Aeroporto di Dublino', nl: 'Luchthaven Dublin', pt: 'Aeroporto de Dublin', tr: 'Dublin Havaalanı', ru: 'Аэропорт Дублин', zh: '都柏林机场', ar: 'مطار دبلن' },
-      'IECOR_AIR': { en: 'Cork Airport', fr: 'Aéroport de Cork', de: 'Flughafen Cork', es: 'Aeropuerto de Cork', it: 'Aeroporto di Cork', nl: 'Luchthaven Cork', pt: 'Aeroporto de Cork', tr: 'Cork Havaalanı', ru: 'Аэропорт Корк', zh: '科克机场', ar: 'مطار كورك' },
-      'IEDUB_RAIL': { en: 'Dublin Heuston Station', fr: 'Gare de Dublin Heuston', de: 'Bahnhof Dublin Heuston', es: 'Estación de Dublín Heuston', it: 'Stazione di Dublino Heuston', nl: 'Station Dublin Heuston', pt: 'Estação de Dublin Heuston', tr: 'Dublin Heuston İstasyonu', ru: 'Вокзал Дублин Хьюстон', zh: '都柏林休斯顿车站', ar: 'محطة دبلن هيوستن' },
-      
-      // 🇮🇩 Indonesia (Indonésie) - Hub du Sud-Est asiatique
-      'IDJKT': { en: 'Jakarta Tanjung Priok Port', fr: 'Port de Jakarta Tanjung Priok', de: 'Hafen Jakarta Tanjung Priok', es: 'Puerto de Jakarta Tanjung Priok', it: 'Porto di Jakarta Tanjung Priok', nl: 'Haven van Jakarta Tanjung Priok', pt: 'Porto de Jakarta Tanjung Priok', tr: 'Jakarta Tanjung Priok Limanı', ru: 'Порт Джакарта Танджунг Приок', zh: '雅加达丹戎不碌港', ar: 'ميناء جاكرتا تانجونغ بريوك' },
-      'IDSUB': { en: 'Port of Surabaya', fr: 'Port de Surabaya', de: 'Hafen Surabaya', es: 'Puerto de Surabaya', it: 'Porto di Surabaya', nl: 'Haven van Surabaya', pt: 'Porto de Surabaya', tr: 'Surabaya Limanı', ru: 'Порт Сурабая', zh: '泗水港', ar: 'ميناء سورابايا' },
-      'IDBLW': { en: 'Belawan Medan Port', fr: 'Port de Belawan Medan', de: 'Hafen Belawan Medan', es: 'Puerto de Belawan Medan', it: 'Porto di Belawan Medan', nl: 'Haven van Belawan Medan', pt: 'Porto de Belawan Medan', tr: 'Belawan Medan Limanı', ru: 'Порт Белаван Медан', zh: '勿拉湾棉兰港', ar: 'ميناء بيلاوان ميدان' },
-      'IDJKT_AIR': { en: 'Jakarta Soekarno-Hatta International Airport', fr: 'Aéroport international de Jakarta Soekarno-Hatta', de: 'Internationaler Flughafen Jakarta Soekarno-Hatta', es: 'Aeropuerto Internacional de Jakarta Soekarno-Hatta', it: 'Aeroporto Internazionale di Jakarta Soekarno-Hatta', nl: 'Internationale Luchthaven Jakarta Soekarno-Hatta', pt: 'Aeroporto Internacional de Jakarta Soekarno-Hatta', tr: 'Jakarta Soekarno-Hatta Uluslararası Havaalanı', ru: 'Международный аэропорт Джакарта Сукарно-Хатта', zh: '雅加达苏加诺-哈达国际机场', ar: 'مطار جاكرتا سوكارنو-هاتا الدولي' },
-      'IDSUB_AIR': { en: 'Surabaya Juanda International Airport', fr: 'Aéroport international de Surabaya Juanda', de: 'Internationaler Flughafen Surabaya Juanda', es: 'Aeropuerto Internacional de Surabaya Juanda', it: 'Aeroporto Internazionale di Surabaya Juanda', nl: 'Internationale Luchthaven Surabaya Juanda', pt: 'Aeroporto Internacional de Surabaya Juanda', tr: 'Surabaya Juanda Uluslararası Havaalanı', ru: 'Международный аэропорт Сурабая Джуанда', zh: '泗水朱安达国际机场', ar: 'مطار سورابايا جواندا الدولي' },
-      'IDMED_AIR': { en: 'Medan Kualanamu International Airport', fr: 'Aéroport international de Medan Kualanamu', de: 'Internationaler Flughafen Medan Kualanamu', es: 'Aeropuerto Internacional de Medan Kualanamu', it: 'Aeroporto Internazionale di Medan Kualanamu', nl: 'Internationale Luchthaven Medan Kualanamu', pt: 'Aeroporto Internacional de Medan Kualanamu', tr: 'Medan Kualanamu Uluslararası Havaalanı', ru: 'Международный аэропорт Медан Куаланаму', zh: '棉兰瓜拉纳木国际机场', ar: 'مطار ميدان كوالانامو الدولي' },
-      
-      // 🇮🇱 Israel (Israël) - Hub du Moyen-Orient
-      'ILHFA': { en: 'Port of Haifa', fr: 'Port de Haïfa', de: 'Hafen Haifa', es: 'Puerto de Haifa', it: 'Porto di Haifa', nl: 'Haven van Haifa', pt: 'Porto de Haifa', tr: 'Hayfa Limanı', ru: 'Порт Хайфа', zh: '海法港', ar: 'ميناء حيفا' },
-      'ILASD': { en: 'Port of Ashdod', fr: 'Port d\'Ashdod', de: 'Hafen Ashdod', es: 'Puerto de Ashdod', it: 'Porto di Ashdod', nl: 'Haven van Ashdod', pt: 'Porto de Ashdod', tr: 'Aşdod Limanı', ru: 'Порт Ашдод', zh: '阿什杜德港', ar: 'ميناء أشدود' },
-      'ILEIL': { en: 'Port of Eilat', fr: 'Port d\'Eilat', de: 'Hafen Eilat', es: 'Puerto de Eilat', it: 'Porto di Eilat', nl: 'Haven van Eilat', pt: 'Porto de Eilat', tr: 'Eylat Limanı', ru: 'Порт Эйлат', zh: '埃拉特港', ar: 'ميناء إيلات' },
-      'ILTLV': { en: 'Tel Aviv Ben Gurion Airport', fr: 'Aéroport de Tel Aviv Ben Gurion', de: 'Flughafen Tel Aviv Ben Gurion', es: 'Aeropuerto de Tel Aviv Ben Gurion', it: 'Aeroporto di Tel Aviv Ben Gurion', nl: 'Luchthaven Tel Aviv Ben Gurion', pt: 'Aeroporto de Tel Aviv Ben Gurion', tr: 'Tel Aviv Ben Gurion Havaalanı', ru: 'Аэропорт Тель-Авив Бен-Гурион', zh: '特拉维夫本-古里安机场', ar: 'مطار تل أبيب بن غوريون' },
-      'ILHFA_AIR': { en: 'Haifa Airport', fr: 'Aéroport de Haïfa', de: 'Flughafen Haifa', es: 'Aeropuerto de Haifa', it: 'Aeroporto di Haifa', nl: 'Luchthaven Haifa', pt: 'Aeroporto de Haifa', tr: 'Hayfa Havaalanı', ru: 'Аэропорт Хайфа', zh: '海法机场', ar: 'مطار حيفا' },
-      
-      // 🇮🇷 Iran (Iran) - Hub du Golfe Persique
-      'IRBND': { en: 'Port of Bandar Abbas', fr: 'Port de Bandar Abbas', de: 'Hafen Bandar Abbas', es: 'Puerto de Bandar Abbas', it: 'Porto di Bandar Abbas', nl: 'Haven van Bandar Abbas', pt: 'Porto de Bandar Abbas', tr: 'Bandar Abbas Limanı', ru: 'Порт Бендер-Аббас', zh: '阿巴斯港', ar: 'ميناء بندر عباس' },
-      'IRIMAM': { en: 'Imam Khomeini Port', fr: 'Port d\'Imam Khomeini', de: 'Hafen Imam Khomeini', es: 'Puerto de Imam Jomeini', it: 'Porto di Imam Khomeini', nl: 'Haven van Imam Khomeini', pt: 'Porto de Imam Khomeini', tr: 'İmam Humeyni Limanı', ru: 'Порт Имам Хомейни', zh: '伊玛目霍梅尼港', ar: 'ميناء الإمام الخميني' },
-      'IRBZG': { en: 'Port of Bushehr', fr: 'Port de Bushehr', de: 'Hafen Bushehr', es: 'Puerto de Bushehr', it: 'Porto di Bushehr', nl: 'Haven van Bushehr', pt: 'Porto de Bushehr', tr: 'Buşehr Limanı', ru: 'Порт Бушер', zh: '布什尔港', ar: 'ميناء بوشهر' },
-      'IRIKU': { en: 'Tehran Imam Khomeini International Airport', fr: 'Aéroport international de Téhéran Imam Khomeini', de: 'Internationaler Flughafen Teheran Imam Khomeini', es: 'Aeropuerto Internacional de Teherán Imam Jomeini', it: 'Aeroporto Internazionale di Teheran Imam Khomeini', nl: 'Internationale Luchthaven Teheran Imam Khomeini', pt: 'Aeroporto Internacional de Teerã Imam Khomeini', tr: 'Tahran İmam Humeyni Uluslararası Havaalanı', ru: 'Международный аэропорт Тегеран Имам Хомейни', zh: '德黑兰伊玛目霍梅尼国际机场', ar: 'مطار طهران الإمام الخميني الدولي' },
-      'IRMHD': { en: 'Mashhad Airport', fr: 'Aéroport de Mashhad', de: 'Flughafen Mashhad', es: 'Aeropuerto de Mashhad', it: 'Aeroporto di Mashhad', nl: 'Luchthaven Mashhad', pt: 'Aeroporto de Mashhad', tr: 'Meşhed Havaalanı', ru: 'Аэропорт Мешхед', zh: '马什哈德机场', ar: 'مطار مشهد' },
-      'IRTEH_RAIL': { en: 'Tehran Railway Station', fr: 'Gare de Téhéran', de: 'Bahnhof Teheran', es: 'Estación de Teherán', it: 'Stazione di Teheran', nl: 'Station Teheran', pt: 'Estação de Teerã', tr: 'Tahran Tren İstasyonu', ru: 'Железнодорожная станция Тегеран', zh: '德黑兰火车站', ar: 'محطة طهران للسكك الحديدية' },
-      'IRISF_RAIL': { en: 'Isfahan Railway Station', fr: 'Gare d\'Isfahan', de: 'Bahnhof Isfahan', es: 'Estación de Isfahan', it: 'Stazione di Isfahan', nl: 'Station Isfahan', pt: 'Estação de Isfahan', tr: 'Isfahan Tren İstasyonu', ru: 'Железнодорожная станция Исфахан', zh: '伊斯法罕火车站', ar: 'محطة أصفهان للسكك الحديدية' },
-      
-      // 🇮🇸 Iceland (Islande) - Hub nordique (mis à jour)
-      'ISAKR': { en: 'Port of Akranes', fr: 'Port d\'Akranes', de: 'Hafen Akranes', es: 'Puerto de Akranes', it: 'Porto di Akranes', nl: 'Haven van Akranes', pt: 'Porto de Akranes', tr: 'Akranes Limanı', ru: 'Порт Акранес', zh: '阿克拉内斯港', ar: 'ميناء أكرانيس' },
-      'ISREY_AIR': { en: 'Reykjavik Airport', fr: 'Aéroport de Reykjavik', de: 'Flughafen Reykjavik', es: 'Aeropuerto de Reykjavik', it: 'Aeroporto di Reykjavik', nl: 'Luchthaven Reykjavik', pt: 'Aeroporto de Reykjavik', tr: 'Reykjavik Havaalanı', ru: 'Аэропорт Рейкьявик', zh: '雷克雅未克机场', ar: 'مطار ريكيافيك' },
-      
-      // === PAYS EN J - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇯🇵 Japan (Japon) - Puissance asiatique majeure
-      'JPTYO': { en: 'Port of Tokyo', fr: 'Port de Tokyo', de: 'Hafen Tokio', es: 'Puerto de Tokio', it: 'Porto di Tokyo', nl: 'Haven van Tokyo', pt: 'Porto de Tóquio', tr: 'Tokyo Limanı', ru: 'Порт Токио', zh: '东京港', ar: 'ميناء طوكيو' },
-      'JPYOK': { en: 'Port of Yokohama', fr: 'Port de Yokohama', de: 'Hafen Yokohama', es: 'Puerto de Yokohama', it: 'Porto di Yokohama', nl: 'Haven van Yokohama', pt: 'Porto de Yokohama', tr: 'Yokohama Limanı', ru: 'Порт Йокогама', zh: '横滨港', ar: 'ميناء يوكوهاما' },
-      'JPOSA': { en: 'Port of Osaka', fr: 'Port d\'Osaka', de: 'Hafen Osaka', es: 'Puerto de Osaka', it: 'Porto di Osaka', nl: 'Haven van Osaka', pt: 'Porto de Osaka', tr: 'Osaka Limanı', ru: 'Порт Осака', zh: '大阪港', ar: 'ميناء أوساكا' },
-      'JPNGO': { en: 'Port of Nagoya', fr: 'Port de Nagoya', de: 'Hafen Nagoya', es: 'Puerto de Nagoya', it: 'Porto di Nagoya', nl: 'Haven van Nagoya', pt: 'Porto de Nagoya', tr: 'Nagoya Limanı', ru: 'Порт Нагоя', zh: '名古屋港', ar: 'ميناء ناغويا' },
-      'JPKOB': { en: 'Port of Kobe', fr: 'Port de Kobe', de: 'Hafen Kobe', es: 'Puerto de Kobe', it: 'Porto di Kobe', nl: 'Haven van Kobe', pt: 'Porto de Kobe', tr: 'Kobe Limanı', ru: 'Порт Кобе', zh: '神户港', ar: 'ميناء كوبي' },
-      'JPNRT': { en: 'Tokyo Narita International Airport', fr: 'Aéroport international de Tokyo Narita', de: 'Internationaler Flughafen Tokyo Narita', es: 'Aeropuerto Internacional de Tokio Narita', it: 'Aeroporto Internazionale di Tokyo Narita', nl: 'Internationale Luchthaven Tokyo Narita', pt: 'Aeroporto Internacional de Tóquio Narita', tr: 'Tokyo Narita Uluslararası Havaalanı', ru: 'Международный аэропорт Токио Нарита', zh: '东京成田国际机场', ar: 'مطار طوكيو ناريتا الدولي' },
-      'JPHND': { en: 'Tokyo Haneda Airport', fr: 'Aéroport de Tokyo Haneda', de: 'Flughafen Tokyo Haneda', es: 'Aeropuerto de Tokio Haneda', it: 'Aeroporto di Tokyo Haneda', nl: 'Luchthaven Tokyo Haneda', pt: 'Aeroporto de Tóquio Haneda', tr: 'Tokyo Haneda Havaalanı', ru: 'Аэропорт Токио Ханеда', zh: '东京羽田机场', ar: 'مطار طوكيو هانيدا' },
-      'JPKIX': { en: 'Osaka Kansai International Airport', fr: 'Aéroport international d\'Osaka Kansai', de: 'Internationaler Flughafen Osaka Kansai', es: 'Aeropuerto Internacional de Osaka Kansai', it: 'Aeroporto Internazionale di Osaka Kansai', nl: 'Internationale Luchthaven Osaka Kansai', pt: 'Aeroporto Internacional de Osaka Kansai', tr: 'Osaka Kansai Uluslararası Havaalanı', ru: 'Международный аэропорт Осака Кансай', zh: '大阪关西国际机场', ar: 'مطار أوساكا كانساي الدولي' },
-      'JPNGO_AIR': { en: 'Nagoya Chubu Centrair International Airport', fr: 'Aéroport international de Nagoya Chubu Centrair', de: 'Internationaler Flughafen Nagoya Chubu Centrair', es: 'Aeropuerto Internacional de Nagoya Chubu Centrair', it: 'Aeroporto Internazionale di Nagoya Chubu Centrair', nl: 'Internationale Luchthaven Nagoya Chubu Centrair', pt: 'Aeroporto Internacional de Nagoya Chubu Centrair', tr: 'Nagoya Chubu Centrair Uluslararası Havaalanı', ru: 'Международный аэропорт Нагоя Чубу Центрэйр', zh: '名古屋中部国际机场', ar: 'مطار ناغويا تشوبو سنترير الدولي' },
-      'JPTYO_RAIL': { en: 'Tokyo Station', fr: 'Gare de Tokyo', de: 'Bahnhof Tokyo', es: 'Estación de Tokio', it: 'Stazione di Tokyo', nl: 'Station Tokyo', pt: 'Estação de Tóquio', tr: 'Tokyo İstasyonu', ru: 'Вокзал Токио', zh: '东京站', ar: 'محطة طوكيو' },
-      'JPOSA_RAIL': { en: 'Osaka Station', fr: 'Gare d\'Osaka', de: 'Bahnhof Osaka', es: 'Estación de Osaka', it: 'Stazione di Osaka', nl: 'Station Osaka', pt: 'Estação de Osaka', tr: 'Osaka İstasyonu', ru: 'Вокзал Осака', zh: '大阪站', ar: 'محطة أوساكا' },
-      'JPNGO_RAIL': { en: 'Nagoya Station', fr: 'Gare de Nagoya', de: 'Bahnhof Nagoya', es: 'Estación de Nagoya', it: 'Stazione di Nagoya', nl: 'Station Nagoya', pt: 'Estação de Nagoya', tr: 'Nagoya İstasyonu', ru: 'Вокзал Нагоя', zh: '名古屋站', ar: 'محطة ناغويا' },
-      
-      // 🇯🇴 Jordan (Jordanie) - Hub du Moyen-Orient
-      'JOAQJ': { en: 'Port of Aqaba', fr: 'Port d\'Aqaba', de: 'Hafen Aqaba', es: 'Puerto de Aqaba', it: 'Porto di Aqaba', nl: 'Haven van Aqaba', pt: 'Porto de Aqaba', tr: 'Akabe Limanı', ru: 'Порт Акаба', zh: '亚喀巴港', ar: 'ميناء العقبة' },
-      'JOAMM': { en: 'Amman Queen Alia International Airport', fr: 'Aéroport international d\'Amman Queen Alia', de: 'Internationaler Flughafen Amman Queen Alia', es: 'Aeropuerto Internacional de Ammán Queen Alia', it: 'Aeroporto Internazionale di Amman Queen Alia', nl: 'Internationale Luchthaven Amman Queen Alia', pt: 'Aeroporto Internacional de Amã Queen Alia', tr: 'Amman Queen Alia Uluslararası Havaalanı', ru: 'Международный аэропорт Амман имени королевы Алии', zh: '安曼阿丽娅王后国际机场', ar: 'مطار عمان الملكة علياء الدولي' },
-      'JOAQJ_AIR': { en: 'Aqaba King Hussein International Airport', fr: 'Aéroport international d\'Aqaba King Hussein', de: 'Internationaler Flughafen Aqaba King Hussein', es: 'Aeropuerto Internacional de Aqaba King Hussein', it: 'Aeroporto Internazionale di Aqaba King Hussein', nl: 'Internationale Luchthaven Aqaba King Hussein', pt: 'Aeroporto Internacional de Aqaba King Hussein', tr: 'Akabe King Hussein Uluslararası Havaalanı', ru: 'Международный аэропорт Акаба имени короля Хусейна', zh: '亚喀巴胡塞因国王国际机场', ar: 'مطار العقبة الملك الحسين الدولي' },
-      
-      // 🇯🇲 Jamaica (Jamaïque) - Hub des Caraïbes
-      'JMKIN': { en: 'Port of Kingston', fr: 'Port de Kingston', de: 'Hafen Kingston', es: 'Puerto de Kingston', it: 'Porto di Kingston', nl: 'Haven van Kingston', pt: 'Porto de Kingston', tr: 'Kingston Limanı', ru: 'Порт Кингстон', zh: '金斯敦港', ar: 'ميناء كينغستون' },
-      'JMMBY': { en: 'Port of Montego Bay', fr: 'Port de Montego Bay', de: 'Hafen Montego Bay', es: 'Puerto de Montego Bay', it: 'Porto di Montego Bay', nl: 'Haven van Montego Bay', pt: 'Porto de Montego Bay', tr: 'Montego Bay Limanı', ru: 'Порт Монтего-Бей', zh: '蒙特哥贝港', ar: 'ميناء مونتيغو باي' },
-      'JMKIN_AIR': { en: 'Kingston Norman Manley International Airport', fr: 'Aéroport international de Kingston Norman Manley', de: 'Internationaler Flughafen Kingston Norman Manley', es: 'Aeropuerto Internacional de Kingston Norman Manley', it: 'Aeroporto Internazionale di Kingston Norman Manley', nl: 'Internationale Luchthaven Kingston Norman Manley', pt: 'Aeroporto Internacional de Kingston Norman Manley', tr: 'Kingston Norman Manley Uluslararası Havaalanı', ru: 'Международный аэропорт Кингстон Норман Мэнли', zh: '金斯敦诺曼·曼利国际机场', ar: 'مطار كينغستون نورمان مانلي الدولي' },
-      'JMMBY_AIR': { en: 'Montego Bay Sangster International Airport', fr: 'Aéroport international de Montego Bay Sangster', de: 'Internationaler Flughafen Montego Bay Sangster', es: 'Aeropuerto Internacional de Montego Bay Sangster', it: 'Aeroporto Internazionale di Montego Bay Sangster', nl: 'Internationale Luchthaven Montego Bay Sangster', pt: 'Aeroporto Internacional de Montego Bay Sangster', tr: 'Montego Bay Sangster Uluslararası Havaalanı', ru: 'Международный аэропорт Монтего-Бей Сангстер', zh: '蒙特哥贝桑斯特国际机场', ar: 'مطار مونتيغو باي سانغستر الدولي' },
-      
-      // === PAYS EN K - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇰🇷 South Korea (Corée du Sud) - Tigre asiatique
-      'KRPUS': { en: 'Port of Busan', fr: 'Port de Busan', de: 'Hafen Busan', es: 'Puerto de Busan', it: 'Porto di Busan', nl: 'Haven van Busan', pt: 'Porto de Busan', tr: 'Busan Limanı', ru: 'Порт Пусан', zh: '釜山港', ar: 'ميناء بوسان' },
-      'KRICN': { en: 'Port of Incheon', fr: 'Port d\'Incheon', de: 'Hafen Incheon', es: 'Puerto de Incheon', it: 'Porto di Incheon', nl: 'Haven van Incheon', pt: 'Porto de Incheon', tr: 'Incheon Limanı', ru: 'Порт Инчхон', zh: '仁川港', ar: 'ميناء إنشيون' },
-      'KRULZ': { en: 'Port of Ulsan', fr: 'Port d\'Ulsan', de: 'Hafen Ulsan', es: 'Puerto de Ulsan', it: 'Porto di Ulsan', nl: 'Haven van Ulsan', pt: 'Porto de Ulsan', tr: 'Ulsan Limanı', ru: 'Порт Ульсан', zh: '蔚山港', ar: 'ميناء أولسان' },
-      'KRICN_AIR': { en: 'Incheon International Airport', fr: 'Aéroport international d\'Incheon', de: 'Internationaler Flughafen Incheon', es: 'Aeropuerto Internacional de Incheon', it: 'Aeroporto Internazionale di Incheon', nl: 'Internationale Luchthaven Incheon', pt: 'Aeroporto Internacional de Incheon', tr: 'Incheon Uluslararası Havaalanı', ru: 'Международный аэропорт Инчхон', zh: '仁川国际机场', ar: 'مطار إنشيون الدولي' },
-      'KRGMP': { en: 'Gimpo Airport', fr: 'Aéroport de Gimpo', de: 'Flughafen Gimpo', es: 'Aeropuerto de Gimpo', it: 'Aeroporto di Gimpo', nl: 'Luchthaven Gimpo', pt: 'Aeroporto de Gimpo', tr: 'Gimpo Havaalanı', ru: 'Аэропорт Кимпо', zh: '金浦机场', ar: 'مطار جيمبو' },
-      'KRPUS_AIR': { en: 'Busan Gimhae International Airport', fr: 'Aéroport international de Busan Gimhae', de: 'Internationaler Flughafen Busan Gimhae', es: 'Aeropuerto Internacional de Busan Gimhae', it: 'Aeroporto Internazionale di Busan Gimhae', nl: 'Internationale Luchthaven Busan Gimhae', pt: 'Aeroporto Internacional de Busan Gimhae', tr: 'Busan Gimhae Uluslararası Havaalanı', ru: 'Международный аэропорт Пусан Кимхэ', zh: '釜山金海国际机场', ar: 'مطار بوسان جيمهاي الدولي' },
-      'KRSEO_RAIL': { en: 'Seoul Station', fr: 'Gare de Séoul', de: 'Bahnhof Seoul', es: 'Estación de Seúl', it: 'Stazione di Seoul', nl: 'Station Seoul', pt: 'Estação de Seul', tr: 'Seoul İstasyonu', ru: 'Вокзал Сеул', zh: '首尔站', ar: 'محطة سيول' },
-      'KRPUS_RAIL': { en: 'Busan Station', fr: 'Gare de Busan', de: 'Bahnhof Busan', es: 'Estación de Busan', it: 'Stazione di Busan', nl: 'Station Busan', pt: 'Estação de Busan', tr: 'Busan İstasyonu', ru: 'Вокзал Пусан', zh: '釜山站', ar: 'محطة بوسان' },
-      
-      // 🇰🇿 Kazakhstan (Kazakhstan) - Hub eurasiatique
-      'KZAKT': { en: 'Port of Aktau', fr: 'Port d\'Aktau', de: 'Hafen Aktau', es: 'Puerto de Aktau', it: 'Porto di Aktau', nl: 'Haven van Aktau', pt: 'Porto de Aktau', tr: 'Aktau Limanı', ru: 'Порт Актау', zh: '阿克套港', ar: 'ميناء أكتاو' },
-      'KZALA': { en: 'Almaty International Airport', fr: 'Aéroport international d\'Almaty', de: 'Internationaler Flughafen Almaty', es: 'Aeropuerto Internacional de Almaty', it: 'Aeroporto Internazionale di Almaty', nl: 'Internationale Luchthaven Almaty', pt: 'Aeroporto Internacional de Almaty', tr: 'Almatı Uluslararası Havaalanı', ru: 'Международный аэропорт Алматы', zh: '阿拉木图国际机场', ar: 'مطار آلماتي الدولي' },
-      'KZNUR': { en: 'Nur-Sultan Nazarbayev International Airport', fr: 'Aéroport international de Nur-Sultan Nazarbayev', de: 'Internationaler Flughafen Nur-Sultan Nazarbayev', es: 'Aeropuerto Internacional de Nur-Sultan Nazarbayev', it: 'Aeroporto Internazionale di Nur-Sultan Nazarbayev', nl: 'Internationale Luchthaven Nur-Sultan Nazarbayev', pt: 'Aeroporto Internacional de Nur-Sultan Nazarbayev', tr: 'Nur-Sultan Nazarbayev Uluslararası Havaalanı', ru: 'Международный аэропорт Нур-Султан Назарбаев', zh: '努尔苏丹纳扎尔巴耶夫国际机场', ar: 'مطار نور سلطان نزارباييف الدولي' },
-      'KZALA_RAIL': { en: 'Almaty Railway Station', fr: 'Gare d\'Almaty', de: 'Bahnhof Almaty', es: 'Estación de Almaty', it: 'Stazione di Almaty', nl: 'Station Almaty', pt: 'Estação de Almaty', tr: 'Almatı Tren İstasyonu', ru: 'Железнодорожная станция Алматы', zh: '阿拉木图火车站', ar: 'محطة آلماتي للسكك الحديدية' },
-      'KZNUR_RAIL': { en: 'Nur-Sultan Railway Station', fr: 'Gare de Nur-Sultan', de: 'Bahnhof Nur-Sultan', es: 'Estación de Nur-Sultan', it: 'Stazione di Nur-Sultan', nl: 'Station Nur-Sultan', pt: 'Estação de Nur-Sultan', tr: 'Nur-Sultan Tren İstasyonu', ru: 'Железнодорожная станция Нур-Султан', zh: '努尔苏丹火车站', ar: 'محطة نور سلطان للسكك الحديدية' },
-      
-      // 🇰🇼 Kuwait (Koweït) - Hub du Golfe Persique
-      'KWKWI': { en: 'Port of Kuwait', fr: 'Port de Koweït', de: 'Hafen Kuwait', es: 'Puerto de Kuwait', it: 'Porto del Kuwait', nl: 'Haven van Koeweit', pt: 'Porto do Kuwait', tr: 'Kuveyt Limanı', ru: 'Порт Кувейт', zh: '科威特港', ar: 'ميناء الكويت' },
-      'KWSHU': { en: 'Port of Shuwaikh', fr: 'Port de Shuwaikh', de: 'Hafen Shuwaikh', es: 'Puerto de Shuwaikh', it: 'Porto di Shuwaikh', nl: 'Haven van Shuwaikh', pt: 'Porto de Shuwaikh', tr: 'Şuveyh Limanı', ru: 'Порт Шувайх', zh: '舒瓦伊赫港', ar: 'ميناء الشويخ' },
-      'KWKWI_AIR': { en: 'Kuwait International Airport', fr: 'Aéroport international du Koweït', de: 'Internationaler Flughafen Kuwait', es: 'Aeropuerto Internacional de Kuwait', it: 'Aeroporto Internazionale del Kuwait', nl: 'Internationale Luchthaven Koeweit', pt: 'Aeroporto Internacional do Kuwait', tr: 'Kuveyt Uluslararası Havaalanı', ru: 'Международный аэропорт Кувейт', zh: '科威特国际机场', ar: 'مطار الكويت الدولي' },
-      
-      // 🇰🇪 Kenya (Kenya) - Hub de l'Afrique de l'Est
-      'KEMSA': { en: 'Port of Mombasa', fr: 'Port de Mombasa', de: 'Hafen Mombasa', es: 'Puerto de Mombasa', it: 'Porto di Mombasa', nl: 'Haven van Mombasa', pt: 'Porto de Mombasa', tr: 'Mombasa Limanı', ru: 'Порт Момбаса', zh: '蒙巴萨港', ar: 'ميناء مومباسا' },
-      'KEKIS': { en: 'Port of Kisumu', fr: 'Port de Kisumu', de: 'Hafen Kisumu', es: 'Puerto de Kisumu', it: 'Porto di Kisumu', nl: 'Haven van Kisumu', pt: 'Porto de Kisumu', tr: 'Kisumu Limanı', ru: 'Порт Кисуму', zh: '基苏木港', ar: 'ميناء كيسومو' },
-      'KENBO': { en: 'Nairobi Jomo Kenyatta International Airport', fr: 'Aéroport international de Nairobi Jomo Kenyatta', de: 'Internationaler Flughafen Nairobi Jomo Kenyatta', es: 'Aeropuerto Internacional de Nairobi Jomo Kenyatta', it: 'Aeroporto Internazionale di Nairobi Jomo Kenyatta', nl: 'Internationale Luchthaven Nairobi Jomo Kenyatta', pt: 'Aeroporto Internacional de Nairobi Jomo Kenyatta', tr: 'Nairobi Jomo Kenyatta Uluslararası Havaalanı', ru: 'Международный аэропорт Найроби Джомо Кениата', zh: '内罗毕乔莫·肯雅塔国际机场', ar: 'مطار نيروبي جومو كينياتا الدولي' },
-      'KEMSA_AIR': { en: 'Mombasa Moi International Airport', fr: 'Aéroport international de Mombasa Moi', de: 'Internationaler Flughafen Mombasa Moi', es: 'Aeropuerto Internacional de Mombasa Moi', it: 'Aeroporto Internazionale di Mombasa Moi', nl: 'Internationale Luchthaven Mombasa Moi', pt: 'Aeroporto Internacional de Mombasa Moi', tr: 'Mombasa Moi Uluslararası Havaalanı', ru: 'Международный аэропорт Момбаса Мои', zh: '蒙巴萨莫伊国际机场', ar: 'مطار مومباسا موي الدولي' },
-      'KENBO_RAIL': { en: 'Nairobi Railway Station', fr: 'Gare de Nairobi', de: 'Bahnhof Nairobi', es: 'Estación de Nairobi', it: 'Stazione di Nairobi', nl: 'Station Nairobi', pt: 'Estação de Nairobi', tr: 'Nairobi Tren İstasyonu', ru: 'Железнодорожная станция Найроби', zh: '内罗毕火车站', ar: 'محطة نيروبي للسكك الحديدية' },
-      'KEMSA_RAIL': { en: 'Mombasa Railway Station', fr: 'Gare de Mombasa', de: 'Bahnhof Mombasa', es: 'Estación de Mombasa', it: 'Stazione di Mombasa', nl: 'Station Mombasa', pt: 'Estação de Mombasa', tr: 'Mombasa Tren İstasyonu', ru: 'Железнодорожная станция Момбаса', zh: '蒙巴萨火车站', ar: 'محطة مومباسا للسكك الحديدية' },
-      
-      // === PAYS EN L - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇱🇰 Sri Lanka (Sri Lanka) - Perle de l'Océan Indien
-      'LKCMB': { en: 'Port of Colombo', fr: 'Port de Colombo', de: 'Hafen Colombo', es: 'Puerto de Colombo', it: 'Porto di Colombo', nl: 'Haven van Colombo', pt: 'Porto de Colombo', tr: 'Kolombo Limanı', ru: 'Порт Коломбо', zh: '科伦坡港', ar: 'ميناء كولومبو' },
-      'LKHMS': { en: 'Port of Hambantota', fr: 'Port de Hambantota', de: 'Hafen Hambantota', es: 'Puerto de Hambantota', it: 'Porto di Hambantota', nl: 'Haven van Hambantota', pt: 'Porto de Hambantota', tr: 'Hambantota Limanı', ru: 'Порт Хамбантота', zh: '汉班托塔港', ar: 'ميناء هامبانتوتا' },
-      'LKCMB_AIR': { en: 'Colombo Bandaranaike International Airport', fr: 'Aéroport international de Colombo Bandaranaike', de: 'Internationaler Flughafen Colombo Bandaranaike', es: 'Aeropuerto Internacional de Colombo Bandaranaike', it: 'Aeroporto Internazionale di Colombo Bandaranaike', nl: 'Internationale Luchthaven Colombo Bandaranaike', pt: 'Aeroporto Internacional de Colombo Bandaranaike', tr: 'Kolombo Bandaranaike Uluslararası Havaalanı', ru: 'Международный аэропорт Коломбо Бандаранаике', zh: '科伦坡班达拉奈克国际机场', ar: 'مطار كولومبو بانداراناياكا الدولي' },
-      
-      // 🇱🇧 Lebanon (Liban) - Gateway du Moyen-Orient
-      'LBBEY': { en: 'Port of Beirut', fr: 'Port de Beyrouth', de: 'Hafen Beirut', es: 'Puerto de Beirut', it: 'Porto di Beirut', nl: 'Haven van Beiroet', pt: 'Porto de Beirute', tr: 'Beyrut Limanı', ru: 'Порт Бейрут', zh: '贝鲁特港', ar: 'ميناء بيروت' },
-      'LBTRI': { en: 'Port of Tripoli', fr: 'Port de Tripoli', de: 'Hafen Tripoli', es: 'Puerto de Trípoli', it: 'Porto di Tripoli', nl: 'Haven van Tripoli', pt: 'Porto de Trípoli', tr: 'Trablusşam Limanı', ru: 'Порт Триполи', zh: '的黎波里港', ar: 'ميناء طرابلس' },
-      'LBBEY_AIR': { en: 'Beirut Rafic Hariri International Airport', fr: 'Aéroport international de Beyrouth Rafic Hariri', de: 'Internationaler Flughafen Beirut Rafic Hariri', es: 'Aeropuerto Internacional de Beirut Rafic Hariri', it: 'Aeroporto Internazionale di Beirut Rafic Hariri', nl: 'Internationale Luchthaven Beiroet Rafic Hariri', pt: 'Aeroporto Internacional de Beirute Rafic Hariri', tr: 'Beyrut Refik Hariri Uluslararası Havaalanı', ru: 'Международный аэропорт Бейрут Рафика Харири', zh: '贝鲁特拉菲克·哈里里国际机场', ar: 'مطار بيروت رفيق الحريري الدولي' },
-      
-      // 🇱🇹 Lithuania (Lituanie) - Hub balte
-      'LTKLA': { en: 'Port of Klaipeda', fr: 'Port de Klaipeda', de: 'Hafen Klaipeda', es: 'Puerto de Klaipeda', it: 'Porto di Klaipeda', nl: 'Haven van Klaipeda', pt: 'Porto de Klaipeda', tr: 'Klaipeda Limanı', ru: 'Порт Клайпеда', zh: '克莱佩达港', ar: 'ميناء كلايبيدا' },
-      'LTVIL': { en: 'Vilnius Airport', fr: 'Aéroport de Vilnius', de: 'Flughafen Vilnius', es: 'Aeropuerto de Vilnius', it: 'Aeroporto di Vilnius', nl: 'Luchthaven Vilnius', pt: 'Aeroporto de Vilnius', tr: 'Vilnius Havaalanı', ru: 'Аэропорт Вильнюс', zh: '维尔纽斯机场', ar: 'مطار فيلنيوس' },
-      'LTKUN': { en: 'Kaunas Airport', fr: 'Aéroport de Kaunas', de: 'Flughafen Kaunas', es: 'Aeropuerto de Kaunas', it: 'Aeroporto di Kaunas', nl: 'Luchthaven Kaunas', pt: 'Aeroporto de Kaunas', tr: 'Kaunas Havaalanı', ru: 'Аэропорт Каунас', zh: '考纳斯机场', ar: 'مطار كاوناس' },
-      'LTVIL_RAIL': { en: 'Vilnius Railway Station', fr: 'Gare de Vilnius', de: 'Bahnhof Vilnius', es: 'Estación de Vilnius', it: 'Stazione di Vilnius', nl: 'Station Vilnius', pt: 'Estação de Vilnius', tr: 'Vilnius Tren İstasyonu', ru: 'Железнодорожная станция Вильнюс', zh: '维尔纽斯火车站', ar: 'محطة فيلنيوس للسكك الحديدية' },
-      'LTKLA_RAIL': { en: 'Klaipeda Railway Station', fr: 'Gare de Klaipeda', de: 'Bahnhof Klaipeda', es: 'Estación de Klaipeda', it: 'Stazione di Klaipeda', nl: 'Station Klaipeda', pt: 'Estação de Klaipeda', tr: 'Klaipeda Tren İstasyonu', ru: 'Железнодорожная станция Клайпеда', zh: '克莱佩达火车站', ar: 'محطة كلايبيدا للسكك الحديدية' },
-      
-      // 🇱🇻 Latvia (Lettonie) - Hub balte
-      'LVRIX': { en: 'Port of Riga', fr: 'Port de Riga', de: 'Hafen Riga', es: 'Puerto de Riga', it: 'Porto di Riga', nl: 'Haven van Riga', pt: 'Porto de Riga', tr: 'Riga Limanı', ru: 'Порт Рига', zh: '里加港', ar: 'ميناء ريغا' },
-      'LVVEN': { en: 'Port of Ventspils', fr: 'Port de Ventspils', de: 'Hafen Ventspils', es: 'Puerto de Ventspils', it: 'Porto di Ventspils', nl: 'Haven van Ventspils', pt: 'Porto de Ventspils', tr: 'Ventspils Limanı', ru: 'Порт Вентспилс', zh: '文茨皮尔斯港', ar: 'ميناء فينتسبيلس' },
-      'LVRIX_AIR': { en: 'Riga Airport', fr: 'Aéroport de Riga', de: 'Flughafen Riga', es: 'Aeropuerto de Riga', it: 'Aeroporto di Riga', nl: 'Luchthaven Riga', pt: 'Aeroporto de Riga', tr: 'Riga Havaalanı', ru: 'Аэропорт Рига', zh: '里加机场', ar: 'مطار ريغا' },
-      'LVRIX_RAIL': { en: 'Riga Central Station', fr: 'Gare centrale de Riga', de: 'Hauptbahnhof Riga', es: 'Estación Central de Riga', it: 'Stazione Centrale di Riga', nl: 'Centraal Station Riga', pt: 'Estação Central de Riga', tr: 'Riga Merkez İstasyonu', ru: 'Центральный вокзал Рига', zh: '里加中央车站', ar: 'محطة ريغا المركزية' },
-      
-      // 🇱🇺 Luxembourg (Luxembourg) - Hub financier européen (mis à jour)
-      'LULUX_RAIL': { en: 'Luxembourg Central Station', fr: 'Gare centrale de Luxembourg', de: 'Hauptbahnhof Luxemburg', es: 'Estación Central de Luxemburgo', it: 'Stazione Centrale di Lussemburgo', nl: 'Centraal Station Luxemburg', pt: 'Estação Central de Luxemburgo', tr: 'Lüksemburg Merkez İstasyonu', ru: 'Центральный вокзал Люксембург', zh: '卢森堡中央车站', ar: 'محطة لوكسمبورغ المركزية' },
-      
-      // 🇱🇮 Liechtenstein (Liechtenstein) - Principauté alpine
-      'LIVAD_RAIL': { en: 'Vaduz Railway Connection', fr: 'Connexion ferroviaire de Vaduz', de: 'Bahnverbindung Vaduz', es: 'Conexión ferroviaria de Vaduz', it: 'Collegamento ferroviario di Vaduz', nl: 'Spoorverbinding Vaduz', pt: 'Conexão ferroviária de Vaduz', tr: 'Vaduz Demiryolu Bağlantısı', ru: 'Железнодорожное соединение Вадуц', zh: '瓦杜兹铁路连接', ar: 'اتصال السكك الحديدية في فادوتس' },
-      
-      // === PAYS EN M - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇲🇾 Malaysia (Malaisie) - Tigre asiatique
-      'MYPKG': { en: 'Port Klang', fr: 'Port Klang', de: 'Hafen Klang', es: 'Puerto Klang', it: 'Porto Klang', nl: 'Haven van Klang', pt: 'Porto Klang', tr: 'Klang Limanı', ru: 'Порт Кланг', zh: '巴生港', ar: 'ميناء كلانغ' },
-      'MYTPP': { en: 'Port of Tanjung Pelepas', fr: 'Port de Tanjung Pelepas', de: 'Hafen Tanjung Pelepas', es: 'Puerto de Tanjung Pelepas', it: 'Porto di Tanjung Pelepas', nl: 'Haven van Tanjung Pelepas', pt: 'Porto de Tanjung Pelepas', tr: 'Tanjung Pelepas Limanı', ru: 'Порт Танджунг Пелепас', zh: '丹戎帕拉帕斯港', ar: 'ميناء تانجونغ بيليباس' },
-      'MYKUL': { en: 'Kuala Lumpur International Airport', fr: 'Aéroport international de Kuala Lumpur', de: 'Internationaler Flughafen Kuala Lumpur', es: 'Aeropuerto Internacional de Kuala Lumpur', it: 'Aeroporto Internazionale di Kuala Lumpur', nl: 'Internationale Luchthaven Kuala Lumpur', pt: 'Aeroporto Internacional de Kuala Lumpur', tr: 'Kuala Lumpur Uluslararası Havaalanı', ru: 'Международный аэропорт Куала-Лумпур', zh: '吉隆坡国际机场', ar: 'مطار كوالالمبور الدولي' },
-      
-      // 🇲🇽 Mexico (Mexique) - Giant latino-américain
-      'MXMAN': { en: 'Port of Manzanillo', fr: 'Port de Manzanillo', de: 'Hafen Manzanillo', es: 'Puerto de Manzanillo', it: 'Porto di Manzanillo', nl: 'Haven van Manzanillo', pt: 'Porto de Manzanillo', tr: 'Manzanillo Limanı', ru: 'Порт Мансанильо', zh: '曼萨尼约港', ar: 'ميناء مانزانيلو' },
-      'MXLAZ': { en: 'Port of Lázaro Cárdenas', fr: 'Port de Lázaro Cárdenas', de: 'Hafen Lázaro Cárdenas', es: 'Puerto de Lázaro Cárdenas', it: 'Porto di Lázaro Cárdenas', nl: 'Haven van Lázaro Cárdenas', pt: 'Porto de Lázaro Cárdenas', tr: 'Lázaro Cárdenas Limanı', ru: 'Порт Ласаро Карденас', zh: '拉萨罗卡德纳斯港', ar: 'ميناء لازارو كارديناس' },
-      'MXVER': { en: 'Port of Veracruz', fr: 'Port de Veracruz', de: 'Hafen Veracruz', es: 'Puerto de Veracruz', it: 'Porto di Veracruz', nl: 'Haven van Veracruz', pt: 'Porto de Veracruz', tr: 'Veracruz Limanı', ru: 'Порт Веракрус', zh: '韦拉克鲁斯港', ar: 'ميناء فيراكروز' },
-      'MXMEX': { en: 'Mexico City International Airport', fr: 'Aéroport international de Mexico', de: 'Internationaler Flughafen Mexiko-Stadt', es: 'Aeropuerto Internacional de la Ciudad de México', it: 'Aeroporto Internazionale di Città del Messico', nl: 'Internationale Luchthaven Mexico-Stad', pt: 'Aeroporto Internacional da Cidade do México', tr: 'Mexico City Uluslararası Havaalanı', ru: 'Международный аэропорт Мехико', zh: '墨西哥城国际机场', ar: 'مطار مكسيكو سيتي الدولي' },
-      'MXCUN': { en: 'Cancún International Airport', fr: 'Aéroport international de Cancún', de: 'Internationaler Flughafen Cancún', es: 'Aeropuerto Internacional de Cancún', it: 'Aeroporto Internazionale di Cancún', nl: 'Internationale Luchthaven Cancún', pt: 'Aeroporto Internacional de Cancún', tr: 'Cancún Uluslararası Havaalanı', ru: 'Международный аэропорт Канкун', zh: '坎昆国际机场', ar: 'مطار كانكون الدولي' },
-      
-      // 🇲🇦 Morocco (Maroc) - Gateway maghrébin
-      'MACAS': { en: 'Port of Casablanca', fr: 'Port de Casablanca', de: 'Hafen Casablanca', es: 'Puerto de Casablanca', it: 'Porto di Casablanca', nl: 'Haven van Casablanca', pt: 'Porto de Casablanca', tr: 'Kazablanka Limanı', ru: 'Порт Касабланка', zh: '卡萨布兰卡港', ar: 'ميناء الدار البيضاء' },
-      'MATAN': { en: 'Port of Tanger Med', fr: 'Port de Tanger Med', de: 'Hafen Tanger Med', es: 'Puerto de Tánger Med', it: 'Porto di Tangeri Med', nl: 'Haven van Tanger Med', pt: 'Porto de Tânger Med', tr: 'Tanger Med Limanı', ru: 'Порт Танжер Мед', zh: '丹吉尔地中海港', ar: 'ميناء طنجة المتوسط' },
-      'MACMN': { en: 'Casablanca Mohammed V International Airport', fr: 'Aéroport international de Casablanca Mohammed V', de: 'Internationaler Flughafen Casablanca Mohammed V', es: 'Aeropuerto Internacional de Casablanca Mohammed V', it: 'Aeroporto Internazionale di Casablanca Mohammed V', nl: 'Internationale Luchthaven Casablanca Mohammed V', pt: 'Aeroporto Internacional de Casablanca Mohammed V', tr: 'Kazablanka Mohammed V Uluslararası Havaalanı', ru: 'Международный аэропорт Касабланка Мохаммед V', zh: '卡萨布兰卡穆罕默德五世国际机场', ar: 'مطار الدار البيضاء محمد الخامس الدولي' },
-      
-      // 🇲🇿 Mozambique (Mozambique) - Gateway d'Afrique australe
-      'MZMPM': { en: 'Port of Maputo', fr: 'Port de Maputo', de: 'Hafen Maputo', es: 'Puerto de Maputo', it: 'Porto di Maputo', nl: 'Haven van Maputo', pt: 'Porto de Maputo', tr: 'Maputo Limanı', ru: 'Порт Мапуту', zh: '马普托港', ar: 'ميناء مابوتو' },
-      'MZBEI': { en: 'Port of Beira', fr: 'Port de Beira', de: 'Hafen Beira', es: 'Puerto de Beira', it: 'Porto di Beira', nl: 'Haven van Beira', pt: 'Porto da Beira', tr: 'Beira Limanı', ru: 'Порт Бейра', zh: '贝拉港', ar: 'ميناء بيرا' },
-      'MZNAC': { en: 'Port of Nacala', fr: 'Port de Nacala', de: 'Hafen Nacala', es: 'Puerto de Nacala', it: 'Porto di Nacala', nl: 'Haven van Nacala', pt: 'Porto de Nacala', tr: 'Nacala Limanı', ru: 'Порт Накала', zh: '纳卡拉港', ar: 'ميناء ناكالا' },
-      'MZMPM_AIR': { en: 'Maputo International Airport', fr: 'Aéroport international de Maputo', de: 'Internationaler Flughafen Maputo', es: 'Aeropuerto Internacional de Maputo', it: 'Aeroporto Internazionale di Maputo', nl: 'Internationale Luchthaven Maputo', pt: 'Aeroporto Internacional de Maputo', tr: 'Maputo Uluslararası Havaalanı', ru: 'Международный аэропорт Мапуту', zh: '马普托国际机场', ar: 'مطار مابوتو الدولي' },
-      'MZMPM_RAIL': { en: 'Maputo Railway Station', fr: 'Gare de Maputo', de: 'Bahnhof Maputo', es: 'Estación de Maputo', it: 'Stazione di Maputo', nl: 'Station Maputo', pt: 'Estação de Maputo', tr: 'Maputo Tren İstasyonu', ru: 'Железнодорожная станция Мапуту', zh: '马普托火车站', ar: 'محطة مابوتو للسكك الحديدية' },
-      
-      // 🇲🇨 Monaco (Monaco) - Principauté luxueuse (mis à jour)
-      'MCNCE': { en: 'Nice Côte d\'Azur Airport', fr: 'Aéroport de Nice Côte d\'Azur', de: 'Flughafen Nizza Côte d\'Azur', es: 'Aeropuerto de Niza Costa Azul', it: 'Aeroporto di Nizza Costa Azzurra', nl: 'Luchthaven Nice Côte d\'Azur', pt: 'Aeroporto de Nice Côte d\'Azur', tr: 'Nice Côte d\'Azur Havaalanı', ru: 'Аэропорт Ницца Лазурный Берег', zh: '尼斯蓝色海岸机场', ar: 'مطار نيس كوت دازور' },
-      
-      // 🇲🇹 Malta (Malte) - Hub méditerranéen (mis à jour)
-      'MTMLA_AIR': { en: 'Malta International Airport', fr: 'Aéroport international de Malte', de: 'Internationaler Flughafen Malta', es: 'Aeropuerto Internacional de Malta', it: 'Aeroporto Internazionale di Malta', nl: 'Internationale Luchthaven Malta', pt: 'Aeroporto Internacional de Malta', tr: 'Malta Uluslararası Havaalanı', ru: 'Международный аэропорт Мальта', zh: '马耳他国际机场', ar: 'مطار مالطا الدولي' },
-      
-      // 🇲🇺 Mauritius (Maurice) - Perle de l'Océan Indien (mis à jour)
-      'MUPLN': { en: 'Plaine Corail Airport', fr: 'Aéroport de Plaine Corail', de: 'Flughafen Plaine Corail', es: 'Aeropuerto de Plaine Corail', it: 'Aeroporto di Plaine Corail', nl: 'Luchthaven Plaine Corail', pt: 'Aeroporto de Plaine Corail', tr: 'Plaine Corail Havaalanı', ru: 'Аэропорт Плейн Корайл', zh: '平原珊瑚机场', ar: 'مطار بلين كورايل' },
-      
-      // 🇲🇻 Maldives (Maldives) - Archipel tropical (mis à jour)
-      'MVMAL': { en: 'Port of Malé', fr: 'Port de Malé', de: 'Hafen Malé', es: 'Puerto de Malé', it: 'Porto di Malé', nl: 'Haven van Malé', pt: 'Porto de Malé', tr: 'Male Limanı', ru: 'Порт Мале', zh: '马累港', ar: 'ميناء ماليه' },
-      'MVGAN': { en: 'Port of Gan', fr: 'Port de Gan', de: 'Hafen Gan', es: 'Puerto de Gan', it: 'Porto di Gan', nl: 'Haven van Gan', pt: 'Porto de Gan', tr: 'Gan Limanı', ru: 'Порт Ган', zh: '甘港', ar: 'ميناء غان' },
-      'MVGAN_AIR': { en: 'Gan International Airport', fr: 'Aéroport international de Gan', de: 'Internationaler Flughafen Gan', es: 'Aeropuerto Internacional de Gan', it: 'Aeroporto Internazionale di Gan', nl: 'Internationale Luchthaven Gan', pt: 'Aeroporto Internacional de Gan', tr: 'Gan Uluslararası Havaalanı', ru: 'Международный аэропорт Ган', zh: '甘国际机场', ar: 'مطار غان الدولي' },
-      
-      // === PAYS EN N - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇳🇱 Netherlands (Pays-Bas) - Hub logistique européen
-      'NLRTM': { en: 'Port of Rotterdam', fr: 'Port de Rotterdam', de: 'Hafen Rotterdam', es: 'Puerto de Rotterdam', it: 'Porto di Rotterdam', nl: 'Haven van Rotterdam', pt: 'Porto de Roterdão', tr: 'Rotterdam Limanı', ru: 'Порт Роттердам', zh: '鹿特丹港', ar: 'ميناء روتردام' },
-      'NLAMS': { en: 'Port of Amsterdam', fr: 'Port d\'Amsterdam', de: 'Hafen Amsterdam', es: 'Puerto de Ámsterdam', it: 'Porto di Amsterdam', nl: 'Haven van Amsterdam', pt: 'Porto de Amsterdã', tr: 'Amsterdam Limanı', ru: 'Порт Амстердам', zh: '阿姆斯特丹港', ar: 'ميناء أمستردام' },
-      'NLAMS_AIR': { en: 'Amsterdam Schiphol Airport', fr: 'Aéroport d\'Amsterdam Schiphol', de: 'Flughafen Amsterdam Schiphol', es: 'Aeropuerto de Ámsterdam Schiphol', it: 'Aeroporto di Amsterdam Schiphol', nl: 'Luchthaven Amsterdam Schiphol', pt: 'Aeroporto de Amsterdã Schiphol', tr: 'Amsterdam Schiphol Havaalanı', ru: 'Аэропорт Амстердам Схипхол', zh: '阿姆斯特丹史基浦机场', ar: 'مطار أمستردام شيبهول' },
-      'NLEIN': { en: 'Eindhoven Airport', fr: 'Aéroport d\'Eindhoven', de: 'Flughafen Eindhoven', es: 'Aeropuerto de Eindhoven', it: 'Aeroporto di Eindhoven', nl: 'Luchthaven Eindhoven', pt: 'Aeroporto de Eindhoven', tr: 'Eindhoven Havaalanı', ru: 'Аэропорт Эйндховен', zh: '埃因霍温机场', ar: 'مطار آيندهوفن' },
-      'NLAMS_RAIL': { en: 'Amsterdam Centraal Station', fr: 'Gare centrale d\'Amsterdam', de: 'Hauptbahnhof Amsterdam', es: 'Estación Central de Ámsterdam', it: 'Stazione Centrale di Amsterdam', nl: 'Amsterdam Centraal', pt: 'Estação Central de Amsterdã', tr: 'Amsterdam Merkez İstasyonu', ru: 'Центральный вокзал Амстердам', zh: '阿姆斯特丹中央车站', ar: 'محطة أمستردام المركزية' },
-      'NLRTM_RAIL': { en: 'Rotterdam Centraal Station', fr: 'Gare centrale de Rotterdam', de: 'Hauptbahnhof Rotterdam', es: 'Estación Central de Rotterdam', it: 'Stazione Centrale di Rotterdam', nl: 'Rotterdam Centraal', pt: 'Estação Central de Roterdão', tr: 'Rotterdam Merkez İstasyonu', ru: 'Центральный вокзал Роттердам', zh: '鹿特丹中央车站', ar: 'محطة روتردام المركزية' },
-      'NLHAG_RAIL': { en: 'Den Haag Centraal Station', fr: 'Gare centrale de La Haye', de: 'Hauptbahnhof Den Haag', es: 'Estación Central de La Haya', it: 'Stazione Centrale dell\'Aia', nl: 'Den Haag Centraal', pt: 'Estação Central de Haia', tr: 'Den Haag Merkez İstasyonu', ru: 'Центральный вокзал Гаага', zh: '海牙中央车站', ar: 'محطة لاهاي المركزية' },
-      
-      // 🇳🇬 Nigeria (Nigeria) - Giant africain
-      'NGLAG': { en: 'Port of Lagos Apapa', fr: 'Port de Lagos Apapa', de: 'Hafen Lagos Apapa', es: 'Puerto de Lagos Apapa', it: 'Porto di Lagos Apapa', nl: 'Haven van Lagos Apapa', pt: 'Porto de Lagos Apapa', tr: 'Lagos Apapa Limanı', ru: 'Порт Лагос Апапа', zh: '拉各斯阿帕帕港', ar: 'ميناء لاغوس أبابا' },
-      'NGTCR': { en: 'Port of Tin Can Island', fr: 'Port de Tin Can Island', de: 'Hafen Tin Can Island', es: 'Puerto de Tin Can Island', it: 'Porto di Tin Can Island', nl: 'Haven van Tin Can Island', pt: 'Porto de Tin Can Island', tr: 'Tin Can Island Limanı', ru: 'Порт Тин Кан Айленд', zh: '锡罐岛港', ar: 'ميناء تين كان آيلاند' },
-      'NGLOS': { en: 'Lagos Murtala Muhammed International Airport', fr: 'Aéroport international de Lagos Murtala Muhammed', de: 'Internationaler Flughafen Lagos Murtala Muhammed', es: 'Aeropuerto Internacional de Lagos Murtala Muhammed', it: 'Aeroporto Internazionale di Lagos Murtala Muhammed', nl: 'Internationale Luchthaven Lagos Murtala Muhammed', pt: 'Aeroporto Internacional de Lagos Murtala Muhammed', tr: 'Lagos Murtala Muhammed Uluslararası Havaalanı', ru: 'Международный аэропорт Лагос Муртала Мухаммед', zh: '拉各斯穆尔塔拉·穆罕默德国际机场', ar: 'مطار لاغوس مرتضى محمد الدولي' },
-      
-      // 🇳🇴 Norway (Norvège) - Hub nordique
-      'NOOSL': { en: 'Port of Oslo', fr: 'Port d\'Oslo', de: 'Hafen Oslo', es: 'Puerto de Oslo', it: 'Porto di Oslo', nl: 'Haven van Oslo', pt: 'Porto de Oslo', tr: 'Oslo Limanı', ru: 'Порт Осло', zh: '奥斯陆港', ar: 'ميناء أوسلو' },
-      'NOBERG': { en: 'Port of Bergen', fr: 'Port de Bergen', de: 'Hafen Bergen', es: 'Puerto de Bergen', it: 'Porto di Bergen', nl: 'Haven van Bergen', pt: 'Porto de Bergen', tr: 'Bergen Limanı', ru: 'Порт Берген', zh: '卑尔根港', ar: 'ميناء بيرغن' },
-      'NOOSL_AIR': { en: 'Oslo Gardermoen Airport', fr: 'Aéroport d\'Oslo Gardermoen', de: 'Flughafen Oslo Gardermoen', es: 'Aeropuerto de Oslo Gardermoen', it: 'Aeroporto di Oslo Gardermoen', nl: 'Luchthaven Oslo Gardermoen', pt: 'Aeroporto de Oslo Gardermoen', tr: 'Oslo Gardermoen Havaalanı', ru: 'Аэропорт Осло Гардермуэн', zh: '奥斯陆加勒穆恩机场', ar: 'مطار أوسلو غاردرموين' },
-      'NOOSL_RAIL': { en: 'Oslo Central Station', fr: 'Gare centrale d\'Oslo', de: 'Hauptbahnhof Oslo', es: 'Estación Central de Oslo', it: 'Stazione Centrale di Oslo', nl: 'Centraal Station Oslo', pt: 'Estação Central de Oslo', tr: 'Oslo Merkez İstasyonu', ru: 'Центральный вокзал Осло', zh: '奥斯陆中央车站', ar: 'محطة أوسلو المركزية' },
-      
-      // 🇳🇿 New Zealand (Nouvelle-Zélande) - Hub du Pacifique Sud
-      'NZAKL': { en: 'Port of Auckland', fr: 'Port d\'Auckland', de: 'Hafen Auckland', es: 'Puerto de Auckland', it: 'Porto di Auckland', nl: 'Haven van Auckland', pt: 'Porto de Auckland', tr: 'Auckland Limanı', ru: 'Порт Окленд', zh: '奥克兰港', ar: 'ميناء أوكلاند' },
-      'NZTRG': { en: 'Port of Tauranga', fr: 'Port de Tauranga', de: 'Hafen Tauranga', es: 'Puerto de Tauranga', it: 'Porto di Tauranga', nl: 'Haven van Tauranga', pt: 'Porto de Tauranga', tr: 'Tauranga Limanı', ru: 'Порт Тауранга', zh: '陶朗加港', ar: 'ميناء تاورانغا' },
-      'NZWEL': { en: 'Port of Wellington', fr: 'Port de Wellington', de: 'Hafen Wellington', es: 'Puerto de Wellington', it: 'Porto di Wellington', nl: 'Haven van Wellington', pt: 'Porto de Wellington', tr: 'Wellington Limanı', ru: 'Порт Веллингтон', zh: '惠灵顿港', ar: 'ميناء ويلينغتون' },
-      'NZAKL_AIR': { en: 'Auckland Airport', fr: 'Aéroport d\'Auckland', de: 'Flughafen Auckland', es: 'Aeropuerto de Auckland', it: 'Aeroporto di Auckland', nl: 'Luchthaven Auckland', pt: 'Aeroporto de Auckland', tr: 'Auckland Havaalanı', ru: 'Аэропорт Окленд', zh: '奥克兰机场', ar: 'مطار أوكلاند' },
-      'NZWEL_AIR': { en: 'Wellington Airport', fr: 'Aéroport de Wellington', de: 'Flughafen Wellington', es: 'Aeropuerto de Wellington', it: 'Aeroporto di Wellington', nl: 'Luchthaven Wellington', pt: 'Aeroporto de Wellington', tr: 'Wellington Havaalanı', ru: 'Аэропорт Веллингтон', zh: '惠灵顿机场', ar: 'مطار ويلينغتون' },
-      'NZCHC_AIR': { en: 'Christchurch Airport', fr: 'Aéroport de Christchurch', de: 'Flughafen Christchurch', es: 'Aeropuerto de Christchurch', it: 'Aeroporto di Christchurch', nl: 'Luchthaven Christchurch', pt: 'Aeroporto de Christchurch', tr: 'Christchurch Havaalanı', ru: 'Аэропорт Крайстчерч', zh: '基督城机场', ar: 'مطار كرايستشيرش' },
-      
-      // === PAYS EN O - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇴🇲 Oman (Oman) - Sultanat du Golfe Persique
-      'OMSAL': { en: 'Port of Salalah', fr: 'Port de Salalah', de: 'Hafen Salalah', es: 'Puerto de Salalah', it: 'Porto di Salalah', nl: 'Haven van Salalah', pt: 'Porto de Salalah', tr: 'Salalah Limanı', ru: 'Порт Салала', zh: '萨拉拉港', ar: 'ميناء صلالة' },
-      'OMMUS': { en: 'Port of Muscat', fr: 'Port de Mascate', de: 'Hafen Maskat', es: 'Puerto de Mascate', it: 'Porto di Mascate', nl: 'Haven van Muscat', pt: 'Porto de Mascate', tr: 'Maskat Limanı', ru: 'Порт Маскат', zh: '马斯喀特港', ar: 'ميناء مسقط' },
-      'OMSOH': { en: 'Port of Sohar', fr: 'Port de Sohar', de: 'Hafen Sohar', es: 'Puerto de Sohar', it: 'Porto di Sohar', nl: 'Haven van Sohar', pt: 'Porto de Sohar', tr: 'Sohar Limanı', ru: 'Порт Сохар', zh: '苏哈尔港', ar: 'ميناء صحار' },
-      'OMMUS_AIR': { en: 'Muscat International Airport', fr: 'Aéroport international de Mascate', de: 'Internationaler Flughafen Maskat', es: 'Aeropuerto Internacional de Mascate', it: 'Aeroporto Internazionale di Mascate', nl: 'Internationale Luchthaven Muscat', pt: 'Aeroporto Internacional de Mascate', tr: 'Maskat Uluslararası Havaalanı', ru: 'Международный аэропорт Маскат', zh: '马斯喀特国际机场', ar: 'مطار مسقط الدولي' },
-      'OMSAL_AIR': { en: 'Salalah Airport', fr: 'Aéroport de Salalah', de: 'Flughafen Salalah', es: 'Aeropuerto de Salalah', it: 'Aeroporto di Salalah', nl: 'Luchthaven Salalah', pt: 'Aeroporto de Salalah', tr: 'Salalah Havaalanı', ru: 'Аэропорт Салала', zh: '萨拉拉机场', ar: 'مطار صلالة' },
-      
-      // === PAYS EN Q - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇶🇦 Qatar (Qatar) - Émirat gazier du Golfe
-      'QADOH': { en: 'Port of Doha', fr: 'Port de Doha', de: 'Hafen Doha', es: 'Puerto de Doha', it: 'Porto di Doha', nl: 'Haven van Doha', pt: 'Porto de Doha', tr: 'Doha Limanı', ru: 'Порт Доха', zh: '多哈港', ar: 'ميناء الدوحة' },
-      'QAMES': { en: 'Port of Mesaieed', fr: 'Port de Mesaieed', de: 'Hafen Mesaieed', es: 'Puerto de Mesaieed', it: 'Porto di Mesaieed', nl: 'Haven van Mesaieed', pt: 'Porto de Mesaieed', tr: 'Mesaieed Limanı', ru: 'Порт Месайеед', zh: '梅赛义德港', ar: 'ميناء مسيعيد' },
-      
-      // === PAYS EN R - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇷🇺 Russia (Russie) - Géant eurasiatique
-      'RULED': { en: 'Port of Saint Petersburg', fr: 'Port de Saint-Pétersbourg', de: 'Hafen Sankt Petersburg', es: 'Puerto de San Petersburgo', it: 'Porto di San Pietroburgo', nl: 'Haven van Sint-Petersburg', pt: 'Porto de São Petersburgo', tr: 'Sankt Petersburg Limanı', ru: 'Порт Санкт-Петербург', zh: '圣彼得堡港', ar: 'ميناء سانت بطرسبرغ' },
-      'RUNVS': { en: 'Port of Novorossiysk', fr: 'Port de Novorossiysk', de: 'Hafen Noworossijsk', es: 'Puerto de Novorossiysk', it: 'Porto di Novorossiysk', nl: 'Haven van Novorossiysk', pt: 'Porto de Novorossiysk', tr: 'Novorossiysk Limanı', ru: 'Порт Новороссийск', zh: '新罗西斯克港', ar: 'ميناء نوفوروسيسك' },
-      'RUVVO': { en: 'Port of Vladivostok', fr: 'Port de Vladivostok', de: 'Hafen Wladiwostok', es: 'Puerto de Vladivostok', it: 'Porto di Vladivostok', nl: 'Haven van Vladivostok', pt: 'Porto de Vladivostok', tr: 'Vladivostok Limanı', ru: 'Порт Владивосток', zh: '符拉迪沃斯托克港', ar: 'ميناء فلاديفوستوك' },
-      'RUSVO': { en: 'Moscow Sheremetyevo International Airport', fr: 'Aéroport international de Moscou Sheremetyevo', de: 'Internationaler Flughafen Moskau Scheremetjewo', es: 'Aeropuerto Internacional de Moscú Sheremetyevo', it: 'Aeroporto Internazionale di Mosca Sheremetyevo', nl: 'Internationale Luchthaven Moskou Sheremetyevo', pt: 'Aeroporto Internacional de Moscou Sheremetyevo', tr: 'Moskova Şeremetyevo Uluslararası Havaalanı', ru: 'Международный аэропорт Москва Шереметьево', zh: '莫斯科谢列梅捷沃国际机场', ar: 'مطار موسكو شيريميتيفو الدولي' },
-      'RULED_AIR': { en: 'Saint Petersburg Pulkovo Airport', fr: 'Aéroport de Saint-Pétersbourg Pulkovo', de: 'Flughafen Sankt Petersburg Pulkowo', es: 'Aeropuerto de San Petersburgo Pulkovo', it: 'Aeroporto di San Pietroburgo Pulkovo', nl: 'Luchthaven Sint-Petersburg Pulkovo', pt: 'Aeroporto de São Petersburgo Pulkovo', tr: 'Sankt Petersburg Pulkovo Havaalanı', ru: 'Аэропорт Санкт-Петербург Пулково', zh: '圣彼得堡普尔科沃机场', ar: 'مطار سانت بطرسبرغ بولكوفو' },
-      'RUMOS_RAIL': { en: 'Moscow Kazansky Railway Station', fr: 'Gare de Moscou Kazansky', de: 'Bahnhof Moskau Kasanski', es: 'Estación de Moscú Kazansky', it: 'Stazione di Mosca Kazansky', nl: 'Station Moskou Kazansky', pt: 'Estação de Moscou Kazansky', tr: 'Moskova Kazansky Tren İstasyonu', ru: 'Казанский вокзал', zh: '莫斯科喀山火车站', ar: 'محطة موسكو كازانسكي' },
-      'RULED_RAIL': { en: 'Saint Petersburg Baltic Station', fr: 'Gare baltique de Saint-Pétersbourg', de: 'Baltischer Bahnhof Sankt Petersburg', es: 'Estación Báltica de San Petersburgo', it: 'Stazione Baltica di San Pietroburgo', nl: 'Baltisch Station Sint-Petersburg', pt: 'Estação Báltica de São Petersburgo', tr: 'Sankt Petersburg Baltık İstasyonu', ru: 'Балтийский вокзал', zh: '圣彼得堡波罗的海火车站', ar: 'محطة سانت بطرسبرغ البلطيقية' },
-      
-      // 🇷🇴 Romania (Roumanie) - Gateway des Balkans (traductions améliorées)
-      'ROCND_AIR': { en: 'Constanta Airport', fr: 'Aéroport de Constanta', de: 'Flughafen Konstanza', es: 'Aeropuerto de Constanza', it: 'Aeroporto di Costanza', nl: 'Luchthaven Constanta', pt: 'Aeroporto de Constanta', tr: 'Köstence Havaalanı', ru: 'Аэропорт Констанца', zh: '康斯坦察机场', ar: 'مطار كونستانتا' },
-      'ROBUH_RAIL': { en: 'Bucharest North Railway Station', fr: 'Gare du Nord de Bucarest', de: 'Nordbahnhof Bukarest', es: 'Estación Norte de Bucarest', it: 'Stazione Nord di Bucarest', nl: 'Noordstation Boekarest', pt: 'Estação Norte de Bucareste', tr: 'Bükreş Kuzey Tren İstasyonu', ru: 'Северный вокзал Бухарест', zh: '布加勒斯特北站', ar: 'محطة بوخارست الشمالية' },
-      'ROCND_RAIL': { en: 'Constanta Railway Station', fr: 'Gare de Constanta', de: 'Bahnhof Konstanza', es: 'Estación de Constanza', it: 'Stazione di Costanza', nl: 'Station Constanta', pt: 'Estação de Constanta', tr: 'Köstence Tren İstasyonu', ru: 'Железнодорожная станция Констанца', zh: '康斯坦察火车站', ar: 'محطة كونستانتا للسكك الحديدية' },
-      
-      // 🇷🇸 Serbia (Serbie) - Cœur des Balkans
-      'RSBEG': { en: 'Port of Belgrade', fr: 'Port de Belgrade', de: 'Hafen Belgrad', es: 'Puerto de Belgrado', it: 'Porto di Belgrado', nl: 'Haven van Belgrado', pt: 'Porto de Belgrado', tr: 'Belgrad Limanı', ru: 'Порт Белград', zh: '贝尔格莱德港', ar: 'ميناء بلغراد' },
-      'RSNOV': { en: 'Port of Novi Sad', fr: 'Port de Novi Sad', de: 'Hafen Novi Sad', es: 'Puerto de Novi Sad', it: 'Porto di Novi Sad', nl: 'Haven van Novi Sad', pt: 'Porto de Novi Sad', tr: 'Novi Sad Limanı', ru: 'Порт Нови Сад', zh: '诺维萨德港', ar: 'ميناء نوفي ساد' },
-      'RSBEG_AIR': { en: 'Belgrade Nikola Tesla Airport', fr: 'Aéroport de Belgrade Nikola Tesla', de: 'Flughafen Belgrad Nikola Tesla', es: 'Aeropuerto de Belgrado Nikola Tesla', it: 'Aeroporto di Belgrado Nikola Tesla', nl: 'Luchthaven Belgrado Nikola Tesla', pt: 'Aeroporto de Belgrado Nikola Tesla', tr: 'Belgrad Nikola Tesla Havaalanı', ru: 'Аэропорт Белград имени Николы Теслы', zh: '贝尔格莱德尼古拉·特斯拉机场', ar: 'مطار بلغراد نيكولا تيسلا' },
-      'RSBEG_RAIL': { en: 'Belgrade Central Station', fr: 'Gare centrale de Belgrade', de: 'Hauptbahnhof Belgrad', es: 'Estación Central de Belgrado', it: 'Stazione Centrale di Belgrado', nl: 'Centraal Station Belgrado', pt: 'Estação Central de Belgrado', tr: 'Belgrad Merkez İstasyonu', ru: 'Центральный вокзал Белград', zh: '贝尔格莱德中央车站', ar: 'محطة بلغراد المركزية' },
-      
-      // 🇷🇼 Rwanda (Rwanda) - Perle de l'Afrique de l'Est (traduction améliorée)
-      'RWKGL_RAIL': { en: 'Kigali Railway Station', fr: 'Gare de Kigali', de: 'Bahnhof Kigali', es: 'Estación de Kigali', it: 'Stazione di Kigali', nl: 'Station Kigali', pt: 'Estação de Kigali', tr: 'Kigali Tren İstasyonu', ru: 'Железнодорожная станция Кигали', zh: '基加利火车站', ar: 'محطة كيغالي للسكك الحديدية' },
-      
-      // === PAYS EN S - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇸🇬 Singapore (Singapour) - Cité-État du commerce mondial
-      'SGSIN': { en: 'Port of Singapore', fr: 'Port de Singapour', de: 'Hafen Singapur', es: 'Puerto de Singapur', it: 'Porto di Singapore', nl: 'Haven van Singapore', pt: 'Porto de Singapura', tr: 'Singapur Limanı', ru: 'Порт Сингапур', zh: '新加坡港', ar: 'ميناء سنغافورة' },
-      'SGSIN_AIR': { en: 'Singapore Changi Airport', fr: 'Aéroport de Singapour Changi', de: 'Flughafen Singapur Changi', es: 'Aeropuerto de Singapur Changi', it: 'Aeroporto di Singapore Changi', nl: 'Luchthaven Singapore Changi', pt: 'Aeroporto de Singapura Changi', tr: 'Singapur Changi Havaalanı', ru: 'Аэропорт Сингапур Чанги', zh: '新加坡樟宜机场', ar: 'مطار سنغافورة تشانغي' },
-      
-      // 🇸🇪 Sweden (Suède) - Royaume nordique du design
-      'SEGOT': { en: 'Port of Gothenburg', fr: 'Port de Göteborg', de: 'Hafen Göteborg', es: 'Puerto de Gotemburgo', it: 'Porto di Göteborg', nl: 'Haven van Göteborg', pt: 'Porto de Gotemburgo', tr: 'Göteborg Limanı', ru: 'Порт Гётеборг', zh: '哥德堡港', ar: 'ميناء غوتنبرغ' },
-      'SESTO': { en: 'Port of Stockholm', fr: 'Port de Stockholm', de: 'Hafen Stockholm', es: 'Puerto de Estocolmo', it: 'Porto di Stoccolma', nl: 'Haven van Stockholm', pt: 'Porto de Estocolmo', tr: 'Stockholm Limanı', ru: 'Порт Стокгольм', zh: '斯德哥尔摩港', ar: 'ميناء ستوكهولم' },
-      'SEARN': { en: 'Stockholm Arlanda Airport', fr: 'Aéroport de Stockholm Arlanda', de: 'Flughafen Stockholm Arlanda', es: 'Aeropuerto de Estocolmo Arlanda', it: 'Aeroporto di Stoccolma Arlanda', nl: 'Luchthaven Stockholm Arlanda', pt: 'Aeroporto de Estocolmo Arlanda', tr: 'Stockholm Arlanda Havaalanı', ru: 'Аэропорт Стокгольм Арланда', zh: '斯德哥尔摩阿兰达机场', ar: 'مطار ستوكهولم أرلاندا' },
-      'SEGOT_AIR': { en: 'Gothenburg Landvetter Airport', fr: 'Aéroport de Göteborg Landvetter', de: 'Flughafen Göteborg Landvetter', es: 'Aeropuerto de Gotemburgo Landvetter', it: 'Aeroporto di Göteborg Landvetter', nl: 'Luchthaven Göteborg Landvetter', pt: 'Aeroporto de Gotemburgo Landvetter', tr: 'Göteborg Landvetter Havaalanı', ru: 'Аэропорт Гётеборг Ландветтер', zh: '哥德堡兰德维特机场', ar: 'مطار غوتنبرغ لاندفيتر' },
-      'SESTO_RAIL': { en: 'Stockholm Central Station', fr: 'Gare centrale de Stockholm', de: 'Hauptbahnhof Stockholm', es: 'Estación Central de Estocolmo', it: 'Stazione Centrale di Stoccolma', nl: 'Centraal Station Stockholm', pt: 'Estação Central de Estocolmo', tr: 'Stockholm Merkez İstasyonu', ru: 'Центральный вокзал Стокгольм', zh: '斯德哥尔摩中央车站', ar: 'محطة ستوكهولم المركزية' },
-      'SEGOT_RAIL': { en: 'Gothenburg Central Station', fr: 'Gare centrale de Göteborg', de: 'Hauptbahnhof Göteborg', es: 'Estación Central de Gotemburgo', it: 'Stazione Centrale di Göteborg', nl: 'Centraal Station Göteborg', pt: 'Estação Central de Gotemburgo', tr: 'Göteborg Merkez İstasyonu', ru: 'Центральный вокзал Гётеборг', zh: '哥德堡中央车站', ar: 'محطة غوتنبرغ المركزية' },
-      
-      // 🇸🇦 Saudi Arabia (Arabie saoudite) - Royaume du pétrole (traductions améliorées)
-      'SADAM': { en: 'Port of Dammam', fr: 'Port de Dammam', de: 'Hafen Dammam', es: 'Puerto de Dammam', it: 'Porto di Dammam', nl: 'Haven van Dammam', pt: 'Porto de Dammam', tr: 'Dammam Limanı', ru: 'Порт Даммам', zh: '达曼港', ar: 'ميناء الدمام' },
-      'SAYAN': { en: 'Port of Yanbu', fr: 'Port de Yanbu', de: 'Hafen Yanbu', es: 'Puerto de Yanbu', it: 'Porto di Yanbu', nl: 'Haven van Yanbu', pt: 'Porto de Yanbu', tr: 'Yanbu Limanı', ru: 'Порт Янбу', zh: '延布港', ar: 'ميناء ينبع' },
-      'SAJED_AIR': { en: 'Jeddah King Abdulaziz International Airport', fr: 'Aéroport international de Jeddah King Abdulaziz', de: 'Internationaler Flughafen Dschidda King Abdulaziz', es: 'Aeropuerto Internacional de Jeddah King Abdulaziz', it: 'Aeroporto Internazionale di Jeddah King Abdulaziz', nl: 'Internationale Luchthaven Jeddah King Abdulaziz', pt: 'Aeroporto Internacional de Jeddah King Abdulaziz', tr: 'Cidde Kral Abdülaziz Uluslararası Havaalanı', ru: 'Международный аэропорт Джидда имени короля Абдул-Азиза', zh: '吉达阿卜杜勒-阿齐兹国王国际机场', ar: 'مطار الملك عبد العزيز الدولي' },
-      'SADAM_AIR': { en: 'Dammam King Fahd International Airport', fr: 'Aéroport international de Dammam King Fahd', de: 'Internationaler Flughafen Dammam King Fahd', es: 'Aeropuerto Internacional de Dammam King Fahd', it: 'Aeroporto Internazionale di Dammam King Fahd', nl: 'Internationale Luchthaven Dammam King Fahd', pt: 'Aeroporto Internacional de Dammam King Fahd', tr: 'Dammam Kral Fahd Uluslararası Havaalanı', ru: 'Международный аэропорт Даммам имени короля Фахда', zh: '达曼法赫德国王国际机场', ar: 'مطار الملك فهد الدولي' },
-      
-      // 🇸🇰 Slovakia (Slovaquie) - Cœur de l'Europe centrale
-      'SKBTS': { en: 'Bratislava Milan Rastislav Štefánik Airport', fr: 'Aéroport de Bratislava Milan Rastislav Štefánik', de: 'Flughafen Bratislava Milan Rastislav Štefánik', es: 'Aeropuerto de Bratislava Milan Rastislav Štefánik', it: 'Aeroporto di Bratislava Milan Rastislav Štefánik', nl: 'Luchthaven Bratislava Milan Rastislav Štefánik', pt: 'Aeroporto de Bratislava Milan Rastislav Štefánik', tr: 'Bratislava Milan Rastislav Štefánik Havaalanı', ru: 'Аэропорт Братислава имени Милана Растислава Штефаника', zh: '布拉迪斯拉发米兰·拉斯蒂斯拉夫·什捷法尼克机场', ar: 'مطار براتيسلافا ميلان راستيسلاف شتيفانيك' },
-      'SKBTS_RAIL': { en: 'Bratislava Central Station', fr: 'Gare centrale de Bratislava', de: 'Hauptbahnhof Bratislava', es: 'Estación Central de Bratislava', it: 'Stazione Centrale di Bratislava', nl: 'Centraal Station Bratislava', pt: 'Estação Central de Bratislava', tr: 'Bratislava Merkez İstasyonu', ru: 'Центральный вокзал Братислава', zh: '布拉迪斯拉发中央车站', ar: 'محطة براتيسلافا المركزية' },
-      
-      // 🇸🇮 Slovenia (Slovénie) - Perle des Alpes adriatiques
-      'SIKOP': { en: 'Port of Koper', fr: 'Port de Koper', de: 'Hafen Koper', es: 'Puerto de Koper', it: 'Porto di Koper', nl: 'Haven van Koper', pt: 'Porto de Koper', tr: 'Koper Limanı', ru: 'Порт Копер', zh: '科佩尔港', ar: 'ميناء كوبر' },
-      'SILJU': { en: 'Ljubljana Jože Pučnik Airport', fr: 'Aéroport de Ljubljana Jože Pučnik', de: 'Flughafen Ljubljana Jože Pučnik', es: 'Aeropuerto de Liubliana Jože Pučnik', it: 'Aeroporto di Lubiana Jože Pučnik', nl: 'Luchthaven Ljubljana Jože Pučnik', pt: 'Aeroporto de Ljubljana Jože Pučnik', tr: 'Ljubljana Jože Pučnik Havaalanı', ru: 'Аэропорт Любляна имени Йоже Пучника', zh: '卢布尔雅那约热·普奇尼克机场', ar: 'مطار ليوبليانا يوجي بوتشنيك' },
-      'SILJU_RAIL': { en: 'Ljubljana Railway Station', fr: 'Gare de Ljubljana', de: 'Bahnhof Ljubljana', es: 'Estación de Liubliana', it: 'Stazione di Lubiana', nl: 'Station Ljubljana', pt: 'Estação de Ljubljana', tr: 'Ljubljana Tren İstasyonu', ru: 'Железнодорожная станция Любляна', zh: '卢布尔雅那火车站', ar: 'محطة ليوبليانا للسكك الحديدية' },
-      
-      // 🇸🇳 Senegal (Sénégal) - Portail de l'Afrique de l'Ouest
-      'SNDKR': { en: 'Port of Dakar', fr: 'Port de Dakar', de: 'Hafen Dakar', es: 'Puerto de Dakar', it: 'Porto di Dakar', nl: 'Haven van Dakar', pt: 'Porto de Dakar', tr: 'Dakar Limanı', ru: 'Порт Дакар', zh: '达喀尔港', ar: 'ميناء داكار' },
-      'SNDSS': { en: 'Dakar Blaise Diagne International Airport', fr: 'Aéroport international de Dakar Blaise Diagne', de: 'Internationaler Flughafen Dakar Blaise Diagne', es: 'Aeropuerto Internacional de Dakar Blaise Diagne', it: 'Aeroporto Internazionale di Dakar Blaise Diagne', nl: 'Internationale Luchthaven Dakar Blaise Diagne', pt: 'Aeroporto Internacional de Dakar Blaise Diagne', tr: 'Dakar Blaise Diagne Uluslararası Havaalanı', ru: 'Международный аэропорт Дакар имени Блеза Диана', zh: '达喀尔布莱兹·迪亚涅国际机场', ar: 'مطار داكار بليز دياغني الدولي' },
-      'SNDKR_RAIL': { en: 'Dakar Railway Station', fr: 'Gare de Dakar', de: 'Bahnhof Dakar', es: 'Estación de Dakar', it: 'Stazione di Dakar', nl: 'Station Dakar', pt: 'Estação de Dakar', tr: 'Dakar Tren İstasyonu', ru: 'Железнодорожная станция Дакар', zh: '达喀尔火车站', ar: 'محطة داكار للسكك الحديدية' },
-      
-      // 🇸🇨 Seychelles (Seychelles) - Perle de l'océan Indien (traductions améliorées)
-      'SCPRS': { en: 'Port of Praslin', fr: 'Port de Praslin', de: 'Hafen Praslin', es: 'Puerto de Praslin', it: 'Porto di Praslin', nl: 'Haven van Praslin', pt: 'Porto de Praslin', tr: 'Praslin Limanı', ru: 'Порт Праслин', zh: '普拉兰港', ar: 'ميناء براسلين' },
-      'SCVIC_AIR': { en: 'Mahé Seychelles International Airport', fr: 'Aéroport international de Mahé Seychelles', de: 'Internationaler Flughafen Mahé Seychellen', es: 'Aeropuerto Internacional de Mahé Seychelles', it: 'Aeroporto Internazionale di Mahé Seychelles', nl: 'Internationale Luchthaven Mahé Seychellen', pt: 'Aeroporto Internacional de Mahé Seychelles', tr: 'Mahé Seyşeller Uluslararası Havaalanı', ru: 'Международный аэропорт Маэ Сейшелы', zh: '马埃塞舌尔国际机场', ar: 'مطار ماهي سيشيل الدولي' },
-      'SCPRS_AIR': { en: 'Praslin Airport', fr: 'Aéroport de Praslin', de: 'Flughafen Praslin', es: 'Aeropuerto de Praslin', it: 'Aeroporto di Praslin', nl: 'Luchthaven Praslin', pt: 'Aeroporto de Praslin', tr: 'Praslin Havaalanı', ru: 'Аэропорт Праслин', zh: '普拉兰机场', ar: 'مطار براسلين' },
-      
-      // === PAYS EN T - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇹🇭 Thailand (Thaïlande) - Royaume du sourire
-      'THLCH': { en: 'Port of Laem Chabang', fr: 'Port de Laem Chabang', de: 'Hafen Laem Chabang', es: 'Puerto de Laem Chabang', it: 'Porto di Laem Chabang', nl: 'Haven van Laem Chabang', pt: 'Porto de Laem Chabang', tr: 'Laem Chabang Limanı', ru: 'Порт Лаем Чабанг', zh: '林查班港', ar: 'ميناء ليم تشابانغ' },
-      'THBKK': { en: 'Port of Bangkok', fr: 'Port de Bangkok', de: 'Hafen Bangkok', es: 'Puerto de Bangkok', it: 'Porto di Bangkok', nl: 'Haven van Bangkok', pt: 'Porto de Bangkok', tr: 'Bangkok Limanı', ru: 'Порт Бангкок', zh: '曼谷港', ar: 'ميناء بانكوك' },
-      'THBKK_AIR': { en: 'Bangkok Suvarnabhumi Airport', fr: 'Aéroport de Bangkok Suvarnabhumi', de: 'Flughafen Bangkok Suvarnabhumi', es: 'Aeropuerto de Bangkok Suvarnabhumi', it: 'Aeroporto di Bangkok Suvarnabhumi', nl: 'Luchthaven Bangkok Suvarnabhumi', pt: 'Aeroporto de Bangkok Suvarnabhumi', tr: 'Bangkok Suvarnabhumi Havaalanı', ru: 'Аэропорт Бангкок Суварнабхуми', zh: '曼谷素万那普机场', ar: 'مطار بانكوك سوفارنابومي' },
-      
-      // 🇹🇷 Turkey (Turquie) - Pont entre l'Europe et l'Asie
-      'TRAMB': { en: 'Port of Ambarli', fr: 'Port d\'Ambarli', de: 'Hafen Ambarli', es: 'Puerto de Ambarli', it: 'Porto di Ambarli', nl: 'Haven van Ambarli', pt: 'Porto de Ambarli', tr: 'Ambarlı Limanı', ru: 'Порт Амбарлы', zh: '安巴利港', ar: 'ميناء أمبارلي' },
-      'TRIST': { en: 'Port of Istanbul', fr: 'Port d\'Istanbul', de: 'Hafen Istanbul', es: 'Puerto de Estambul', it: 'Porto di Istanbul', nl: 'Haven van Istanbul', pt: 'Porto de Istambul', tr: 'İstanbul Limanı', ru: 'Порт Стамбул', zh: '伊斯坦布尔港', ar: 'ميناء اسطنبول' },
-      'TRIZM': { en: 'Port of Izmir', fr: 'Port d\'Izmir', de: 'Hafen Izmir', es: 'Puerto de Esmirna', it: 'Porto di Smirne', nl: 'Haven van Izmir', pt: 'Porto de Esmirna', tr: 'İzmir Limanı', ru: 'Порт Измир', zh: '伊兹密尔港', ar: 'ميناء إزمير' },
-      'TRIST_AIR': { en: 'Istanbul Airport', fr: 'Aéroport d\'Istanbul', de: 'Flughafen Istanbul', es: 'Aeropuerto de Estambul', it: 'Aeroporto di Istanbul', nl: 'Luchthaven Istanbul', pt: 'Aeroporto de Istambul', tr: 'İstanbul Havaalanı', ru: 'Аэропорт Стамбул', zh: '伊斯坦布尔机场', ar: 'مطار اسطنبول' },
-      'TRSAW': { en: 'Sabiha Gökçen Airport', fr: 'Aéroport de Sabiha Gökçen', de: 'Flughafen Sabiha Gökçen', es: 'Aeropuerto de Sabiha Gökçen', it: 'Aeroporto di Sabiha Gökçen', nl: 'Luchthaven Sabiha Gökçen', pt: 'Aeroporto de Sabiha Gökçen', tr: 'Sabiha Gökçen Havaalanı', ru: 'Аэропорт Сабиха Гёкчен', zh: '萨比哈·格克琴机场', ar: 'مطار صبيحة غوكتشين' },
-      'TRIZM_AIR': { en: 'Izmir Adnan Menderes Airport', fr: 'Aéroport d\'Izmir Adnan Menderes', de: 'Flughafen Izmir Adnan Menderes', es: 'Aeropuerto de Esmirna Adnan Menderes', it: 'Aeroporto di Smirne Adnan Menderes', nl: 'Luchthaven Izmir Adnan Menderes', pt: 'Aeroporto de Esmirna Adnan Menderes', tr: 'İzmir Adnan Menderes Havaalanı', ru: 'Аэропорт Измир имени Аднана Мендереса', zh: '伊兹密尔阿德南·门德雷斯机场', ar: 'مطار إزمير عدنان مندريس' },
-      
-      // 🇹🇼 Taiwan (Taïwan) - Formose asiatique (traductions améliorées)
-      'TWTPE': { en: 'Port of Taipei', fr: 'Port de Taipei', de: 'Hafen Taipei', es: 'Puerto de Taipéi', it: 'Porto di Taipei', nl: 'Haven van Taipei', pt: 'Porto de Taipei', tr: 'Taipei Limanı', ru: 'Порт Тайбэй', zh: '台北港', ar: 'ميناء تايبيه' },
-      'TWTCG': { en: 'Port of Taichung', fr: 'Port de Taichung', de: 'Hafen Taichung', es: 'Puerto de Taichung', it: 'Porto di Taichung', nl: 'Haven van Taichung', pt: 'Porto de Taichung', tr: 'Taichung Limanı', ru: 'Порт Тайчжун', zh: '台中港', ar: 'ميناء تايتشونغ' },
-      'TWKHH_AIR': { en: 'Kaohsiung International Airport', fr: 'Aéroport international de Kaohsiung', de: 'Internationaler Flughafen Kaohsiung', es: 'Aeropuerto Internacional de Kaohsiung', it: 'Aeroporto Internazionale di Kaohsiung', nl: 'Internationale Luchthaven Kaohsiung', pt: 'Aeroporto Internacional de Kaohsiung', tr: 'Kaohsiung Uluslararası Havaalanı', ru: 'Международный аэропорт Гаосюн', zh: '高雄国际机场', ar: 'مطار كاوهسيونغ الدولي' },
-      'TWTPE_RAIL': { en: 'Taipei Main Station', fr: 'Gare principale de Taipei', de: 'Hauptbahnhof Taipei', es: 'Estación Principal de Taipéi', it: 'Stazione Principale di Taipei', nl: 'Hoofdstation Taipei', pt: 'Estação Principal de Taipei', tr: 'Taipei Ana İstasyonu', ru: 'Главный вокзал Тайбэй', zh: '台北车站', ar: 'محطة تايبيه الرئيسية' },
-      'TWKHH_RAIL': { en: 'Kaohsiung Railway Station', fr: 'Gare de Kaohsiung', de: 'Bahnhof Kaohsiung', es: 'Estación de Kaohsiung', it: 'Stazione di Kaohsiung', nl: 'Station Kaohsiung', pt: 'Estação de Kaohsiung', tr: 'Kaohsiung Tren İstasyonu', ru: 'Железнодорожная станция Гаосюн', zh: '高雄车站', ar: 'محطة كاوهسيونغ للسكك الحديدية' },
-      
-      // 🇹🇳 Tunisia (Tunisie) - Perle du Maghreb
-      'TNTU1': { en: 'Port of Tunis', fr: 'Port de Tunis', de: 'Hafen Tunis', es: 'Puerto de Túnez', it: 'Porto di Tunisi', nl: 'Haven van Tunis', pt: 'Porto de Tunes', tr: 'Tunus Limanı', ru: 'Порт Тунис', zh: '突尼斯港', ar: 'ميناء تونس' },
-      'TNSFA': { en: 'Port of Sfax', fr: 'Port de Sfax', de: 'Hafen Sfax', es: 'Puerto de Sfax', it: 'Porto di Sfax', nl: 'Haven van Sfax', pt: 'Porto de Sfax', tr: 'Sfaks Limanı', ru: 'Порт Сфакс', zh: '斯法克斯港', ar: 'ميناء صفاقس' },
-      'TNRAD': { en: 'Port of Radès', fr: 'Port de Radès', de: 'Hafen Radès', es: 'Puerto de Radès', it: 'Porto di Radès', nl: 'Haven van Radès', pt: 'Porto de Radès', tr: 'Radès Limanı', ru: 'Порт Радес', zh: '拉代斯港', ar: 'ميناء رادس' },
-      'TNTU1_AIR': { en: 'Tunis-Carthage Airport', fr: 'Aéroport de Tunis-Carthage', de: 'Flughafen Tunis-Karthago', es: 'Aeropuerto de Túnez-Cartago', it: 'Aeroporto di Tunisi-Cartagine', nl: 'Luchthaven Tunis-Carthago', pt: 'Aeroporto de Tunes-Cartago', tr: 'Tunus-Kartaca Havaalanı', ru: 'Аэропорт Тунис-Карфаген', zh: '突尼斯-迦太基机场', ar: 'مطار تونس قرطاج' },
-      'TNTU1_RAIL': { en: 'Tunis Central Station', fr: 'Gare centrale de Tunis', de: 'Hauptbahnhof Tunis', es: 'Estación Central de Túnez', it: 'Stazione Centrale di Tunisi', nl: 'Centraal Station Tunis', pt: 'Estação Central de Tunes', tr: 'Tunus Merkez İstasyonu', ru: 'Центральный вокзал Тунис', zh: '突尼斯中央车站', ar: 'محطة تونس المركزية' },
-      
-      // 🇹🇹 Trinidad and Tobago (Trinité-et-Tobago) - Perles des Caraïbes
-      'TTPOS': { en: 'Port of Port of Spain', fr: 'Port de Port of Spain', de: 'Hafen Port of Spain', es: 'Puerto de Puerto España', it: 'Porto di Port of Spain', nl: 'Haven van Port of Spain', pt: 'Porto de Port of Spain', tr: 'Port of Spain Limanı', ru: 'Порт Порт-оф-Спейн', zh: '西班牙港港口', ar: 'ميناء بورت أوف سبين' },
-      'TTCOU': { en: 'Port of Point Lisas', fr: 'Port de Point Lisas', de: 'Hafen Point Lisas', es: 'Puerto de Point Lisas', it: 'Porto di Point Lisas', nl: 'Haven van Point Lisas', pt: 'Porto de Point Lisas', tr: 'Point Lisas Limanı', ru: 'Порт Пойнт Лисас', zh: '利萨斯角港', ar: 'ميناء بوينت ليساس' },
-      'TTPOS_AIR': { en: 'Port of Spain Piarco International Airport', fr: 'Aéroport international de Port of Spain Piarco', de: 'Internationaler Flughafen Port of Spain Piarco', es: 'Aeropuerto Internacional de Puerto España Piarco', it: 'Aeroporto Internazionale di Port of Spain Piarco', nl: 'Internationale Luchthaven Port of Spain Piarco', pt: 'Aeroporto Internacional de Port of Spain Piarco', tr: 'Port of Spain Piarco Uluslararası Havaalanı', ru: 'Международный аэропорт Порт-оф-Спейн Пиарко', zh: '西班牙港皮亚尔科国际机场', ar: 'مطار بورت أوف سبين بيارko الدولي' },
-      
-      // 🇹🇿 Tanzania (Tanzanie) - Berceau de l'humanité (traductions améliorées)
-      'TZMTW': { en: 'Port of Mtwara', fr: 'Port de Mtwara', de: 'Hafen Mtwara', es: 'Puerto de Mtwara', it: 'Porto di Mtwara', nl: 'Haven van Mtwara', pt: 'Porto de Mtwara', tr: 'Mtwara Limanı', ru: 'Порт Мтвара', zh: '姆特瓦拉港', ar: 'ميناء متوارا' },
-      'TZMZA': { en: 'Port of Mwanza', fr: 'Port de Mwanza', de: 'Hafen Mwanza', es: 'Puerto de Mwanza', it: 'Porto di Mwanza', nl: 'Haven van Mwanza', pt: 'Porto de Mwanza', tr: 'Mwanza Limanı', ru: 'Порт Мванза', zh: '姆万扎港', ar: 'ميناء موانزا' },
-      'TZDAR_AIR': { en: 'Dar es Salaam Julius Nyerere International Airport', fr: 'Aéroport international de Dar es Salaam Julius Nyerere', de: 'Internationaler Flughafen Dar es Salaam Julius Nyerere', es: 'Aeropuerto Internacional de Dar es Salaam Julius Nyerere', it: 'Aeroporto Internazionale di Dar es Salaam Julius Nyerere', nl: 'Internationale Luchthaven Dar es Salaam Julius Nyerere', pt: 'Aeroporto Internacional de Dar es Salaam Julius Nyerere', tr: 'Dar es Salaam Julius Nyerere Uluslararası Havaalanı', ru: 'Международный аэропорт Дар-эс-Салам имени Джулиуса Ньерере', zh: '达累斯萨拉姆朱利叶斯·尼雷尔国际机场', ar: 'مطار دار السلام جوليوس نيريري الدولي' },
-      'TZKIL': { en: 'Kilimanjaro International Airport', fr: 'Aéroport international du Kilimandjaro', de: 'Internationaler Flughafen Kilimandscharo', es: 'Aeropuerto Internacional del Kilimanjaro', it: 'Aeroporto Internazionale del Kilimanjaro', nl: 'Internationale Luchthaven Kilimanjaro', pt: 'Aeroporto Internacional do Kilimanjaro', tr: 'Kilimanjaro Uluslararası Havaalanı', ru: 'Международный аэропорт Килиманджаро', zh: '乞力马扎罗国际机场', ar: 'مطار كليمنجارو الدولي' },
-      'TZDAR_RAIL': { en: 'Dar es Salaam Railway Station', fr: 'Gare de Dar es Salaam', de: 'Bahnhof Dar es Salaam', es: 'Estación de Dar es Salaam', it: 'Stazione di Dar es Salaam', nl: 'Station Dar es Salaam', pt: 'Estação de Dar es Salaam', tr: 'Dar es Salaam Tren İstasyonu', ru: 'Железнодорожная станция Дар-эс-Салам', zh: '达累斯萨拉姆火车站', ar: 'محطة دار السلام للسكك الحديدية' },
-      'TZMZA_RAIL': { en: 'Mwanza Railway Station', fr: 'Gare de Mwanza', de: 'Bahnhof Mwanza', es: 'Estación de Mwanza', it: 'Stazione di Mwanza', nl: 'Station Mwanza', pt: 'Estação de Mwanza', tr: 'Mwanza Tren İstasyonu', ru: 'Железнодорожная станция Мванза', zh: '姆万扎火车站', ar: 'محطة موانزا للسكك الحديدية' },
-      
-      // === PAYS EN U - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇺🇸 United States (États-Unis) - Superpuissance mondiale (traductions améliorées)
-      'USLAX': { en: 'Port of Los Angeles', fr: 'Port de Los Angeles', de: 'Hafen Los Angeles', es: 'Puerto de Los Ángeles', it: 'Porto di Los Angeles', nl: 'Haven van Los Angeles', pt: 'Porto de Los Angeles', tr: 'Los Angeles Limanı', ru: 'Порт Лос-Анджелес', zh: '洛杉矶港', ar: 'ميناء لوس أنجلوس' },
-      'USLGB': { en: 'Port of Long Beach', fr: 'Port de Long Beach', de: 'Hafen Long Beach', es: 'Puerto de Long Beach', it: 'Porto di Long Beach', nl: 'Haven van Long Beach', pt: 'Porto de Long Beach', tr: 'Long Beach Limanı', ru: 'Порт Лонг-Бич', zh: '长滩港', ar: 'ميناء لونغ بيتش' },
-      'USNYC': { en: 'Port of New York/New Jersey', fr: 'Port de New York/New Jersey', de: 'Hafen New York/New Jersey', es: 'Puerto de Nueva York/Nueva Jersey', it: 'Porto di New York/New Jersey', nl: 'Haven van New York/New Jersey', pt: 'Porto de Nova York/Nova Jersey', tr: 'New York/New Jersey Limanı', ru: 'Порт Нью-Йорк/Нью-Джерси', zh: '纽约/新泽西港', ar: 'ميناء نيويورك/نيو جيرسي' },
-      'USSAV': { en: 'Port of Savannah', fr: 'Port de Savannah', de: 'Hafen Savannah', es: 'Puerto de Savannah', it: 'Porto di Savannah', nl: 'Haven van Savannah', pt: 'Porto de Savannah', tr: 'Savannah Limanı', ru: 'Порт Саванна', zh: '萨凡纳港', ar: 'ميناء سافانا' },
-      'USSEA': { en: 'Port of Seattle', fr: 'Port de Seattle', de: 'Hafen Seattle', es: 'Puerto de Seattle', it: 'Porto di Seattle', nl: 'Haven van Seattle', pt: 'Porto de Seattle', tr: 'Seattle Limanı', ru: 'Порт Сиэтл', zh: '西雅图港', ar: 'ميناء سياتل' },
-      'USTAC': { en: 'Port of Tacoma', fr: 'Port de Tacoma', de: 'Hafen Tacoma', es: 'Puerto de Tacoma', it: 'Porto di Tacoma', nl: 'Haven van Tacoma', pt: 'Porto de Tacoma', tr: 'Tacoma Limanı', ru: 'Порт Такома', zh: '塔科马港', ar: 'ميناء تاكوما' },
-      'USHOU': { en: 'Port of Houston', fr: 'Port de Houston', de: 'Hafen Houston', es: 'Puerto de Houston', it: 'Porto di Houston', nl: 'Haven van Houston', pt: 'Porto de Houston', tr: 'Houston Limanı', ru: 'Порт Хьюстон', zh: '休斯顿港', ar: 'ميناء هيوستن' },
-      'USMIA': { en: 'Port of Miami', fr: 'Port de Miami', de: 'Hafen Miami', es: 'Puerto de Miami', it: 'Porto di Miami', nl: 'Haven van Miami', pt: 'Porto de Miami', tr: 'Miami Limanı', ru: 'Порт Майами', zh: '迈阿密港', ar: 'ميناء ميامي' },
-      'USMEM': { en: 'Memphis International Airport', fr: 'Aéroport international de Memphis', de: 'Internationaler Flughafen Memphis', es: 'Aeropuerto Internacional de Memphis', it: 'Aeroporto Internazionale di Memphis', nl: 'Internationale Luchthaven Memphis', pt: 'Aeroporto Internacional de Memphis', tr: 'Memphis Uluslararası Havaalanı', ru: 'Международный аэропорт Мемфис', zh: '孟菲斯国际机场', ar: 'مطار ممفيس الدولي' },
-      'USANC': { en: 'Anchorage Ted Stevens Airport', fr: 'Aéroport Ted Stevens d\'Anchorage', de: 'Flughafen Anchorage Ted Stevens', es: 'Aeropuerto Ted Stevens de Anchorage', it: 'Aeroporto Ted Stevens di Anchorage', nl: 'Luchthaven Anchorage Ted Stevens', pt: 'Aeroporto Ted Stevens de Anchorage', tr: 'Anchorage Ted Stevens Havaalanı', ru: 'Аэропорт Анкоридж имени Теда Стивенса', zh: '安克雷奇泰德·史蒂文斯机场', ar: 'مطار أنكوريج تيد ستيفنز' },
-      'USMIA_AIR': { en: 'Miami International Airport', fr: 'Aéroport international de Miami', de: 'Internationaler Flughafen Miami', es: 'Aeropuerto Internacional de Miami', it: 'Aeroporto Internazionale di Miami', nl: 'Internationale Luchthaven Miami', pt: 'Aeroporto Internacional de Miami', tr: 'Miami Uluslararası Havaalanı', ru: 'Международный аэропорт Майами', zh: '迈阿密国际机场', ar: 'مطار ميامي الدولي' },
-      'USNYC_RAIL': { en: 'New York Penn Station', fr: 'Gare Pennsylvania de New York', de: 'Bahnhof New York Penn Station', es: 'Estación Pennsylvania de Nueva York', it: 'Stazione Pennsylvania di New York', nl: 'Penn Station New York', pt: 'Estação Pennsylvania de Nova York', tr: 'New York Penn İstasyonu', ru: 'Пенсильванский вокзал Нью-Йорк', zh: '纽约宾夕法尼亚车站', ar: 'محطة نيويورك بنسلفانيا' },
-      'USCHI_RAIL': { en: 'Chicago Union Station', fr: 'Gare Union de Chicago', de: 'Union Station Chicago', es: 'Estación Union de Chicago', it: 'Stazione Union di Chicago', nl: 'Union Station Chicago', pt: 'Estação Union de Chicago', tr: 'Chicago Union İstasyonu', ru: 'Юнион-стейшн Чикаго', zh: '芝加哥联合车站', ar: 'محطة شيكاغو يونيون' },
-      'USLAX_RAIL': { en: 'Los Angeles Union Station', fr: 'Gare Union de Los Angeles', de: 'Union Station Los Angeles', es: 'Estación Union de Los Ángeles', it: 'Stazione Union di Los Angeles', nl: 'Union Station Los Angeles', pt: 'Estação Union de Los Angeles', tr: 'Los Angeles Union İstasyonu', ru: 'Юнион-стейшн Лос-Анджелес', zh: '洛杉矶联合车站', ar: 'محطة لوس أنجلوس يونيون' },
-      
-      // 🇺🇦 Ukraine (Ukraine) - Grenier de l'Europe
-      'UAODE': { en: 'Port of Odesa', fr: 'Port d\'Odessa', de: 'Hafen Odessa', es: 'Puerto de Odesa', it: 'Porto di Odessa', nl: 'Haven van Odessa', pt: 'Porto de Odessa', tr: 'Odessa Limanı', ru: 'Порт Одесса', zh: '敖德萨港', ar: 'ميناء أوديسا' },
-      'UAIEV': { en: 'Port of Chornomorsk', fr: 'Port de Chornomorsk', de: 'Hafen Tschornomorsk', es: 'Puerto de Chornomorsk', it: 'Porto di Chornomorsk', nl: 'Haven van Chornomorsk', pt: 'Porto de Chornomorsk', tr: 'Çornomorsk Limanı', ru: 'Порт Черноморск', zh: '切尔诺莫尔斯克港', ar: 'ميناء تشورنومورسك' },
-      'UAMYK': { en: 'Port of Mykolaiv', fr: 'Port de Mykolaiv', de: 'Hafen Mykolajiw', es: 'Puerto de Mykolaiv', it: 'Porto di Mykolaiv', nl: 'Haven van Mykolaiv', pt: 'Porto de Mykolaiv', tr: 'Mikolayiv Limanı', ru: 'Порт Николаев', zh: '尼古拉耶夫港', ar: 'ميناء ميكولايف' },
-      'UAKBP': { en: 'Kyiv Boryspil International Airport', fr: 'Aéroport international de Kiev Boryspil', de: 'Internationaler Flughafen Kiew Boryspil', es: 'Aeropuerto Internacional de Kiev Boryspil', it: 'Aeroporto Internazionale di Kiev Boryspil', nl: 'Internationale Luchthaven Kiev Boryspil', pt: 'Aeroporto Internacional de Kiev Boryspil', tr: 'Kiev Boryspil Uluslararası Havaalanı', ru: 'Международный аэропорт Киев Борисполь', zh: '基辅鲍里斯波尔国际机场', ar: 'مطار كييف بوريسبيل الدولي' },
-      'UAODS': { en: 'Odesa International Airport', fr: 'Aéroport international d\'Odessa', de: 'Internationaler Flughafen Odessa', es: 'Aeropuerto Internacional de Odesa', it: 'Aeroporto Internazionale di Odessa', nl: 'Internationale Luchthaven Odessa', pt: 'Aeroporto Internacional de Odessa', tr: 'Odessa Uluslararası Havaalanı', ru: 'Международный аэропорт Одесса', zh: '敖德萨国际机场', ar: 'مطار أوديسا الدولي' },
-      'UAKIV_RAIL': { en: 'Kyiv Central Railway Station', fr: 'Gare centrale de Kiev', de: 'Hauptbahnhof Kiew', es: 'Estación Central de Kiev', it: 'Stazione Centrale di Kiev', nl: 'Centraal Station Kiev', pt: 'Estação Central de Kiev', tr: 'Kiev Merkez Tren İstasyonu', ru: 'Центральный железнодорожный вокзал Киев', zh: '基辅中央火车站', ar: 'محطة كييف المركزية للسكك الحديدية' },
-      'UAODE_RAIL': { en: 'Odesa Railway Station', fr: 'Gare d\'Odessa', de: 'Bahnhof Odessa', es: 'Estación de Odesa', it: 'Stazione di Odessa', nl: 'Station Odessa', pt: 'Estação de Odessa', tr: 'Odessa Tren İstasyonu', ru: 'Железнодорожная станция Одесса', zh: '敖德萨火车站', ar: 'محطة أوديسا للسكك الحديدية' },
-      
-      // 🇺🇾 Uruguay (Uruguay) - Suisse de l'Amérique du Sud
-      'UYMVD': { en: 'Port of Montevideo', fr: 'Port de Montevideo', de: 'Hafen Montevideo', es: 'Puerto de Montevideo', it: 'Porto di Montevideo', nl: 'Haven van Montevideo', pt: 'Porto de Montevidéu', tr: 'Montevideo Limanı', ru: 'Порт Монтевидео', zh: '蒙得维的亚港', ar: 'ميناء مونتيفيديو' },
-      'UYMVD_AIR': { en: 'Montevideo Carrasco International Airport', fr: 'Aéroport international de Montevideo Carrasco', de: 'Internationaler Flughafen Montevideo Carrasco', es: 'Aeropuerto Internacional de Montevideo Carrasco', it: 'Aeroporto Internazionale di Montevideo Carrasco', nl: 'Internationale Luchthaven Montevideo Carrasco', pt: 'Aeroporto Internacional de Montevidéu Carrasco', tr: 'Montevideo Carrasco Uluslararası Havaalanı', ru: 'Международный аэропорт Монтевидео Карраско', zh: '蒙得维的亚卡拉斯科国际机场', ar: 'مطار مونتيفيديو كاراسكو الدولي' },
-      'UYMVD_RAIL': { en: 'Montevideo Central Station', fr: 'Gare centrale de Montevideo', de: 'Hauptbahnhof Montevideo', es: 'Estación Central de Montevideo', it: 'Stazione Centrale di Montevideo', nl: 'Centraal Station Montevideo', pt: 'Estação Central de Montevidéu', tr: 'Montevideo Merkez İstasyonu', ru: 'Центральный вокзал Монтевидео', zh: '蒙得维的亚中央车站', ar: 'محطة مونتيفيديو المركزية' },
-      
-      // 🇺🇬 Uganda (Ouganda) - Perle de l'Afrique (traductions améliorées)
-      'UGKMP': { en: 'Port of Kampala', fr: 'Port de Kampala', de: 'Hafen Kampala', es: 'Puerto de Kampala', it: 'Porto di Kampala', nl: 'Haven van Kampala', pt: 'Porto de Kampala', tr: 'Kampala Limanı', ru: 'Порт Кампала', zh: '坎帕拉港', ar: 'ميناء كامبالا' },
-      'UGENT': { en: 'Port of Entebbe', fr: 'Port d\'Entebbe', de: 'Hafen Entebbe', es: 'Puerto de Entebbe', it: 'Porto di Entebbe', nl: 'Haven van Entebbe', pt: 'Porto de Entebbe', tr: 'Entebbe Limanı', ru: 'Порт Энтеббе', zh: '恩德培港', ar: 'ميناء عنتيبي' },
-      'UGKMP_RAIL': { en: 'Kampala Railway Station', fr: 'Gare de Kampala', de: 'Bahnhof Kampala', es: 'Estación de Kampala', it: 'Stazione di Kampala', nl: 'Station Kampala', pt: 'Estação de Kampala', tr: 'Kampala Tren İstasyonu', ru: 'Железнодорожная станция Кампала', zh: '坎帕拉火车站', ar: 'محطة كامبالا للسكك الحديدية' },
-      
-      // === PAYS EN V - TRADUCTIONS COMPLÈTES ===
-      
-      // 🇻🇳 Vietnam (Vietnam) - Dragon d'Asie du Sud-Est (traductions excellentes)
-      'VNSGN': { en: 'Port of Ho Chi Minh City', fr: 'Port d\'Hô Chi Minh-Ville', de: 'Hafen Ho-Chi-Minh-Stadt', es: 'Puerto de Ciudad Ho Chi Minh', it: 'Porto di Ho Chi Minh', nl: 'Haven van Ho Chi Minh Stad', pt: 'Porto de Ho Chi Minh', tr: 'Ho Chi Minh Şehri Limanı', ru: 'Порт Хошимин', zh: '胡志明市港', ar: 'ميناء هو تشي مين' },
-      'VNHAN': { en: 'Port of Haiphong', fr: 'Port de Haïphong', de: 'Hafen Haiphong', es: 'Puerto de Haiphong', it: 'Porto di Haiphong', nl: 'Haven van Haiphong', pt: 'Porto de Haiphong', tr: 'Haiphong Limanı', ru: 'Порт Хайфон', zh: '海防港', ar: 'ميناء هايفونغ' },
-      'VNDAN': { en: 'Port of Da Nang', fr: 'Port de Da Nang', de: 'Hafen Da Nang', es: 'Puerto de Da Nang', it: 'Porto di Da Nang', nl: 'Haven van Da Nang', pt: 'Porto de Da Nang', tr: 'Da Nang Limanı', ru: 'Порт Дананг', zh: '岘港', ar: 'ميناء دا نانغ' },
-      'VNSGN_AIR': { en: 'Ho Chi Minh City Tan Son Nhat International Airport', fr: 'Aéroport international Tan Son Nhat d\'Hô Chi Minh-Ville', de: 'Internationaler Flughafen Tan Son Nhat Ho-Chi-Minh-Stadt', es: 'Aeropuerto Internacional Tan Son Nhat de Ciudad Ho Chi Minh', it: 'Aeroporto Internazionale Tan Son Nhat di Ho Chi Minh', nl: 'Internationale Luchthaven Tan Son Nhat Ho Chi Minh Stad', pt: 'Aeroporto Internacional Tan Son Nhat de Ho Chi Minh', tr: 'Ho Chi Minh Şehri Tan Son Nhat Uluslararası Havaalanı', ru: 'Международный аэропорт Таншоннят Хошимин', zh: '胡志明市新山一国际机场', ar: 'مطار هو تشي مين تان سون نهات الدولي' },
-      'VNHAN_AIR': { en: 'Hanoi Noi Bai International Airport', fr: 'Aéroport international Noi Bai de Hanoï', de: 'Internationaler Flughafen Noi Bai Hanoi', es: 'Aeropuerto Internacional Noi Bai de Hanoi', it: 'Aeroporto Internazionale Noi Bai di Hanoi', nl: 'Internationale Luchthaven Noi Bai Hanoi', pt: 'Aeroporto Internacional Noi Bai de Hanói', tr: 'Hanoi Noi Bai Uluslararası Havaalanı', ru: 'Международный аэропорт Нойбай Ханой', zh: '河内内排国际机场', ar: 'مطار هانوي نوي باي الدولي' },
-      'VNDAN_AIR': { en: 'Da Nang International Airport', fr: 'Aéroport international de Da Nang', de: 'Internationaler Flughafen Da Nang', es: 'Aeropuerto Internacional de Da Nang', it: 'Aeroporto Internazionale di Da Nang', nl: 'Internationale Luchthaven Da Nang', pt: 'Aeroporto Internacional de Da Nang', tr: 'Da Nang Uluslararası Havaalanı', ru: 'Международный аэропорт Дананг', zh: '岘港国际机场', ar: 'مطار دا نانغ الدولي' },
-      'VNHAN_RAIL': { en: 'Hanoi Railway Station', fr: 'Gare de Hanoï', de: 'Bahnhof Hanoi', es: 'Estación de Hanoi', it: 'Stazione di Hanoi', nl: 'Station Hanoi', pt: 'Estação de Hanói', tr: 'Hanoi Tren İstasyonu', ru: 'Железнодорожная станция Ханой', zh: '河内火车站', ar: 'محطة هانوي للسكك الحديدية' },
-      'VNSGN_RAIL': { en: 'Ho Chi Minh City Railway Station', fr: 'Gare d\'Hô Chi Minh-Ville', de: 'Bahnhof Ho-Chi-Minh-Stadt', es: 'Estación de Ciudad Ho Chi Minh', it: 'Stazione di Ho Chi Minh', nl: 'Station Ho Chi Minh Stad', pt: 'Estação de Ho Chi Minh', tr: 'Ho Chi Minh Şehri Tren İstasyonu', ru: 'Железнодорожная станция Хошимин', zh: '胡志明市火车站', ar: 'محطة هو تشي مين للسكك الحديدية' },
-      
-      // 🇻🇪 Venezuela (Venezuela) - Pays du pétrole (traductions solides)
-      'VELAS': { en: 'Port of La Guaira', fr: 'Port de La Guaira', de: 'Hafen La Guaira', es: 'Puerto de La Guaira', it: 'Porto di La Guaira', nl: 'Haven van La Guaira', pt: 'Porto de La Guaira', tr: 'La Guaira Limanı', ru: 'Порт Ла-Гуайра', zh: '拉瓜伊拉港', ar: 'ميناء لا غوايرا' },
-      'VEPZO': { en: 'Port of Puerto Cabello', fr: 'Port de Puerto Cabello', de: 'Hafen Puerto Cabello', es: 'Puerto de Puerto Cabello', it: 'Porto di Puerto Cabello', nl: 'Haven van Puerto Cabello', pt: 'Porto de Puerto Cabello', tr: 'Puerto Cabello Limanı', ru: 'Порт Пуэрто-Кабельо', zh: '卡贝略港', ar: 'ميناء بويرتو كابيلو' },
-      'VEMCB': { en: 'Port of Maracaibo', fr: 'Port de Maracaibo', de: 'Hafen Maracaibo', es: 'Puerto de Maracaibo', it: 'Porto di Maracaibo', nl: 'Haven van Maracaibo', pt: 'Porto de Maracaibo', tr: 'Maracaibo Limanı', ru: 'Порт Маракайбо', zh: '马拉开波港', ar: 'ميناء ماراكايبو' },
-      'VECCS': { en: 'Caracas Simón Bolívar International Airport', fr: 'Aéroport international Simón Bolívar de Caracas', de: 'Internationaler Flughafen Simón Bolívar Caracas', es: 'Aeropuerto Internacional Simón Bolívar de Caracas', it: 'Aeroporto Internazionale Simón Bolívar di Caracas', nl: 'Internationale Luchthaven Simón Bolívar Caracas', pt: 'Aeroporto Internacional Simón Bolívar de Caracas', tr: 'Caracas Simón Bolívar Uluslararası Havaalanı', ru: 'Международный аэропорт Симон Боливар Каракас', zh: '加拉加斯西蒙·玻利瓦尔国际机场', ar: 'مطار كاراكاس سيمون بوليفار الدولي' },
-      'VECCS_RAIL': { en: 'Caracas Railway Station', fr: 'Gare de Caracas', de: 'Bahnhof Caracas', es: 'Estación de Caracas', it: 'Stazione di Caracas', nl: 'Station Caracas', pt: 'Estação de Caracas', tr: 'Caracas Tren İstasyonu', ru: 'Железнодорожная станция Каракас', zh: '加拉加斯火车站', ar: 'محطة كاراكاس للسكك الحديدية' },
-      
-      // === PAYS EN P - TRADUCTIONS COMPLÈTES (DEUXIÈME RATTRAPAGE!) ===
-      
-      // 🇵🇪 Peru (Pérou) - Berceau des Incas (traductions parfaites)
-      'PECLL': { en: 'Port of Callao', fr: 'Port de Callao', de: 'Hafen Callao', es: 'Puerto del Callao', it: 'Porto di Callao', nl: 'Haven van Callao', pt: 'Porto de Callao', tr: 'Callao Limanı', ru: 'Порт Кальяо', zh: '卡亚俄港', ar: 'ميناء كالاو' },
-      'PELIM': { en: 'Jorge Chávez International Airport', fr: 'Aéroport international Jorge Chávez', de: 'Internationaler Flughafen Jorge Chávez', es: 'Aeropuerto Internacional Jorge Chávez', it: 'Aeroporto Internazionale Jorge Chávez', nl: 'Internationale Luchthaven Jorge Chávez', pt: 'Aeroporto Internacional Jorge Chávez', tr: 'Jorge Chávez Uluslararası Havaalanı', ru: 'Международный аэропорт Хорхе Чавес', zh: '豪尔赫·查韦斯国际机场', ar: 'مطار خورخي تشافيز الدولي' },
-      
-      // 🇵🇱 Poland (Pologne) - Cœur de l'Europe (traductions complètes)
-      'PLGDY': { en: 'Port of Gdynia', fr: 'Port de Gdynia', de: 'Hafen Gdingen', es: 'Puerto de Gdynia', it: 'Porto di Gdynia', nl: 'Haven van Gdynia', pt: 'Porto de Gdynia', tr: 'Gdynia Limanı', ru: 'Порт Гдыня', zh: '格丁尼亚港', ar: 'ميناء غدينيا' },
-      'PLSZZ': { en: 'Port of Szczecin', fr: 'Port de Szczecin', de: 'Hafen Stettin', es: 'Puerto de Szczecin', it: 'Porto di Stettino', nl: 'Haven van Szczecin', pt: 'Porto de Szczecin', tr: 'Szczecin Limanı', ru: 'Порт Щецин', zh: '什切青港', ar: 'ميناء شتشيتشين' },
-      'PLWAW': { en: 'Warsaw Chopin Airport', fr: 'Aéroport Chopin de Varsovie', de: 'Flughafen Warschau-Chopin', es: 'Aeropuerto Chopin de Varsovia', it: 'Aeroporto Chopin di Varsavia', nl: 'Luchthaven Warschau Chopin', pt: 'Aeroporto Chopin de Varsóvia', tr: 'Varşova Chopin Havaalanı', ru: 'Аэропорт Варшава-Шопен', zh: '华沙肖邦机场', ar: 'مطار وارسو شوبان' },
-      'PLKRK': { en: 'Kraków John Paul II International Airport', fr: 'Aéroport international Jean-Paul II de Cracovie', de: 'Internationaler Flughafen Johannes Paul II. Krakau', es: 'Aeropuerto Internacional Juan Pablo II de Cracovia', it: 'Aeroporto Internazionale Giovanni Paolo II di Cracovia', nl: 'Internationale Luchthaven Johannes Paulus II Krakau', pt: 'Aeroporto Internacional João Paulo II de Cracóvia', tr: 'Krakow II. John Paul Uluslararası Havaalanı', ru: 'Международный аэропорт Краков-Балице', zh: '克拉科夫约翰·保罗二世国际机场', ar: 'مطار كراكوف يوحنا بولس الثاني الدولي' },
-      'PLWAR_RAIL': { en: 'Warsaw Central Station', fr: 'Gare centrale de Varsovie', de: 'Warschau Hauptbahnhof', es: 'Estación Central de Varsovia', it: 'Stazione Centrale di Varsavia', nl: 'Centraal Station Warschau', pt: 'Estação Central de Varsóvia', tr: 'Varşova Merkez İstasyonu', ru: 'Центральная станция Варшава', zh: '华沙中央车站', ar: 'محطة وارسو المركزية' },
-      'PLKRK_RAIL': { en: 'Kraków Main Station', fr: 'Gare principale de Cracovie', de: 'Krakau Hauptbahnhof', es: 'Estación Principal de Cracovia', it: 'Stazione Principale di Cracovia', nl: 'Hoofdstation Krakau', pt: 'Estação Principal de Cracóvia', tr: 'Krakow Ana İstasyonu', ru: 'Главная станция Краков', zh: '克拉科夫主火车站', ar: 'محطة كراكوف الرئيسية' },
-      
-      // 🇵🇹 Portugal (Portugal) - Navigation des découvertes (traductions excellentes)
-      'PTLIS': { en: 'Port of Lisbon', fr: 'Port de Lisbonne', de: 'Hafen Lissabon', es: 'Puerto de Lisboa', it: 'Porto di Lisbona', nl: 'Haven van Lissabon', pt: 'Porto de Lisboa', tr: 'Lizbon Limanı', ru: 'Порт Лиссабон', zh: '里斯本港', ar: 'ميناء لشبونة' },
-      'PTLEI': { en: 'Port of Leixões', fr: 'Port de Leixões', de: 'Hafen Leixões', es: 'Puerto de Leixões', it: 'Porto di Leixões', nl: 'Haven van Leixões', pt: 'Porto de Leixões', tr: 'Leixões Limanı', ru: 'Порт Лейшойнш', zh: '莱绍英斯港', ar: 'ميناء ليشويس' },
-      'PTLIS_AIR': { en: 'Lisbon Portela Airport', fr: 'Aéroport de Lisbonne Portela', de: 'Flughafen Lissabon-Portela', es: 'Aeropuerto de Lisboa Portela', it: 'Aeroporto di Lisbona Portela', nl: 'Luchthaven Lissabon Portela', pt: 'Aeroporto de Lisboa Portela', tr: 'Lizbon Portela Havaalanı', ru: 'Аэропорт Лиссабон-Портела', zh: '里斯本波尔特拉机场', ar: 'مطار لشبونة بورتيلا' },
-      'PTOPO': { en: 'Porto Francisco Sá Carneiro Airport', fr: 'Aéroport Francisco Sá Carneiro de Porto', de: 'Flughafen Porto Francisco Sá Carneiro', es: 'Aeropuerto Francisco Sá Carneiro de Oporto', it: 'Aeroporto Francisco Sá Carneiro di Porto', nl: 'Luchthaven Porto Francisco Sá Carneiro', pt: 'Aeroporto Francisco Sá Carneiro do Porto', tr: 'Porto Francisco Sá Carneiro Havaalanı', ru: 'Аэропорт Порту Франсишку Са Карнейру', zh: '波尔图弗朗西斯科·萨·卡内罗机场', ar: 'مطار بورتو فرانسيسكو سا كارنيرو' },
-      'PTLIS_RAIL': { en: 'Lisbon Santa Apolónia Station', fr: 'Gare de Lisbonne Santa Apolónia', de: 'Bahnhof Lissabon Santa Apolónia', es: 'Estación de Lisboa Santa Apolónia', it: 'Stazione di Lisbona Santa Apolónia', nl: 'Station Lissabon Santa Apolónia', pt: 'Estação de Lisboa Santa Apolónia', tr: 'Lizbon Santa Apolónia İstasyonu', ru: 'Станция Лиссабон Санта-Аполония', zh: '里斯本圣阿波洛尼亚车站', ar: 'محطة لشبونة سانتا أبولونيا' },
-      'PTOPO_RAIL': { en: 'Porto Campanhã Station', fr: 'Gare de Porto Campanhã', de: 'Bahnhof Porto Campanhã', es: 'Estación de Oporto Campanhã', it: 'Stazione di Porto Campanhã', nl: 'Station Porto Campanhã', pt: 'Estação de Porto Campanhã', tr: 'Porto Campanhã İstasyonu', ru: 'Станция Порту Кампанья', zh: '波尔图坎帕尼亚车站', ar: 'محطة بورتو كامبانها' },
-      
-      // 🇵🇭 Philippines (Philippines) - Archipel des 7000 îles (traductions superbes)
-      'PHMNL': { en: 'Port of Manila', fr: 'Port de Manille', de: 'Hafen Manila', es: 'Puerto de Manila', it: 'Porto di Manila', nl: 'Haven van Manila', pt: 'Porto de Manila', tr: 'Manila Limanı', ru: 'Порт Манила', zh: '马尼拉港', ar: 'ميناء مانيلا' },
-      'PHCEB': { en: 'Port of Cebu', fr: 'Port de Cebu', de: 'Hafen Cebu', es: 'Puerto de Cebú', it: 'Porto di Cebu', nl: 'Haven van Cebu', pt: 'Porto de Cebu', tr: 'Cebu Limanı', ru: 'Порт Себу', zh: '宿务港', ar: 'ميناء سيبو' },
-      'PHBAT': { en: 'Port of Batangas', fr: 'Port de Batangas', de: 'Hafen Batangas', es: 'Puerto de Batangas', it: 'Porto di Batangas', nl: 'Haven van Batangas', pt: 'Porto de Batangas', tr: 'Batangas Limanı', ru: 'Порт Батангас', zh: '八打雁港', ar: 'ميناء باتانغاس' },
-      'PHMNL_AIR': { en: 'Ninoy Aquino International Airport', fr: 'Aéroport international Ninoy Aquino', de: 'Internationaler Flughafen Ninoy Aquino', es: 'Aeropuerto Internacional Ninoy Aquino', it: 'Aeroporto Internazionale Ninoy Aquino', nl: 'Internationale Luchthaven Ninoy Aquino', pt: 'Aeroporto Internacional Ninoy Aquino', tr: 'Ninoy Aquino Uluslararası Havaalanı', ru: 'Международный аэропорт Ниной Акино', zh: '尼诺·阿基诺国际机场', ar: 'مطار نينوي أكينو الدولي' },
-      'PHCEB_AIR': { en: 'Mactan-Cebu International Airport', fr: 'Aéroport international Mactan-Cebu', de: 'Internationaler Flughafen Mactan-Cebu', es: 'Aeropuerto Internacional Mactan-Cebú', it: 'Aeroporto Internazionale Mactan-Cebu', nl: 'Internationale Luchthaven Mactan-Cebu', pt: 'Aeroporto Internacional Mactan-Cebu', tr: 'Mactan-Cebu Uluslararası Havaalanı', ru: 'Международный аэропорт Мактан-Себу', zh: '马克坦-宿务国际机场', ar: 'مطار ماكتان-سيبو الدولي' },
-      'PHCRK': { en: 'Clark International Airport', fr: 'Aéroport international de Clark', de: 'Internationaler Flughafen Clark', es: 'Aeropuerto Internacional de Clark', it: 'Aeroporto Internazionale di Clark', nl: 'Internationale Luchthaven Clark', pt: 'Aeroporto Internacional de Clark', tr: 'Clark Uluslararası Havaalanı', ru: 'Международный аэропорт Кларк', zh: '克拉克国际机场', ar: 'مطار كلارك الدولي' },
-      
-      // 🇵🇰 Pakistan (Pakistan) - Terre des purs (traductions excellentes)
-      'PKKAR': { en: 'Port of Karachi', fr: 'Port de Karachi', de: 'Hafen Karatschi', es: 'Puerto de Karachi', it: 'Porto di Karachi', nl: 'Haven van Karachi', pt: 'Porto de Karachi', tr: 'Karaçi Limanı', ru: 'Порт Карачи', zh: '卡拉奇港', ar: 'ميناء كراتشي' },
-      'PKQAS': { en: 'Port Qasim', fr: 'Port Qasim', de: 'Hafen Qasim', es: 'Puerto Qasim', it: 'Porto Qasim', nl: 'Haven Qasim', pt: 'Porto Qasim', tr: 'Qasim Limanı', ru: 'Порт Касим', zh: '卡西姆港', ar: 'ميناء قاسم' },
-      'PKGWA': { en: 'Port of Gwadar', fr: 'Port de Gwadar', de: 'Hafen Gwadar', es: 'Puerto de Gwadar', it: 'Porto di Gwadar', nl: 'Haven van Gwadar', pt: 'Porto de Gwadar', tr: 'Gwadar Limanı', ru: 'Порт Гвадар', zh: '瓜达尔港', ar: 'ميناء جوادر' },
-      'PKKAR_AIR': { en: 'Jinnah International Airport', fr: 'Aéroport international Jinnah', de: 'Internationaler Flughafen Jinnah', es: 'Aeropuerto Internacional Jinnah', it: 'Aeroporto Internazionale Jinnah', nl: 'Internationale Luchthaven Jinnah', pt: 'Aeroporto Internacional Jinnah', tr: 'Jinnah Uluslararası Havaalanı', ru: 'Международный аэропорт Джинна', zh: '真纳国际机场', ar: 'مطار جناح الدولي' },
-      'PKLHE': { en: 'Allama Iqbal International Airport', fr: 'Aéroport international Allama Iqbal', de: 'Internationaler Flughafen Allama Iqbal', es: 'Aeropuerto Internacional Allama Iqbal', it: 'Aeroporto Internazionale Allama Iqbal', nl: 'Internationale Luchthaven Allama Iqbal', pt: 'Aeroporto Internacional Allama Iqbal', tr: 'Allama Iqbal Uluslararası Havaalanı', ru: 'Международный аэропорт Аллама Икбал', zh: '阿拉马·伊克巴尔国际机场', ar: 'مطار علامة إقبال الدولي' },
-      'PKISB': { en: 'Islamabad International Airport', fr: 'Aéroport international d\'Islamabad', de: 'Internationaler Flughafen Islamabad', es: 'Aeropuerto Internacional de Islamabad', it: 'Aeroporto Internazionale di Islamabad', nl: 'Internationale Luchthaven Islamabad', pt: 'Aeroporto Internacional de Islamabad', tr: 'İslamabad Uluslararası Havaalanı', ru: 'Международный аэропорт Исламабад', zh: '伊斯兰堡国际机场', ar: 'مطار إسلام أباد الدولي' },
-      'PKKAR_RAIL': { en: 'Karachi City Railway Station', fr: 'Gare de Karachi', de: 'Bahnhof Karatschi', es: 'Estación de Karachi', it: 'Stazione di Karachi', nl: 'Station Karachi', pt: 'Estação de Karachi', tr: 'Karaçi Tren İstasyonu', ru: 'Железнодорожная станция Карачи', zh: '卡拉奇火车站', ar: 'محطة كراتشي للسكك الحديدية' },
-      'PKLHE_RAIL': { en: 'Lahore Railway Station', fr: 'Gare de Lahore', de: 'Bahnhof Lahore', es: 'Estación de Lahore', it: 'Stazione di Lahore', nl: 'Station Lahore', pt: 'Estação de Lahore', tr: 'Lahore Tren İstasyonu', ru: 'Железнодорожная станция Лахор', zh: '拉合尔火车站', ar: 'محطة لاهور للسكك الحديدية' },
-      
-      // 🇵🇾 Paraguay (Paraguay) - Cœur de l'Amérique du Sud (traductions solides)
-      'PYASU': { en: 'Port of Asunción', fr: 'Port d\'Asunción', de: 'Hafen Asunción', es: 'Puerto de Asunción', it: 'Porto di Asunción', nl: 'Haven van Asunción', pt: 'Porto de Assunção', tr: 'Asunción Limanı', ru: 'Порт Асунсьон', zh: '亚松森港', ar: 'ميناء أسونسيون' },
-      'PYASU_AIR': { en: 'Silvio Pettirossi International Airport', fr: 'Aéroport international Silvio Pettirossi', de: 'Internationaler Flughafen Silvio Pettirossi', es: 'Aeropuerto Internacional Silvio Pettirossi', it: 'Aeroporto Internazionale Silvio Pettirossi', nl: 'Internationale Luchthaven Silvio Pettirossi', pt: 'Aeroporto Internacional Silvio Pettirossi', tr: 'Silvio Pettirossi Uluslararası Havaalanı', ru: 'Международный аэропорт Сильвио Петтиросси', zh: '西尔维奥·佩蒂罗西国际机场', ar: 'مطار سيلفيو بيتيروسي الدولي' },
-      'PYASU_RAIL': { en: 'Asunción Railway Station', fr: 'Gare d\'Asunción', de: 'Bahnhof Asunción', es: 'Estación de Asunción', it: 'Stazione di Asunción', nl: 'Station Asunción', pt: 'Estação de Assunção', tr: 'Asunción Tren İstasyonu', ru: 'Железнодорожная станция Асунсьон', zh: '亚松森火车站', ar: 'محطة أسونسيون للسكك الحديدية' },
-      
-      // 🇵🇦 Panama (Panama) - Canal entre les océans (traductions magistrales)
-      'PABAL': { en: 'Port of Balboa', fr: 'Port de Balboa', de: 'Hafen Balboa', es: 'Puerto de Balboa', it: 'Porto di Balboa', nl: 'Haven van Balboa', pt: 'Porto de Balboa', tr: 'Balboa Limanı', ru: 'Порт Бальбоа', zh: '巴尔博亚港', ar: 'ميناء بالبوا' },
-      'PACOL': { en: 'Port of Colón', fr: 'Port de Colón', de: 'Hafen Colón', es: 'Puerto de Colón', it: 'Porto di Colón', nl: 'Haven van Colón', pt: 'Porto de Colón', tr: 'Colón Limanı', ru: 'Порт Колон', zh: '科隆港', ar: 'ميناء كولون' },
-      'PACRZ': { en: 'Port of Cristóbal', fr: 'Port de Cristóbal', de: 'Hafen Cristóbal', es: 'Puerto de Cristóbal', it: 'Porto di Cristóbal', nl: 'Haven van Cristóbal', pt: 'Porto de Cristóbal', tr: 'Cristóbal Limanı', ru: 'Порт Кристобаль', zh: '克里斯托瓦尔港', ar: 'ميناء كريستوبال' },
-      'PAPTY': { en: 'Tocumen International Airport', fr: 'Aéroport international de Tocumen', de: 'Internationaler Flughafen Tocumen', es: 'Aeropuerto Internacional de Tocumen', it: 'Aeroporto Internazionale di Tocumen', nl: 'Internationale Luchthaven Tocumen', pt: 'Aeroporto Internacional de Tocumen', tr: 'Tocumen Uluslararası Havaalanı', ru: 'Международный аэропорт Токумен', zh: '托库门国际机场', ar: 'مطار توكومين الدولي' },
-      
-      // === PAYS EN D - TRADUCTIONS COMPLÈTES (RATTRAPAGE!) ===
-      
-      // 🇩🇪 Germany (Allemagne) - Puissance industrielle européenne (traductions complètes)
-      'DEWVN': { en: 'Port of Wilhelmshaven', fr: 'Port de Wilhelmshaven', de: 'Hafen Wilhelmshaven', es: 'Puerto de Wilhelmshaven', it: 'Porto di Wilhelmshaven', nl: 'Haven van Wilhelmshaven', pt: 'Porto de Wilhelmshaven', tr: 'Wilhelmshaven Limanı', ru: 'Порт Вильгельмсхафен', zh: '威廉港', ar: 'ميناء فيلهلمسهافن' },
-      'DELUB': { en: 'Port of Lübeck', fr: 'Port de Lübeck', de: 'Hafen Lübeck', es: 'Puerto de Lübeck', it: 'Porto di Lubecca', nl: 'Haven van Lübeck', pt: 'Porto de Lübeck', tr: 'Lübeck Limanı', ru: 'Порт Любек', zh: '吕贝克港', ar: 'ميناء لوبيك' },
-      'DEROS': { en: 'Port of Rostock', fr: 'Port de Rostock', de: 'Hafen Rostock', es: 'Puerto de Rostock', it: 'Porto di Rostock', nl: 'Haven van Rostock', pt: 'Porto de Rostock', tr: 'Rostock Limanı', ru: 'Порт Росток', zh: '罗斯托克港', ar: 'ميناء روستوك' },
-      'DEBER': { en: 'Berlin Brandenburg Airport', fr: 'Aéroport de Berlin-Brandebourg', de: 'Flughafen Berlin Brandenburg', es: 'Aeropuerto de Berlín-Brandeburgo', it: 'Aeroporto di Berlino-Brandeburgo', nl: 'Luchthaven Berlijn Brandenburg', pt: 'Aeroporto de Berlim-Brandemburgo', tr: 'Berlin Brandenburg Havaalanı', ru: 'Аэропорт Берлин-Бранденбург', zh: '柏林勃兰登堡机场', ar: 'مطار برلين براندنبورغ' },
-      'DEDUS': { en: 'Düsseldorf Airport', fr: 'Aéroport de Düsseldorf', de: 'Flughafen Düsseldorf', es: 'Aeropuerto de Düsseldorf', it: 'Aeroporto di Düsseldorf', nl: 'Luchthaven Düsseldorf', pt: 'Aeroporto de Düsseldorf', tr: 'Düsseldorf Havaalanı', ru: 'Аэропорт Дюссельдорф', zh: '杜塞尔多夫机场', ar: 'مطار دوسلدورف' },
-      'DEHAM_AIR': { en: 'Hamburg Airport', fr: 'Aéroport de Hambourg', de: 'Flughafen Hamburg', es: 'Aeropuerto de Hamburgo', it: 'Aeroporto di Amburgo', nl: 'Luchthaven Hamburg', pt: 'Aeroporto de Hamburgo', tr: 'Hamburg Havaalanı', ru: 'Аэропорт Гамбург', zh: '汉堡机场', ar: 'مطار هامبورغ' },
-      'DECGN': { en: 'Cologne Bonn Airport', fr: 'Aéroport de Cologne/Bonn', de: 'Flughafen Köln/Bonn', es: 'Aeropuerto de Colonia/Bonn', it: 'Aeroporto di Colonia/Bonn', nl: 'Luchthaven Keulen/Bonn', pt: 'Aeroporto de Colônia/Bonn', tr: 'Köln/Bonn Havaalanı', ru: 'Аэропорт Кёльн/Бонн', zh: '科隆/波恩机场', ar: 'مطار كولونيا/بون' },
-      'DESTR': { en: 'Stuttgart Airport', fr: 'Aéroport de Stuttgart', de: 'Flughafen Stuttgart', es: 'Aeropuerto de Stuttgart', it: 'Aeroporto di Stoccarda', nl: 'Luchthaven Stuttgart', pt: 'Aeroporto de Stuttgart', tr: 'Stuttgart Havaalanı', ru: 'Аэропорт Штутгарт', zh: '斯图加特机场', ar: 'مطار شتوتغارت' },
-      'DENUR': { en: 'Nuremberg Airport', fr: 'Aéroport de Nuremberg', de: 'Flughafen Nürnberg', es: 'Aeropuerto de Núremberg', it: 'Aeroporto di Norimberga', nl: 'Luchthaven Neurenberg', pt: 'Aeroporto de Nuremberga', tr: 'Nürnberg Havaalanı', ru: 'Аэропорт Нюрнберг', zh: '纽伦堡机场', ar: 'مطار نورمبرغ' },
-      'DEBER_RAIL': { en: 'Berlin Central Station', fr: 'Gare centrale de Berlin', de: 'Berlin Hauptbahnhof', es: 'Estación Central de Berlín', it: 'Stazione Centrale di Berlino', nl: 'Centraal Station Berlijn', pt: 'Estação Central de Berlim', tr: 'Berlin Merkez İstasyonu', ru: 'Центральная станция Берлин', zh: '柏林中央车站', ar: 'محطة برلين المركزية' },
-      'DEFRA_RAIL': { en: 'Frankfurt Central Station', fr: 'Gare centrale de Francfort', de: 'Frankfurt Hauptbahnhof', es: 'Estación Central de Fráncfort', it: 'Stazione Centrale di Francoforte', nl: 'Centraal Station Frankfurt', pt: 'Estação Central de Frankfurt', tr: 'Frankfurt Merkez İstasyonu', ru: 'Центральная станция Франкфурт', zh: '法兰克福中央车站', ar: 'محطة فرانكفورت المركزية' },
-      'DEHAM_RAIL': { en: 'Hamburg Central Station', fr: 'Gare centrale de Hambourg', de: 'Hamburg Hauptbahnhof', es: 'Estación Central de Hamburgo', it: 'Stazione Centrale di Amburgo', nl: 'Centraal Station Hamburg', pt: 'Estação Central de Hamburgo', tr: 'Hamburg Merkez İstasyonu', ru: 'Центральная станция Гамбург', zh: '汉堡中央车站', ar: 'محطة هامبورغ المركزية' },
-      'DEMUC_RAIL': { en: 'Munich Central Station', fr: 'Gare centrale de Munich', de: 'München Hauptbahnhof', es: 'Estación Central de Múnich', it: 'Stazione Centrale di Monaco', nl: 'Centraal Station München', pt: 'Estação Central de Munique', tr: 'Münih Merkez İstasyonu', ru: 'Центральная станция Мюнхен', zh: '慕尼黑中央车站', ar: 'محطة ميونيخ المركزية' },
-      'DECGN_RAIL': { en: 'Cologne Central Station', fr: 'Gare centrale de Cologne', de: 'Köln Hauptbahnhof', es: 'Estación Central de Colonia', it: 'Stazione Centrale di Colonia', nl: 'Centraal Station Keulen', pt: 'Estação Central de Colônia', tr: 'Köln Merkez İstasyonu', ru: 'Центральная станция Кёльн', zh: '科隆中央车站', ar: 'محطة كولونيا المركزية' },
-      
-      // 🇩🇰 Denmark (Danemark) - Royaume scandinave (traductions excellentes)
-      'DKAAR': { en: 'Port of Aarhus', fr: 'Port d\'Aarhus', de: 'Hafen Aarhus', es: 'Puerto de Aarhus', it: 'Porto di Aarhus', nl: 'Haven van Aarhus', pt: 'Porto de Aarhus', tr: 'Aarhus Limanı', ru: 'Порт Орхус', zh: '奥胡斯港', ar: 'ميناء آرهوس' },
-      'DKCPH': { en: 'Port of Copenhagen', fr: 'Port de Copenhague', de: 'Hafen Kopenhagen', es: 'Puerto de Copenhague', it: 'Porto di Copenaghen', nl: 'Haven van Kopenhagen', pt: 'Porto de Copenhague', tr: 'Kopenhag Limanı', ru: 'Порт Копенгаген', zh: '哥本哈根港', ar: 'ميناء كوبنهاغن' },
-      'DKCPH_AIR': { en: 'Copenhagen Airport', fr: 'Aéroport de Copenhague', de: 'Flughafen Kopenhagen', es: 'Aeropuerto de Copenhague', it: 'Aeroporto di Copenaghen', nl: 'Luchthaven Kopenhagen', pt: 'Aeroporto de Copenhague', tr: 'Kopenhag Havaalanı', ru: 'Аэропорт Копенгаген', zh: '哥本哈根机场', ar: 'مطار كوبنهاغن' },
-      'DKCPH_RAIL': { en: 'Copenhagen Central Station', fr: 'Gare centrale de Copenhague', de: 'Kopenhagen Hauptbahnhof', es: 'Estación Central de Copenhague', it: 'Stazione Centrale di Copenaghen', nl: 'Centraal Station Kopenhagen', pt: 'Estação Central de Copenhague', tr: 'Kopenhag Merkez İstasyonu', ru: 'Центральная станция Копенгаген', zh: '哥本哈根中央车站', ar: 'محطة كوبنهاغن المركزية' },
-      
-      // 🇩🇴 Dominican Republic (République dominicaine) - Perle des Caraïbes (traductions parfaites)
-      'DOSDQ': { en: 'Port of Santo Domingo', fr: 'Port de Saint-Domingue', de: 'Hafen Santo Domingo', es: 'Puerto de Santo Domingo', it: 'Porto di Santo Domingo', nl: 'Haven van Santo Domingo', pt: 'Porto de Santo Domingo', tr: 'Santo Domingo Limanı', ru: 'Порт Санто-Доминго', zh: '圣多明各港', ar: 'ميناء سانتو دومينغو' },
-      'DOHIG': { en: 'Port of Haina', fr: 'Port de Haina', de: 'Hafen Haina', es: 'Puerto de Haina', it: 'Porto di Haina', nl: 'Haven van Haina', pt: 'Porto de Haina', tr: 'Haina Limanı', ru: 'Порт Хайна', zh: '海纳港', ar: 'ميناء هاينا' },
-      'DOSDQ_AIR': { en: 'Santo Domingo Las Américas International Airport', fr: 'Aéroport international Las Américas de Saint-Domingue', de: 'Internationaler Flughafen Las Américas Santo Domingo', es: 'Aeropuerto Internacional Las Américas de Santo Domingo', it: 'Aeroporto Internazionale Las Américas di Santo Domingo', nl: 'Internationale Luchthaven Las Américas Santo Domingo', pt: 'Aeroporto Internacional Las Américas de Santo Domingo', tr: 'Santo Domingo Las Américas Uluslararası Havaalanı', ru: 'Международный аэропорт Лас-Америкас Санто-Доминго', zh: '圣多明各拉斯美洲国际机场', ar: 'مطار سانتو دومينغو لاس أمريكاس الدولي' },
-      'DOPOP': { en: 'Puerto Plata Gregorio Luperón International Airport', fr: 'Aéroport international Gregorio Luperón de Puerto Plata', de: 'Internationaler Flughafen Gregorio Luperón Puerto Plata', es: 'Aeropuerto Internacional Gregorio Luperón de Puerto Plata', it: 'Aeroporto Internazionale Gregorio Luperón di Puerto Plata', nl: 'Internationale Luchthaven Gregorio Luperón Puerto Plata', pt: 'Aeroporto Internacional Gregorio Luperón de Puerto Plata', tr: 'Puerto Plata Gregorio Luperón Uluslararası Havaalanı', ru: 'Международный аэропорт Грегорио Луперон Пуэрто-Плата', zh: '普拉塔港格雷戈里奥·卢佩龙国际机场', ar: 'مطار بويرتو بلاتا غريغوريو لوبيرون الدولي' },
-      
-      // === PAYS EN Z - TRADUCTIONS COMPLÈTES (DERNIÈRE LETTRE!) ===
-      
-      // 🇿🇦 South Africa (Afrique du Sud) - Nation arc-en-ciel (traductions excellentes)
-      'ZADUR': { en: 'Port of Durban', fr: 'Port de Durban', de: 'Hafen Durban', es: 'Puerto de Durban', it: 'Porto di Durban', nl: 'Haven van Durban', pt: 'Porto de Durban', tr: 'Durban Limanı', ru: 'Порт Дурбан', zh: '德班港', ar: 'ميناء ديربان' },
-      'ZACPT': { en: 'Port of Cape Town', fr: 'Port du Cap', de: 'Hafen Kapstadt', es: 'Puerto de Ciudad del Cabo', it: 'Porto di Città del Capo', nl: 'Haven van Kaapstad', pt: 'Porto da Cidade do Cabo', tr: 'Cape Town Limanı', ru: 'Порт Кейптаун', zh: '开普敦港', ar: 'ميناء كيب تاون' },
-      'ZAJNB': { en: 'OR Tambo International Airport', fr: 'Aéroport international OR Tambo', de: 'Internationaler Flughafen OR Tambo', es: 'Aeropuerto Internacional OR Tambo', it: 'Aeroporto Internazionale OR Tambo', nl: 'Internationale Luchthaven OR Tambo', pt: 'Aeroporto Internacional OR Tambo', tr: 'OR Tambo Uluslararası Havaalanı', ru: 'Международный аэропорт О. Р. Тамбо', zh: 'OR坦博国际机场', ar: 'مطار أو آر تامبو الدولي' },
-      'ZACPT_AIR': { en: 'Cape Town International Airport', fr: 'Aéroport international du Cap', de: 'Internationaler Flughafen Kapstadt', es: 'Aeropuerto Internacional de Ciudad del Cabo', it: 'Aeroporto Internazionale di Città del Capo', nl: 'Internationale Luchthaven Kaapstad', pt: 'Aeroporto Internacional da Cidade do Cabo', tr: 'Cape Town Uluslararası Havaalanı', ru: 'Международный аэропорт Кейптаун', zh: '开普敦国际机场', ar: 'مطار كيب تاون الدولي' },
-      
-      // 🇿🇼 Zimbabwe (Zimbabwe) - Berceau des ruines du Grand Zimbabwe
-      'ZWHRE': { en: 'Port of Harare', fr: 'Port de Harare', de: 'Hafen Harare', es: 'Puerto de Harare', it: 'Porto di Harare', nl: 'Haven van Harare', pt: 'Porto de Harare', tr: 'Harare Limanı', ru: 'Порт Хараре', zh: '哈拉雷港', ar: 'ميناء هراري' },
-      'ZWBYO': { en: 'Port of Bulawayo', fr: 'Port de Bulawayo', de: 'Hafen Bulawayo', es: 'Puerto de Bulawayo', it: 'Porto di Bulawayo', nl: 'Haven van Bulawayo', pt: 'Porto de Bulawayo', tr: 'Bulawayo Limanı', ru: 'Порт Булавайо', zh: '布拉瓦约港', ar: 'ميناء بولاوايو' },
-      'ZWHRE_AIR': { en: 'Harare International Airport', fr: 'Aéroport international de Harare', de: 'Internationaler Flughafen Harare', es: 'Aeropuerto Internacional de Harare', it: 'Aeroporto Internazionale di Harare', nl: 'Internationale Luchthaven Harare', pt: 'Aeroporto Internacional de Harare', tr: 'Harare Uluslararası Havaalanı', ru: 'Международный аэропорт Хараре', zh: '哈拉雷国际机场', ar: 'مطار هراري الدولي' },
-      'ZWBYO_AIR': { en: 'Bulawayo Airport', fr: 'Aéroport de Bulawayo', de: 'Flughafen Bulawayo', es: 'Aeropuerto de Bulawayo', it: 'Aeroporto di Bulawayo', nl: 'Luchthaven Bulawayo', pt: 'Aeroporto de Bulawayo', tr: 'Bulawayo Havaalanı', ru: 'Аэропорт Булавайо', zh: '布拉瓦约机场', ar: 'مطار بولاوايو' },
-      'ZWHRE_RAIL': { en: 'Harare Railway Station', fr: 'Gare de Harare', de: 'Bahnhof Harare', es: 'Estación de Harare', it: 'Stazione di Harare', nl: 'Station Harare', pt: 'Estação de Harare', tr: 'Harare Tren İstasyonu', ru: 'Железнодорожная станция Хараре', zh: '哈拉雷火车站', ar: 'محطة هراري للسكك الحديدية' },
-      'ZWBYO_RAIL': { en: 'Bulawayo Railway Station', fr: 'Gare de Bulawayo', de: 'Bahnhof Bulawayo', es: 'Estación de Bulawayo', it: 'Stazione di Bulawayo', nl: 'Station Bulawayo', pt: 'Estação de Bulawayo', tr: 'Bulawayo Tren İstasyonu', ru: 'Железнодорожная станция Булавайо', zh: '布拉瓦约火车站', ar: 'محطة بولاوايو للسكك الحديدية' },
-      
-      // 🇿🇲 Zambia (Zambie) - Pays du cuivre et des chutes Victoria
-      'ZMLUN': { en: 'Port of Lusaka', fr: 'Port de Lusaka', de: 'Hafen Lusaka', es: 'Puerto de Lusaka', it: 'Porto di Lusaka', nl: 'Haven van Lusaka', pt: 'Porto de Lusaka', tr: 'Lusaka Limanı', ru: 'Порт Лусака', zh: '卢萨卡港', ar: 'ميناء لوساكا' },
-      'ZMKAP': { en: 'Port of Kapiri Mposhi', fr: 'Port de Kapiri Mposhi', de: 'Hafen Kapiri Mposhi', es: 'Puerto de Kapiri Mposhi', it: 'Porto di Kapiri Mposhi', nl: 'Haven van Kapiri Mposhi', pt: 'Porto de Kapiri Mposhi', tr: 'Kapiri Mposhi Limanı', ru: 'Порт Капири-Мпоши', zh: '卡皮里姆波希港', ar: 'ميناء كابيري مبوشي' },
-      'ZMLUN_AIR': { en: 'Kenneth Kaunda International Airport', fr: 'Aéroport international Kenneth Kaunda', de: 'Internationaler Flughafen Kenneth Kaunda', es: 'Aeropuerto Internacional Kenneth Kaunda', it: 'Aeroporto Internazionale Kenneth Kaunda', nl: 'Internationale Luchthaven Kenneth Kaunda', pt: 'Aeroporto Internacional Kenneth Kaunda', tr: 'Kenneth Kaunda Uluslararası Havaalanı', ru: 'Международный аэропорт Кеннет Каунда', zh: '肯尼思·卡翁达国际机场', ar: 'مطار كينيث كاوندا الدولي' },
-      'ZMNDO': { en: 'Ndola Airport', fr: 'Aéroport de Ndola', de: 'Flughafen Ndola', es: 'Aeropuerto de Ndola', it: 'Aeroporto di Ndola', nl: 'Luchthaven Ndola', pt: 'Aeroporto de Ndola', tr: 'Ndola Havaalanı', ru: 'Аэропорт Ндола', zh: '恩多拉机场', ar: 'مطار ندولا' },
-      'ZMLUN_RAIL': { en: 'Lusaka Railway Station', fr: 'Gare de Lusaka', de: 'Bahnhof Lusaka', es: 'Estación de Lusaka', it: 'Stazione di Lusaka', nl: 'Station Lusaka', pt: 'Estação de Lusaka', tr: 'Lusaka Tren İstasyonu', ru: 'Железнодорожная станция Лусака', zh: '卢萨卡火车站', ar: 'محطة لوساكا للسكك الحديدية' },
-      'ZMKAP_RAIL': { en: 'Kapiri Mposhi Railway Station', fr: 'Gare de Kapiri Mposhi', de: 'Bahnhof Kapiri Mposhi', es: 'Estación de Kapiri Mposhi', it: 'Stazione di Kapiri Mposhi', nl: 'Station Kapiri Mposhi', pt: 'Estação de Kapiri Mposhi', tr: 'Kapiri Mposhi Tren İstasyonu', ru: 'Железнодорожная станция Капири-Мпоши', zh: '卡皮里姆波希火车站', ar: 'محطة كابيري مبوشي للسكك الحديدية' },
-      
-      // US major airports (fix the French source names)
-      'USLAX_AIR': { en: 'Los Angeles International Airport (LAX)', fr: 'Aéroport international de Los Angeles (LAX)', de: 'Internationaler Flughafen Los Angeles (LAX)', es: 'Aeropuerto Internacional de Los Ángeles (LAX)', it: 'Aeroporto Internazionale di Los Angeles (LAX)', nl: 'Internationale Luchthaven Los Angeles (LAX)', pt: 'Aeroporto Internacional de Los Angeles (LAX)', tr: 'Los Angeles Uluslararası Havaalanı (LAX)', ru: 'Международный аэропорт Лос-Анджелес (LAX)', zh: '洛杉矶国际机场 (LAX)', ar: 'مطار لوس أنجلوس الدولي (LAX)' },
-      'USJFK': { en: 'John F. Kennedy International Airport (JFK)', fr: 'Aéroport international John F. Kennedy (JFK)', de: 'John F. Kennedy International Airport (JFK)', es: 'Aeropuerto Internacional John F. Kennedy (JFK)', it: 'Aeroporto Internazionale John F. Kennedy (JFK)', nl: 'John F. Kennedy International Airport (JFK)', pt: 'Aeroporto Internacional John F. Kennedy (JFK)', tr: 'John F. Kennedy Uluslararası Havaalanı (JFK)', ru: 'Международный аэропорт имени Джона Кеннеди (JFK)', zh: '约翰·肯尼迪国际机场 (JFK)', ar: 'مطار جون كينيدي الدولي (JFK)' },
-      'USORD': { en: 'O\'Hare International Airport (ORD)', fr: 'Aéroport international O\'Hare (ORD)', de: 'O\'Hare International Airport (ORD)', es: 'Aeropuerto Internacional O\'Hare (ORD)', it: 'Aeroporto Internazionale O\'Hare (ORD)', nl: 'O\'Hare International Airport (ORD)', pt: 'Aeroporto Internacional O\'Hare (ORD)', tr: 'O\'Hare Uluslararası Havaalanı (ORD)', ru: 'Международный аэропорт О\'Хэйр (ORD)', zh: '芝加哥奥黑尔国际机场 (ORD)', ar: 'مطار أوهير الدولي (ORD)' },
-      'USDFW': { en: 'Dallas/Fort Worth International Airport (DFW)', fr: 'Aéroport international de Dallas/Fort Worth (DFW)', de: 'Dallas/Fort Worth International Airport (DFW)', es: 'Aeropuerto Internacional de Dallas/Fort Worth (DFW)', it: 'Aeroporto Internazionale di Dallas/Fort Worth (DFW)', nl: 'Dallas/Fort Worth International Airport (DFW)', pt: 'Aeroporto Internacional de Dallas/Fort Worth (DFW)', tr: 'Dallas/Fort Worth Uluslararası Havaalanı (DFW)', ru: 'Международный аэропорт Даллас/Форт-Уэрт (DFW)', zh: '达拉斯/沃斯堡国际机场 (DFW)', ar: 'مطار دالاس/فورت وورث الدولي (DFW)' },
-      'USATL': { en: 'Hartsfield-Jackson Atlanta International Airport (ATL)', fr: 'Aéroport international Hartsfield-Jackson d\'Atlanta (ATL)', de: 'Hartsfield-Jackson Atlanta International Airport (ATL)', es: 'Aeropuerto Internacional Hartsfield-Jackson de Atlanta (ATL)', it: 'Aeroporto Internazionale Hartsfield-Jackson di Atlanta (ATL)', nl: 'Hartsfield-Jackson Atlanta International Airport (ATL)', pt: 'Aeroporto Internacional Hartsfield-Jackson de Atlanta (ATL)', tr: 'Hartsfield-Jackson Atlanta Uluslararası Havaalanı (ATL)', ru: 'Международный аэропорт Хартсфилд-Джексон Атланта (ATL)', zh: '亚特兰大哈茨菲尔德-杰克逊国际机场 (ATL)', ar: 'مطار هارتسفيلد جاكسون أتلانتا الدولي (ATL)' }
-    };
-    
-    // Check manual translations first
-    const manualTranslation = manualTranslations[portCode];
-    if (manualTranslation && manualTranslation[userLang]) {
-      return manualTranslation[userLang];
-    }
-    
-    // City name translations for common toponyms
-    const cityTranslations: Record<string, Record<string, string>> = {
-      'London': { en: 'London', fr: 'Londres', de: 'London', es: 'Londres', it: 'Londra', nl: 'Londen', pt: 'Londres', tr: 'Londra', ru: 'Лондон', zh: '伦敦', ar: 'لندن' },
-      'Londres': { en: 'London', fr: 'Londres', de: 'London', es: 'Londres', it: 'Londra', nl: 'Londen', pt: 'Londres', tr: 'Londra', ru: 'Лондон', zh: '伦敦', ar: 'لندن' },
-      'Munich': { en: 'Munich', fr: 'Munich', de: 'München', es: 'Múnich', it: 'Monaco', nl: 'München', pt: 'Munique', tr: 'Münih', ru: 'Мюнхен', zh: '慕尼黑', ar: 'ميونيخ' },
-      'München': { en: 'Munich', fr: 'Munich', de: 'München', es: 'Múnich', it: 'Monaco', nl: 'München', pt: 'Munique', tr: 'Münih', ru: 'Мюнхен', zh: '慕尼黑', ar: 'ميونيخ' },
-      'Cologne': { en: 'Cologne', fr: 'Cologne', de: 'Köln', es: 'Colonia', it: 'Colonia', nl: 'Keulen', pt: 'Colônia', tr: 'Köln', ru: 'Кёльн', zh: '科隆', ar: 'كولونيا' },
-      'Köln': { en: 'Cologne', fr: 'Cologne', de: 'Köln', es: 'Colonia', it: 'Colonia', nl: 'Keulen', pt: 'Colônia', tr: 'Köln', ru: 'Кёльн', zh: '科隆', ar: 'كولونيا' },
-      'Dover': { en: 'Dover', fr: 'Douvres', de: 'Dover', es: 'Dover', it: 'Dover', nl: 'Dover', pt: 'Dover', tr: 'Dover', ru: 'Дувр', zh: '多佛', ar: 'دوفر' },
-      'Douvres': { en: 'Dover', fr: 'Douvres', de: 'Dover', es: 'Dover', it: 'Dover', nl: 'Dover', pt: 'Dover', tr: 'Dover', ru: 'Дувр', zh: '多佛', ar: 'دوفر' },
-      'Edinburgh': { en: 'Edinburgh', fr: 'Édimbourg', de: 'Edinburgh', es: 'Edimburgo', it: 'Edimburgo', nl: 'Edinburgh', pt: 'Edimburgo', tr: 'Edinburgh', ru: 'Эдинбург', zh: '爱丁堡', ar: 'إدنبرة' },
-      'Édimbourg': { en: 'Edinburgh', fr: 'Édimbourg', de: 'Edinburgh', es: 'Edimburgo', it: 'Edimburgo', nl: 'Edinburgh', pt: 'Edimburgo', tr: 'Edinburgh', ru: 'Эдинбург', zh: '爱丁堡', ar: 'إدنبرة' },
-      'Genoa': { en: 'Genoa', fr: 'Gênes', de: 'Genua', es: 'Génova', it: 'Genova', nl: 'Genua', pt: 'Gênova', tr: 'Cenova', ru: 'Генуя', zh: '热那亚', ar: 'جنوة' },
-      'Gênes': { en: 'Genoa', fr: 'Gênes', de: 'Genua', es: 'Génova', it: 'Genova', nl: 'Genua', pt: 'Gênova', tr: 'Cenova', ru: 'Генуя', zh: '热那亚', ar: 'جنوة' },
-      'Genova': { en: 'Genoa', fr: 'Gênes', de: 'Genua', es: 'Génova', it: 'Genova', nl: 'Genua', pt: 'Gênova', tr: 'Cenova', ru: 'Генуя', zh: '热那亚', ar: 'جنوة' },
-      'Valletta': { en: 'Valletta', fr: 'La Valette', de: 'Valletta', es: 'La Valeta', it: 'La Valletta', nl: 'Valletta', pt: 'Valletta', tr: 'Valletta', ru: 'Валлетта', zh: '瓦莱塔', ar: 'فاليتا' },
-      'La Valette': { en: 'Valletta', fr: 'La Valette', de: 'Valletta', es: 'La Valeta', it: 'La Valletta', nl: 'Valletta', pt: 'Valletta', tr: 'Valletta', ru: 'Валлетта', zh: '瓦莱塔', ar: 'فاليتا' },
-      'Warsaw': { en: 'Warsaw', fr: 'Varsovie', de: 'Warschau', es: 'Varsovia', it: 'Varsavia', nl: 'Warschau', pt: 'Varsóvia', tr: 'Varşova', ru: 'Варшава', zh: '华沙', ar: 'وارسو' },
-      'Varsovie': { en: 'Warsaw', fr: 'Varsovie', de: 'Warschau', es: 'Varsovia', it: 'Varsavia', nl: 'Warschau', pt: 'Varsóvia', tr: 'Varşova', ru: 'Варшава', zh: '华沙', ar: 'وارسو' },
-      'Immingham': { en: 'Immingham', fr: 'Immingham', de: 'Immingham', es: 'Immingham', it: 'Immingham', nl: 'Immingham', pt: 'Immingham', tr: 'Immingham', ru: 'Иммингхэм', zh: '伊明厄姆', ar: 'إمنجهام' }
-    };
-    
-    // Apply city translations
-    const applyCityTranslations = (text: string): string => {
-      let result = text;
-      for (const [sourceCity, translations] of Object.entries(cityTranslations)) {
-        if (translations[userLang]) {
-          const regex = new RegExp(`\\b${sourceCity}\\b`, 'giu');
-          result = result.replace(regex, translations[userLang]);
-        }
+
+  // -------- Origin (Step 3) helpers & handlers --------
+  const ORIGIN_COUNTRY_CODE = 'CN';
+  const originPorts = useMemo(() => PORTS_BY_COUNTRY[ORIGIN_COUNTRY_CODE] || [], []);
+  const getFilteredOriginPorts = useCallback(() => {
+    const ports = originPorts;
+    if (!originPortSearch.trim()) return ports;
+    if (formData.origin) return ports;
+    const clean = originPortSearch
+      .replace(/\p{Extended_Pictographic}/gu, '')
+      .trim()
+      .toLowerCase();
+    if (!clean) return ports;
+    return ports.filter(
+      (p) =>
+        p.name.toLowerCase().includes(clean) ||
+        p.code.toLowerCase().includes(clean) ||
+        p.type.toLowerCase().includes(clean)
+    );
+  }, [originPorts, originPortSearch, formData.origin]);
+
+  const handleOriginLocationTypeSelect = useCallback(
+    (typeId: string) => {
+      setFormData((prev) => ({ ...prev, locationType: typeId, city: '', zipCode: '', origin: '' }));
+      setFieldValid((prev) => ({
+        ...prev,
+        city: null,
+        zipCode: null,
+        origin: null,
+        locationType: true,
+      }));
+      setOriginPortSearch('');
+    },
+    [setFormData, setFieldValid]
+  );
+
+  const handleOriginPortSelect = useCallback(
+    (portCode: string) => {
+      setFormData((prev) => ({ ...prev, origin: portCode }));
+      setFieldValid((prev) => ({ ...prev, origin: true }));
+      const p = originPorts.find((po) => po.code === portCode);
+      if (p) {
+        // Inline name translation to avoid referencing later-declared function
+        const nameLocalized = (() => {
+          const manual: Record<string, Record<string, string>> = {};
+          const translated = manual[portCode]?.[userLang] || p.name;
+          return translated;
+        })();
+        setOriginPortSearch(`${p.flag} ${nameLocalized}`);
       }
-      return result;
-    };
-    
-    // Smart pattern-based translation for common terms
-    const translateTerm = (term: string, lang: string): string => {
-      const translations: Record<string, Record<string, string>> = {
-        en: {
-          'Port of': 'Port of', 'Airport': 'Airport', 'Station': 'Station',
-          'Central Station': 'Central Station', 'Railway Station': 'Railway Station',
-          'International Airport': 'International Airport'
+      setIsOriginPortListVisible(false);
+    },
+    [originPorts, setFormData, setFieldValid, userLang]
+  );
+
+  const getTranslatedPortNameLocal = useCallback(
+    (port: { code: string; name: string }, userLang: string) => {
+      // Smart translation system using patterns and fallbacks
+      const portCode = port.code;
+      const portName = port.name;
+
+      // Manual translations for specific important ports
+      const manualTranslations: Record<string, Record<string, string>> = {
+        // Major German ports
+        DEHAM: {
+          en: 'Port of Hamburg',
+          de: 'Hafen Hamburg',
+          fr: 'Port de Hambourg',
+          es: 'Puerto de Hamburgo',
+          it: 'Porto di Amburgo',
+          nl: 'Haven van Hamburg',
+          pt: 'Porto de Hamburgo',
+          tr: 'Hamburg Limanı',
+          ru: 'Порт Гамбург',
+          zh: '汉堡港',
+          ar: 'ميناء هامبورغ',
         },
-        fr: {
-          'Port of': 'Port de', 'Airport': 'Aéroport', 'Station': 'Gare',
-          'Central Station': 'Gare centrale', 'Railway Station': 'Gare',
-          'International Airport': 'Aéroport international', 'Railway Connection': 'Connexion ferroviaire'
+        DEBRE: {
+          en: 'Port of Bremen',
+          de: 'Hafen Bremen',
+          fr: 'Port de Brême',
+          es: 'Puerto de Bremen',
+          it: 'Porto di Brema',
+          nl: 'Haven van Bremen',
+          pt: 'Porto de Bremen',
+          tr: 'Bremen Limanı',
+          ru: 'Порт Бремен',
+          zh: '不来梅港',
+          ar: 'ميناء بريمن',
         },
-        de: {
-          'Port of': 'Hafen', 'Airport': 'Flughafen', 'Station': 'Bahnhof',
-          'Central Station': 'Hauptbahnhof', 'Railway Station': 'Bahnhof',
-          'International Airport': 'Internationaler Flughafen', 'Railway Connection': 'Bahnanschluss'
+        DEFRA: {
+          en: 'Frankfurt Airport',
+          de: 'Flughafen Frankfurt',
+          fr: 'Aéroport de Francfort',
+          es: 'Aeropuerto de Fráncfort',
+          it: 'Aeroporto di Francoforte',
+          nl: 'Luchthaven Frankfurt',
+          pt: 'Aeroporto de Frankfurt',
+          tr: 'Frankfurt Havaalanı',
+          ru: 'Аэропорт Франкфурт',
+          zh: '法兰克福机场',
+          ar: 'مطار فرانكفورت',
         },
-        es: {
-          'Port of': 'Puerto de', 'Airport': 'Aeropuerto', 'Station': 'Estación',
-          'Central Station': 'Estación Central', 'Railway Station': 'Estación',
-          'International Airport': 'Aeropuerto Internacional', 'Railway Connection': 'Conexión ferroviaria'
+        DEMUC: {
+          en: 'Munich Airport',
+          de: 'Flughafen München',
+          fr: 'Aéroport de Munich',
+          es: 'Aeropuerto de Múnich',
+          it: 'Aeroporto di Monaco',
+          nl: 'Luchthaven München',
+          pt: 'Aeroporto de Munique',
+          tr: 'Münih Havaalanı',
+          ru: 'Аэропорт Мюнхен',
+          zh: '慕尼黑机场',
+          ar: 'مطار ميونيخ',
         },
-        it: {
-          'Port of': 'Porto di', 'Airport': 'Aeroporto', 'Station': 'Stazione',
-          'Central Station': 'Stazione Centrale', 'Railway Station': 'Stazione',
-          'International Airport': 'Aeroporto Internazionale', 'Railway Connection': 'Collegamento ferroviario'
+
+        // Major Asian ports
+        TWKHH: {
+          en: 'Port of Kaohsiung',
+          fr: 'Port de Kaohsiung',
+          de: 'Hafen Kaohsiung',
+          es: 'Puerto de Kaohsiung',
+          it: 'Porto di Kaohsiung',
+          nl: 'Haven van Kaohsiung',
+          pt: 'Porto de Kaohsiung',
+          tr: 'Kaohsiung Limanı',
+          ru: 'Порт Гаосюн',
+          zh: '高雄港',
+          ar: 'ميناء كاوشيونغ',
         },
-        nl: {
-          'Port of': 'Haven van', 'Airport': 'Luchthaven', 'Station': 'Station',
-          'Central Station': 'Centraal Station', 'Railway Station': 'Station',
-          'International Airport': 'Internationale Luchthaven', 'Railway Connection': 'Spoorverbinding'
+        TWTPE_AIR: {
+          en: 'Taipei Taoyuan Airport',
+          fr: 'Aéroport de Taipei Taoyuan',
+          de: 'Flughafen Taipei Taoyuan',
+          es: 'Aeropuerto de Taipéi Taoyuan',
+          it: 'Aeroporto di Taipei Taoyuan',
+          nl: 'Luchthaven Taipei Taoyuan',
+          pt: 'Aeroporto de Taipei Taoyuan',
+          tr: 'Taipei Taoyuan Havaalanı',
+          ru: 'Аэропорт Тайбэй Таоюань',
+          zh: '台北桃园机场',
+          ar: 'مطار تايبيه تاويوان',
         },
-        pt: {
-          'Port of': 'Porto de', 'Airport': 'Aeroporto', 'Station': 'Estação',
-          'Central Station': 'Estação Central', 'Railway Station': 'Estação',
-          'International Airport': 'Aeroporto Internacional', 'Railway Connection': 'Conexão ferroviária'
+
+        // Major Middle East ports
+        QADOH_AIR: {
+          en: 'Doha Hamad International Airport',
+          fr: 'Aéroport international de Doha Hamad',
+          de: 'Internationaler Flughafen Doha Hamad',
+          es: 'Aeropuerto Internacional de Doha Hamad',
+          it: 'Aeroporto Internazionale di Doha Hamad',
+          nl: 'Internationale Luchthaven Doha Hamad',
+          pt: 'Aeroporto Internacional de Doha Hamad',
+          tr: 'Doha Hamad Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Доха Хамад',
+          zh: '多哈哈马德国际机场',
+          ar: 'مطار حمد الدولي',
         },
-        tr: {
-          'Port of': '', 'Airport': 'Havaalanı', 'Station': 'İstasyonu',
-          'Central Station': 'Merkez İstasyonu', 'Railway Station': 'Tren İstasyonu',
-          'International Airport': 'Uluslararası Havaalanı', 'Railway Connection': 'Demiryolu bağlantısı'
+        SAJED: {
+          en: 'Port of Jeddah',
+          fr: 'Port de Jeddah',
+          de: 'Hafen Dschidda',
+          es: 'Puerto de Jeddah',
+          it: 'Porto di Jeddah',
+          nl: 'Haven van Jeddah',
+          pt: 'Porto de Jeddah',
+          tr: 'Cidde Limanı',
+          ru: 'Порт Джидда',
+          zh: '吉达港',
+          ar: 'ميناء جدة',
         },
-        ru: {
-          'Port of': 'Порт', 'Airport': 'Аэропорт', 'Station': 'Вокзал',
-          'Central Station': 'Центральный вокзал', 'Railway Station': 'Железнодорожный вокзал',
-          'International Airport': 'Международный аэропорт', 'Railway Connection': 'Железнодорожное соединение'
+        SARUH: {
+          en: 'Riyadh King Khalid Airport',
+          fr: 'Aéroport de Riyadh King Khalid',
+          de: 'Flughafen Riad King Khalid',
+          es: 'Aeropuerto de Riad King Khalid',
+          it: 'Aeroporto di Riyadh King Khalid',
+          nl: 'Luchthaven Riyadh King Khalid',
+          pt: 'Aeroporto de Riyadh King Khalid',
+          tr: 'Riyad Kral Halid Havaalanı',
+          ru: 'Аэропорт Эр-Рияд имени короля Халида',
+          zh: '利雅得哈立德国王机场',
+          ar: 'مطار الملك خالد الدولي',
         },
-        zh: {
-          'Port of': '', 'Airport': '机场', 'Station': '车站',
-          'Central Station': '中央车站', 'Railway Station': '火车站',
-          'International Airport': '国际机场', 'Railway Connection': '铁路连接'
+
+        // New major hubs - Luxembourg
+        LULUX: {
+          en: 'Luxembourg Findel Airport',
+          fr: 'Aéroport de Luxembourg Findel',
+          de: 'Flughafen Luxemburg Findel',
+          es: 'Aeropuerto de Luxemburgo Findel',
+          it: 'Aeroporto di Lussemburgo Findel',
+          nl: 'Luchthaven Luxemburg Findel',
+          pt: 'Aeroporto de Luxemburgo Findel',
+          tr: 'Lüksemburg Findel Havaalanı',
+          ru: 'Аэропорт Люксембург Финдель',
+          zh: '卢森堡芬德尔机场',
+          ar: 'مطار لوكسمبورغ فيندل',
         },
-        ar: {
-          'Port of': 'ميناء', 'Airport': 'مطار', 'Station': 'محطة',
-          'Central Station': 'المحطة المركزية', 'Railway Station': 'محطة القطار',
-          'International Airport': 'مطار دولي', 'Railway Connection': 'الاتصال بالسكك الحديدية'
-        }
+
+        // Monaco
+        MCMON: {
+          en: 'Port of Monaco',
+          fr: 'Port de Monaco',
+          de: 'Hafen Monaco',
+          es: 'Puerto de Mónaco',
+          it: 'Porto di Monaco',
+          nl: 'Haven van Monaco',
+          pt: 'Porto do Mônaco',
+          tr: 'Monako Limanı',
+          ru: 'Порт Монако',
+          zh: '摩纳哥港',
+          ar: 'ميناء موناكو',
+        },
+
+        // Iceland
+        ISKEF: {
+          en: 'Reykjavik Keflavik Airport',
+          fr: 'Aéroport de Reykjavik Keflavik',
+          de: 'Flughafen Reykjavik Keflavik',
+          es: 'Aeropuerto de Reykjavik Keflavik',
+          it: 'Aeroporto di Reykjavik Keflavik',
+          nl: 'Luchthaven Reykjavik Keflavik',
+          pt: 'Aeroporto de Reykjavik Keflavik',
+          tr: 'Reykjavik Keflavik Havaalanı',
+          ru: 'Аэропорт Рейкьявик Кефлавик',
+          zh: '雷克雅未克凯夫拉维克机场',
+          ar: 'مطار ريكيافيك كيفلافيك',
+        },
+        ISREY: {
+          en: 'Port of Reykjavik',
+          fr: 'Port de Reykjavik',
+          de: 'Hafen Reykjavik',
+          es: 'Puerto de Reykjavik',
+          it: 'Porto di Reykjavik',
+          nl: 'Haven van Reykjavik',
+          pt: 'Porto de Reykjavik',
+          tr: 'Reykjavik Limanı',
+          ru: 'Порт Рейкьявик',
+          zh: '雷克雅未克港',
+          ar: 'ميناء ريكيافيك',
+        },
+
+        // Malta
+        MTMLA: {
+          en: 'Port of Valletta',
+          fr: 'Port de La Valette',
+          de: 'Hafen Valletta',
+          es: 'Puerto de La Valeta',
+          it: 'Porto di La Valletta',
+          nl: 'Haven van Valletta',
+          pt: 'Porto de Valletta',
+          tr: 'Valletta Limanı',
+          ru: 'Порт Валлетта',
+          zh: '瓦莱塔港',
+          ar: 'ميناء فاليتا',
+        },
+        MTMRS: {
+          en: 'Port of Marsaxlokk',
+          fr: 'Port de Marsaxlokk',
+          de: 'Hafen Marsaxlokk',
+          es: 'Puerto de Marsaxlokk',
+          it: 'Porto di Marsaxlokk',
+          nl: 'Haven van Marsaxlokk',
+          pt: 'Porto de Marsaxlokk',
+          tr: 'Marsaxlokk Limanı',
+          ru: 'Порт Марсашлокк',
+          zh: '马尔萨什洛克港',
+          ar: 'ميناء مارساشلوك',
+        },
+
+        // Cyprus
+        CYLIM: {
+          en: 'Port of Limassol',
+          fr: 'Port de Limassol',
+          de: 'Hafen Limassol',
+          es: 'Puerto de Limassol',
+          it: 'Porto di Limassol',
+          nl: 'Haven van Limassol',
+          pt: 'Porto de Limassol',
+          tr: 'Limasol Limanı',
+          ru: 'Порт Лимассол',
+          zh: '利马索尔港',
+          ar: 'ميناء ليماسول',
+        },
+
+        // African hubs
+        TZDAR: {
+          en: 'Port of Dar es Salaam',
+          fr: 'Port de Dar es Salaam',
+          de: 'Hafen Dar es Salaam',
+          es: 'Puerto de Dar es Salaam',
+          it: 'Porto di Dar es Salaam',
+          nl: 'Haven van Dar es Salaam',
+          pt: 'Porto de Dar es Salaam',
+          tr: 'Dar es Salaam Limanı',
+          ru: 'Порт Дар-эс-Салам',
+          zh: '达累斯萨拉姆港',
+          ar: 'ميناء دار السلام',
+        },
+        RWKGL: {
+          en: 'Kigali International Airport',
+          fr: 'Aéroport international de Kigali',
+          de: 'Internationaler Flughafen Kigali',
+          es: 'Aeropuerto Internacional de Kigali',
+          it: 'Aeroporto Internazionale di Kigali',
+          nl: 'Internationale Luchthaven Kigali',
+          pt: 'Aeroporto Internacional de Kigali',
+          tr: 'Kigali Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Кигали',
+          zh: '基加利国际机场',
+          ar: 'مطار كيغالي الدولي',
+        },
+        UGENT_AIR: {
+          en: 'Entebbe International Airport',
+          fr: "Aéroport international d'Entebbe",
+          de: 'Internationaler Flughafen Entebbe',
+          es: 'Aeropuerto Internacional de Entebbe',
+          it: 'Aeroporto Internazionale di Entebbe',
+          nl: 'Internationale Luchthaven Entebbe',
+          pt: 'Aeroporto Internacional de Entebbe',
+          tr: 'Entebbe Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Энтеббе',
+          zh: '恩德培国际机场',
+          ar: 'مطار عنتيبي الدولي',
+        },
+
+        // Pacific hubs
+        FJNAN: {
+          en: 'Nadi Airport',
+          fr: 'Aéroport de Nadi',
+          de: 'Flughafen Nadi',
+          es: 'Aeropuerto de Nadi',
+          it: 'Aeroporto di Nadi',
+          nl: 'Luchthaven Nadi',
+          pt: 'Aeroporto de Nadi',
+          tr: 'Nadi Havaalanı',
+          ru: 'Аэропорт Нади',
+          zh: '楠迪机场',
+          ar: 'مطار نادي',
+        },
+        FJSUV: {
+          en: 'Port of Suva',
+          fr: 'Port de Suva',
+          de: 'Hafen Suva',
+          es: 'Puerto de Suva',
+          it: 'Porto di Suva',
+          nl: 'Haven van Suva',
+          pt: 'Porto de Suva',
+          tr: 'Suva Limanı',
+          ru: 'Порт Сува',
+          zh: '苏瓦港',
+          ar: 'ميناء سوفا',
+        },
+
+        // Indian Ocean hubs
+        MUPTS: {
+          en: 'Port Louis',
+          fr: 'Port Louis',
+          de: 'Port Louis',
+          es: 'Puerto Louis',
+          it: 'Port Louis',
+          nl: 'Port Louis',
+          pt: 'Port Louis',
+          tr: 'Port Louis',
+          ru: 'Порт-Луи',
+          zh: '路易港',
+          ar: 'بورت لويس',
+        },
+        MUPTS_AIR: {
+          en: 'Mauritius Airport',
+          fr: 'Aéroport de Maurice',
+          de: 'Flughafen Mauritius',
+          es: 'Aeropuerto de Mauricio',
+          it: 'Aeroporto di Mauritius',
+          nl: 'Luchthaven Mauritius',
+          pt: 'Aeroporto de Maurício',
+          tr: 'Mauritius Havaalanı',
+          ru: 'Аэропорт Маврикий',
+          zh: '毛里求斯机场',
+          ar: 'مطار موريشيوس',
+        },
+        SCVIC: {
+          en: 'Port of Victoria',
+          fr: 'Port de Victoria',
+          de: 'Hafen Victoria',
+          es: 'Puerto de Victoria',
+          it: 'Porto di Victoria',
+          nl: 'Haven van Victoria',
+          pt: 'Porto de Victoria',
+          tr: 'Victoria Limanı',
+          ru: 'Порт Виктория',
+          zh: '维多利亚港',
+          ar: 'ميناء فيكتوريا',
+        },
+        MVMAL_AIR: {
+          en: 'Malé Velana Airport',
+          fr: 'Aéroport de Malé Velana',
+          de: 'Flughafen Malé Velana',
+          es: 'Aeropuerto de Malé Velana',
+          it: 'Aeroporto di Malé Velana',
+          nl: 'Luchthaven Malé Velana',
+          pt: 'Aeroporto de Malé Velana',
+          tr: 'Malé Velana Havaalanı',
+          ru: 'Аэропорт Мале Велана',
+          zh: '马累维拉纳机场',
+          ar: 'مطار مالي فيلانا',
+        },
+
+        // Romanian hubs (for the issues shown in the screenshot)
+        ROCND: {
+          en: 'Port of Constanta',
+          fr: 'Port de Constanta',
+          de: 'Hafen Konstanza',
+          es: 'Puerto de Constanza',
+          it: 'Porto di Costanza',
+          nl: 'Haven van Constanta',
+          pt: 'Porto de Constanta',
+          tr: 'Köstence Limanı',
+          ru: 'Порт Констанца',
+          zh: '康斯坦察港',
+          ar: 'ميناء كونستانتا',
+        },
+        ROGLT: {
+          en: 'Port of Galati',
+          fr: 'Port de Galati',
+          de: 'Hafen Galați',
+          es: 'Puerto de Galați',
+          it: 'Porto di Galați',
+          nl: 'Haven van Galați',
+          pt: 'Porto de Galați',
+          tr: 'Galați Limanı',
+          ru: 'Порт Галац',
+          zh: '加拉茨港',
+          ar: 'ميناء غالاتي',
+        },
+        ROBUH: {
+          en: 'Bucharest Henri Coandă Airport',
+          fr: 'Aéroport de Bucarest Henri Coandă',
+          de: 'Flughafen Bukarest Henri Coandă',
+          es: 'Aeropuerto de Bucarest Henri Coandă',
+          it: 'Aeroporto di Bucarest Henri Coandă',
+          nl: 'Luchthaven Boekarest Henri Coandă',
+          pt: 'Aeroporto de Bucareste Henri Coandă',
+          tr: 'Bükreş Henri Coandă Havaalanı',
+          ru: 'Аэропорт Бухарест Анри Коандэ',
+          zh: '布加勒斯特亨利·科安德机场',
+          ar: 'مطار بوخارست هنري كواندا',
+        },
+
+        // Other European hubs that users might see
+        BGVAR: {
+          en: 'Port of Varna',
+          fr: 'Port de Varna',
+          de: 'Hafen Warna',
+          es: 'Puerto de Varna',
+          it: 'Porto di Varna',
+          nl: 'Haven van Varna',
+          pt: 'Porto de Varna',
+          tr: 'Varna Limanı',
+          ru: 'Порт Варна',
+          zh: '瓦尔纳港',
+          ar: 'ميناء فارنا',
+        },
+        BGSOF: {
+          en: 'Sofia Airport',
+          fr: 'Aéroport de Sofia',
+          de: 'Flughafen Sofia',
+          es: 'Aeropuerto de Sofía',
+          it: 'Aeroporto di Sofia',
+          nl: 'Luchthaven Sofia',
+          pt: 'Aeroporto de Sofia',
+          tr: 'Sofya Havaalanı',
+          ru: 'Аэропорт София',
+          zh: '索菲亚机场',
+          ar: 'مطار صوفيا',
+        },
+        PLWAR: {
+          en: 'Port of Warsaw',
+          fr: 'Port de Varsovie',
+          de: 'Hafen Warschau',
+          es: 'Puerto de Varsovia',
+          it: 'Porto di Varsavia',
+          nl: 'Haven van Warschau',
+          pt: 'Porto de Varsóvia',
+          tr: 'Varşova Limanı',
+          ru: 'Порт Варшава',
+          zh: '华沙港',
+          ar: 'ميناء وارسو',
+        },
+        PLGDN: {
+          en: 'Port of Gdansk',
+          fr: 'Port de Gdansk',
+          de: 'Hafen Danzig',
+          es: 'Puerto de Gdansk',
+          it: 'Porto di Danzica',
+          nl: 'Haven van Gdansk',
+          pt: 'Porto de Gdansk',
+          tr: 'Gdansk Limanı',
+          ru: 'Порт Гданьск',
+          zh: '格但斯克港',
+          ar: 'ميناء غدانسك',
+        },
+        CZKRK: {
+          en: 'Port of Krakow',
+          fr: 'Port de Cracovie',
+          de: 'Hafen Krakau',
+          es: 'Puerto de Cracovia',
+          it: 'Porto di Cracovia',
+          nl: 'Haven van Krakau',
+          pt: 'Porto de Cracóvia',
+          tr: 'Krakow Limanı',
+          ru: 'Порт Краков',
+          zh: '克拉科夫港',
+          ar: 'ميناء كراكوف',
+        },
+        CZPRG_AIR: {
+          en: 'Prague Airport',
+          fr: 'Aéroport de Prague',
+          de: 'Flughafen Prag',
+          es: 'Aeropuerto de Praga',
+          it: 'Aeroporto di Praga',
+          nl: 'Luchthaven Praag',
+          pt: 'Aeroporto de Praga',
+          tr: 'Prag Havaalanı',
+          ru: 'Аэропорт Прага',
+          zh: '布拉格机场',
+          ar: 'مطار براغ',
+        },
+
+        // === PAYS EN A - TRADUCTIONS COMPLÈTES ===
+
+        // 🇦🇪 UAE (Émirats Arabes Unis) - Hubs majeurs du Moyen-Orient
+        AEJEA: {
+          en: 'Port of Jebel Ali',
+          fr: 'Port de Jebel Ali',
+          de: 'Hafen Jebel Ali',
+          es: 'Puerto de Jebel Ali',
+          it: 'Porto di Jebel Ali',
+          nl: 'Haven van Jebel Ali',
+          pt: 'Porto de Jebel Ali',
+          tr: 'Jebel Ali Limanı',
+          ru: 'Порт Джебель-Али',
+          zh: '杰贝阿里港',
+          ar: 'ميناء جبل علي',
+        },
+        AESHJ: {
+          en: 'Port of Sharjah',
+          fr: 'Port de Sharjah',
+          de: 'Hafen Schardscha',
+          es: 'Puerto de Sharjah',
+          it: 'Porto di Sharjah',
+          nl: 'Haven van Sharjah',
+          pt: 'Porto de Sharjah',
+          tr: 'Şarjah Limanı',
+          ru: 'Порт Шарджа',
+          zh: '沙迦港',
+          ar: 'ميناء الشارقة',
+        },
+        AEDXB: {
+          en: 'Dubai International Airport',
+          fr: 'Aéroport international de Dubaï',
+          de: 'Internationaler Flughafen Dubai',
+          es: 'Aeropuerto Internacional de Dubái',
+          it: 'Aeroporto Internazionale di Dubai',
+          nl: 'Internationale Luchthaven Dubai',
+          pt: 'Aeroporto Internacional de Dubai',
+          tr: 'Dubai Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Дубай',
+          zh: '迪拜国际机场',
+          ar: 'مطار دبي الدولي',
+        },
+        AEAUH: {
+          en: 'Abu Dhabi International Airport',
+          fr: "Aéroport international d'Abu Dhabi",
+          de: 'Internationaler Flughafen Abu Dhabi',
+          es: 'Aeropuerto Internacional de Abu Dhabi',
+          it: 'Aeroporto Internazionale di Abu Dhabi',
+          nl: 'Internationale Luchthaven Abu Dhabi',
+          pt: 'Aeroporto Internacional de Abu Dhabi',
+          tr: 'Abu Dabi Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Абу-Даби',
+          zh: '阿布扎比国际机场',
+          ar: 'مطار أبوظبي الدولي',
+        },
+
+        // 🇦🇺 Australia (Australie) - Hubs majeurs du Pacifique
+        AUSYD: {
+          en: 'Port of Sydney',
+          fr: 'Port de Sydney',
+          de: 'Hafen Sydney',
+          es: 'Puerto de Sídney',
+          it: 'Porto di Sydney',
+          nl: 'Haven van Sydney',
+          pt: 'Porto de Sydney',
+          tr: 'Sidney Limanı',
+          ru: 'Порт Сидней',
+          zh: '悉尼港',
+          ar: 'ميناء سيدني',
+        },
+        AUMEL: {
+          en: 'Port of Melbourne',
+          fr: 'Port de Melbourne',
+          de: 'Hafen Melbourne',
+          es: 'Puerto de Melbourne',
+          it: 'Porto di Melbourne',
+          nl: 'Haven van Melbourne',
+          pt: 'Porto de Melbourne',
+          tr: 'Melbourne Limanı',
+          ru: 'Порт Мельбурн',
+          zh: '墨尔本港',
+          ar: 'ميناء ملبورن',
+        },
+        AUBNE: {
+          en: 'Port of Brisbane',
+          fr: 'Port de Brisbane',
+          de: 'Hafen Brisbane',
+          es: 'Puerto de Brisbane',
+          it: 'Porto di Brisbane',
+          nl: 'Haven van Brisbane',
+          pt: 'Porto de Brisbane',
+          tr: 'Brisbane Limanı',
+          ru: 'Порт Брисбен',
+          zh: '布里斯班港',
+          ar: 'ميناء بريسبان',
+        },
+        AUFRE: {
+          en: 'Port of Fremantle',
+          fr: 'Port de Fremantle',
+          de: 'Hafen Fremantle',
+          es: 'Puerto de Fremantle',
+          it: 'Porto di Fremantle',
+          nl: 'Haven van Fremantle',
+          pt: 'Porto de Fremantle',
+          tr: 'Fremantle Limanı',
+          ru: 'Порт Фримантл',
+          zh: '弗里曼特尔港',
+          ar: 'ميناء فريمانتل',
+        },
+        AUSYD_AIR: {
+          en: 'Sydney Kingsford Smith Airport',
+          fr: 'Aéroport de Sydney Kingsford Smith',
+          de: 'Flughafen Sydney Kingsford Smith',
+          es: 'Aeropuerto de Sídney Kingsford Smith',
+          it: 'Aeroporto di Sydney Kingsford Smith',
+          nl: 'Luchthaven Sydney Kingsford Smith',
+          pt: 'Aeroporto de Sydney Kingsford Smith',
+          tr: 'Sidney Kingsford Smith Havaalanı',
+          ru: 'Аэропорт Сидней Кингсфорд Смит',
+          zh: '悉尼金斯福德·史密斯机场',
+          ar: 'مطار سيدني كينجسفورد سميث',
+        },
+        AUMEL_AIR: {
+          en: 'Melbourne Airport',
+          fr: 'Aéroport de Melbourne',
+          de: 'Flughafen Melbourne',
+          es: 'Aeropuerto de Melbourne',
+          it: 'Aeroporto di Melbourne',
+          nl: 'Luchthaven Melbourne',
+          pt: 'Aeroporto de Melbourne',
+          tr: 'Melbourne Havaalanı',
+          ru: 'Аэропорт Мельбурн',
+          zh: '墨尔本机场',
+          ar: 'مطار ملبورن',
+        },
+        AUBNE_AIR: {
+          en: 'Brisbane Airport',
+          fr: 'Aéroport de Brisbane',
+          de: 'Flughafen Brisbane',
+          es: 'Aeropuerto de Brisbane',
+          it: 'Aeroporto di Brisbane',
+          nl: 'Luchthaven Brisbane',
+          pt: 'Aeroporto de Brisbane',
+          tr: 'Brisbane Havaalanı',
+          ru: 'Аэропорт Брисбен',
+          zh: '布里斯班机场',
+          ar: 'مطار بريسبان',
+        },
+        AUPER_AIR: {
+          en: 'Perth Airport',
+          fr: 'Aéroport de Perth',
+          de: 'Flughafen Perth',
+          es: 'Aeropuerto de Perth',
+          it: 'Aeroporto di Perth',
+          nl: 'Luchthaven Perth',
+          pt: 'Aeroporto de Perth',
+          tr: 'Perth Havaalanı',
+          ru: 'Аэропорт Перт',
+          zh: '珀斯机场',
+          ar: 'مطار بيرث',
+        },
+
+        // 🇦🇷 Argentina (Argentine) - Hub d'Amérique du Sud
+        ARBUE: {
+          en: 'Port of Buenos Aires',
+          fr: 'Port de Buenos Aires',
+          de: 'Hafen Buenos Aires',
+          es: 'Puerto de Buenos Aires',
+          it: 'Porto di Buenos Aires',
+          nl: 'Haven van Buenos Aires',
+          pt: 'Porto de Buenos Aires',
+          tr: 'Buenos Aires Limanı',
+          ru: 'Порт Буэнос-Айрес',
+          zh: '布宜诺斯艾利斯港',
+          ar: 'ميناء بوينس آيرس',
+        },
+        AREZE: {
+          en: 'Ezeiza International Airport',
+          fr: "Aéroport international d'Ezeiza",
+          de: 'Internationaler Flughafen Ezeiza',
+          es: 'Aeropuerto Internacional de Ezeiza',
+          it: 'Aeroporto Internazionale di Ezeiza',
+          nl: 'Internationale Luchthaven Ezeiza',
+          pt: 'Aeroporto Internacional de Ezeiza',
+          tr: 'Ezeiza Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Эсейса',
+          zh: '埃塞萨国际机场',
+          ar: 'مطار إيزيزا الدولي',
+        },
+
+        // 🇦🇹 Austria (Autriche) - Hub européen central
+        ATVIE: {
+          en: 'Vienna International Airport',
+          fr: 'Aéroport international de Vienne',
+          de: 'Flughafen Wien-Schwechat',
+          es: 'Aeropuerto Internacional de Viena',
+          it: 'Aeroporto Internazionale di Vienna',
+          nl: 'Internationale Luchthaven Wenen',
+          pt: 'Aeroporto Internacional de Viena',
+          tr: 'Viyana Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Вена',
+          zh: '维也纳国际机场',
+          ar: 'مطار فيينا الدولي',
+        },
+        ATVIE_RAIL: {
+          en: 'Vienna Central Station',
+          fr: 'Gare centrale de Vienne',
+          de: 'Wien Hauptbahnhof',
+          es: 'Estación Central de Viena',
+          it: 'Stazione Centrale di Vienna',
+          nl: 'Centraal Station Wenen',
+          pt: 'Estação Central de Viena',
+          tr: 'Viyana Merkez İstasyonu',
+          ru: 'Центральный вокзал Вены',
+          zh: '维也纳中央火车站',
+          ar: 'محطة فيينا المركزية',
+        },
+
+        // 🇦🇴 Angola - Hub d'Afrique australe
+        AOLAD: {
+          en: 'Port of Luanda',
+          fr: 'Port de Luanda',
+          de: 'Hafen Luanda',
+          es: 'Puerto de Luanda',
+          it: 'Porto di Luanda',
+          nl: 'Haven van Luanda',
+          pt: 'Porto de Luanda',
+          tr: 'Luanda Limanı',
+          ru: 'Порт Луанда',
+          zh: '罗安达港',
+          ar: 'ميناء لواندا',
+        },
+        AOLOS: {
+          en: 'Port of Lobito',
+          fr: 'Port de Lobito',
+          de: 'Hafen Lobito',
+          es: 'Puerto de Lobito',
+          it: 'Porto di Lobito',
+          nl: 'Haven van Lobito',
+          pt: 'Porto do Lobito',
+          tr: 'Lobito Limanı',
+          ru: 'Порт Лобито',
+          zh: '洛比托港',
+          ar: 'ميناء لوبيتو',
+        },
+        AOLAD_AIR: {
+          en: 'Luanda Quatro de Fevereiro Airport',
+          fr: 'Aéroport de Luanda Quatro de Fevereiro',
+          de: 'Flughafen Luanda Quatro de Fevereiro',
+          es: 'Aeropuerto de Luanda Quatro de Fevereiro',
+          it: 'Aeroporto di Luanda Quatro de Fevereiro',
+          nl: 'Luchthaven Luanda Quatro de Fevereiro',
+          pt: 'Aeroporto de Luanda Quatro de Fevereiro',
+          tr: 'Luanda Quatro de Fevereiro Havaalanı',
+          ru: 'Аэропорт Луанда Куатро-де-Февереиру',
+          zh: '罗安达二月四日机场',
+          ar: 'مطار لواندا كواترو دي فيفيريرو',
+        },
+        AOLAD_RAIL: {
+          en: 'Luanda Railway Station',
+          fr: 'Gare ferroviaire de Luanda',
+          de: 'Bahnhof Luanda',
+          es: 'Estación de Ferrocarril de Luanda',
+          it: 'Stazione Ferroviaria di Luanda',
+          nl: 'Treinstation Luanda',
+          pt: 'Estação Ferroviária de Luanda',
+          tr: 'Luanda Tren İstasyonu',
+          ru: 'Железнодорожная станция Луанда',
+          zh: '罗安达火车站',
+          ar: 'محطة لواندا للسكك الحديدية',
+        },
+
+        // === PAYS EN B - TRADUCTIONS COMPLÈTES ===
+
+        // 🇧🇪 Belgium (Belgique) - Hub européen majeur
+        BEANR: {
+          en: 'Port of Antwerp',
+          fr: "Port d'Anvers",
+          de: 'Hafen Antwerpen',
+          es: 'Puerto de Amberes',
+          it: 'Porto di Anversa',
+          nl: 'Haven van Antwerpen',
+          pt: 'Porto de Antuérpia',
+          tr: 'Anvers Limanı',
+          ru: 'Порт Антверпен',
+          zh: '安特卫普港',
+          ar: 'ميناء أنتويرب',
+        },
+        BEZEE: {
+          en: 'Port of Zeebrugge',
+          fr: 'Port de Zeebruges',
+          de: 'Hafen Zeebrügge',
+          es: 'Puerto de Zeebrugge',
+          it: 'Porto di Zeebrugge',
+          nl: 'Haven van Zeebrugge',
+          pt: 'Porto de Zeebrugge',
+          tr: 'Zeebrugge Limanı',
+          ru: 'Порт Зебрюгге',
+          zh: '泽布吕赫港',
+          ar: 'ميناء زيبروج',
+        },
+        BEBRU: {
+          en: 'Brussels Airport',
+          fr: 'Aéroport de Bruxelles',
+          de: 'Flughafen Brüssel',
+          es: 'Aeropuerto de Bruselas',
+          it: 'Aeroporto di Bruxelles',
+          nl: 'Luchthaven Brussel',
+          pt: 'Aeroporto de Bruxelas',
+          tr: 'Brüksel Havaalanı',
+          ru: 'Аэропорт Брюссель',
+          zh: '布鲁塞尔机场',
+          ar: 'مطار بروكسل',
+        },
+        BELIE: {
+          en: 'Liège Airport',
+          fr: 'Aéroport de Liège',
+          de: 'Flughafen Lüttich',
+          es: 'Aeropuerto de Lieja',
+          it: 'Aeroporto di Liegi',
+          nl: 'Luchthaven Luik',
+          pt: 'Aeroporto de Liège',
+          tr: 'Liège Havaalanı',
+          ru: 'Аэропорт Льеж',
+          zh: '列日机场',
+          ar: 'مطار لييج',
+        },
+        BEBRU_RAIL: {
+          en: 'Brussels Central Station',
+          fr: 'Gare centrale de Bruxelles',
+          de: 'Brüssel-Zentral',
+          es: 'Estación Central de Bruselas',
+          it: 'Stazione Centrale di Bruxelles',
+          nl: 'Brussel-Centraal',
+          pt: 'Estação Central de Bruxelas',
+          tr: 'Brüksel Merkez İstasyonu',
+          ru: 'Центральный вокзал Брюсселя',
+          zh: '布鲁塞尔中央车站',
+          ar: 'محطة بروكسل المركزية',
+        },
+        BEANR_RAIL: {
+          en: 'Antwerp Central Station',
+          fr: "Gare centrale d'Anvers",
+          de: 'Antwerpen-Zentral',
+          es: 'Estación Central de Amberes',
+          it: 'Stazione Centrale di Anversa',
+          nl: 'Antwerpen-Centraal',
+          pt: 'Estação Central de Antuérpia',
+          tr: 'Anvers Merkez İstasyonu',
+          ru: 'Центральный вокзал Антверпена',
+          zh: '安特卫普中央车站',
+          ar: 'محطة أنتويرب المركزية',
+        },
+
+        // 🇧🇷 Brazil (Brésil) - Hub d'Amérique du Sud
+        BRSFS: {
+          en: 'Port of Santos',
+          fr: 'Port de Santos',
+          de: 'Hafen Santos',
+          es: 'Puerto de Santos',
+          it: 'Porto di Santos',
+          nl: 'Haven van Santos',
+          pt: 'Porto de Santos',
+          tr: 'Santos Limanı',
+          ru: 'Порт Сантос',
+          zh: '桑托斯港',
+          ar: 'ميناء سانتوس',
+        },
+        BRRIO: {
+          en: 'Port of Rio de Janeiro',
+          fr: 'Port de Rio de Janeiro',
+          de: 'Hafen Rio de Janeiro',
+          es: 'Puerto de Río de Janeiro',
+          it: 'Porto di Rio de Janeiro',
+          nl: 'Haven van Rio de Janeiro',
+          pt: 'Porto do Rio de Janeiro',
+          tr: 'Rio de Janeiro Limanı',
+          ru: 'Порт Рио-де-Жанейро',
+          zh: '里约热内卢港',
+          ar: 'ميناء ريو دي جانيرو',
+        },
+        BRPAR: {
+          en: 'Port of Paranaguá',
+          fr: 'Port de Paranaguá',
+          de: 'Hafen Paranaguá',
+          es: 'Puerto de Paranaguá',
+          it: 'Porto di Paranaguá',
+          nl: 'Haven van Paranaguá',
+          pt: 'Porto de Paranaguá',
+          tr: 'Paranaguá Limanı',
+          ru: 'Порт Паранагуа',
+          zh: '巴拉那瓜港',
+          ar: 'ميناء باراناغوا',
+        },
+        BRGRU: {
+          en: 'São Paulo Guarulhos International Airport',
+          fr: 'Aéroport international de São Paulo Guarulhos',
+          de: 'Internationaler Flughafen São Paulo Guarulhos',
+          es: 'Aeropuerto Internacional de São Paulo Guarulhos',
+          it: 'Aeroporto Internazionale di São Paulo Guarulhos',
+          nl: 'Internationale Luchthaven São Paulo Guarulhos',
+          pt: 'Aeroporto Internacional de São Paulo Guarulhos',
+          tr: 'São Paulo Guarulhos Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Сан-Паулу Гуарульос',
+          zh: '圣保罗瓜鲁柳斯国际机场',
+          ar: 'مطار ساو باولو غواروليوس الدولي',
+        },
+        BRRIO_AIR: {
+          en: 'Rio de Janeiro Galeão International Airport',
+          fr: 'Aéroport international de Rio de Janeiro Galeão',
+          de: 'Internationaler Flughafen Rio de Janeiro Galeão',
+          es: 'Aeropuerto Internacional de Río de Janeiro Galeão',
+          it: 'Aeroporto Internazionale di Rio de Janeiro Galeão',
+          nl: 'Internationale Luchthaven Rio de Janeiro Galeão',
+          pt: 'Aeroporto Internacional do Rio de Janeiro Galeão',
+          tr: 'Rio de Janeiro Galeão Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Рио-де-Жанейро Галеао',
+          zh: '里约热内卢加利昂国际机场',
+          ar: 'مطار ريو دي جانيرو غالياو الدولي',
+        },
+        BRBSB: {
+          en: 'Brasília International Airport',
+          fr: 'Aéroport international de Brasília',
+          de: 'Internationaler Flughafen Brasília',
+          es: 'Aeropuerto Internacional de Brasilia',
+          it: 'Aeroporto Internazionale di Brasília',
+          nl: 'Internationale Luchthaven Brasília',
+          pt: 'Aeroporto Internacional de Brasília',
+          tr: 'Brasília Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Бразилиа',
+          zh: '巴西利亚国际机场',
+          ar: 'مطار برازيليا الدولي',
+        },
+
+        // 🇧🇩 Bangladesh - Hub d'Asie du Sud
+        BDCGP: {
+          en: 'Port of Chittagong',
+          fr: 'Port de Chittagong',
+          de: 'Hafen Chittagong',
+          es: 'Puerto de Chittagong',
+          it: 'Porto di Chittagong',
+          nl: 'Haven van Chittagong',
+          pt: 'Porto de Chittagong',
+          tr: 'Chittagong Limanı',
+          ru: 'Порт Читтагонг',
+          zh: '吉大港港',
+          ar: 'ميناء شيتاغونغ',
+        },
+        BDDHA: {
+          en: 'Port of Dhaka',
+          fr: 'Port de Dhaka',
+          de: 'Hafen Dhaka',
+          es: 'Puerto de Daca',
+          it: 'Porto di Dhaka',
+          nl: 'Haven van Dhaka',
+          pt: 'Porto de Dhaka',
+          tr: 'Dakka Limanı',
+          ru: 'Порт Дакка',
+          zh: '达卡港',
+          ar: 'ميناء دكا',
+        },
+        BDMGL: {
+          en: 'Port of Mongla',
+          fr: 'Port de Mongla',
+          de: 'Hafen Mongla',
+          es: 'Puerto de Mongla',
+          it: 'Porto di Mongla',
+          nl: 'Haven van Mongla',
+          pt: 'Porto de Mongla',
+          tr: 'Mongla Limanı',
+          ru: 'Порт Монгла',
+          zh: '蒙格拉港',
+          ar: 'ميناء مونغلا',
+        },
+        BDDAC: {
+          en: 'Dhaka Hazrat Shahjalal International Airport',
+          fr: 'Aéroport international de Dhaka Hazrat Shahjalal',
+          de: 'Internationaler Flughafen Dhaka Hazrat Shahjalal',
+          es: 'Aeropuerto Internacional de Daca Hazrat Shahjalal',
+          it: 'Aeroporto Internazionale di Dhaka Hazrat Shahjalal',
+          nl: 'Internationale Luchthaven Dhaka Hazrat Shahjalal',
+          pt: 'Aeroporto Internacional de Dhaka Hazrat Shahjalal',
+          tr: 'Dakka Hazrat Shahjalal Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Дакка Хазрат Шахджалал',
+          zh: '达卡哈兹拉特·沙贾拉勒国际机场',
+          ar: 'مطار دكا حضرة شاه جلال الدولي',
+        },
+        BDCGP_AIR: {
+          en: 'Chittagong Shah Amanat International Airport',
+          fr: 'Aéroport international de Chittagong Shah Amanat',
+          de: 'Internationaler Flughafen Chittagong Shah Amanat',
+          es: 'Aeropuerto Internacional de Chittagong Shah Amanat',
+          it: 'Aeroporto Internazionale di Chittagong Shah Amanat',
+          nl: 'Internationale Luchthaven Chittagong Shah Amanat',
+          pt: 'Aeroporto Internacional de Chittagong Shah Amanat',
+          tr: 'Chittagong Shah Amanat Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Читтагонг Шах Аманат',
+          zh: '吉大港沙阿马纳特国际机场',
+          ar: 'مطار شيتاغونغ شاه أمانات الدولي',
+        },
+        BDDHA_RAIL: {
+          en: 'Dhaka Railway Station',
+          fr: 'Gare ferroviaire de Dhaka',
+          de: 'Bahnhof Dhaka',
+          es: 'Estación de Ferrocarril de Daca',
+          it: 'Stazione Ferroviaria di Dhaka',
+          nl: 'Treinstation Dhaka',
+          pt: 'Estação Ferroviária de Dhaka',
+          tr: 'Dakka Tren İstasyonu',
+          ru: 'Железнодорожная станция Дакка',
+          zh: '达卡火车站',
+          ar: 'محطة دكا للسكك الحديدية',
+        },
+        BDCGP_RAIL: {
+          en: 'Chittagong Railway Station',
+          fr: 'Gare ferroviaire de Chittagong',
+          de: 'Bahnhof Chittagong',
+          es: 'Estación de Ferrocarril de Chittagong',
+          it: 'Stazione Ferroviaria di Chittagong',
+          nl: 'Treinstation Chittagong',
+          pt: 'Estação Ferroviária de Chittagong',
+          tr: 'Chittagong Tren İstasyonu',
+          ru: 'Железнодорожная станция Читтагонг',
+          zh: '吉大港火车站',
+          ar: 'محطة شيتاغونغ للسكك الحديدية',
+        },
+
+        // 🇧🇬 Bulgaria (Bulgarie) - Hub des Balkans
+        BGBOJ: {
+          en: 'Port of Bourgas',
+          fr: 'Port de Bourgas',
+          de: 'Hafen Burgas',
+          es: 'Puerto de Burgas',
+          it: 'Porto di Burgas',
+          nl: 'Haven van Burgas',
+          pt: 'Porto de Burgas',
+          tr: 'Burgas Limanı',
+          ru: 'Порт Бургас',
+          zh: '布尔加斯港',
+          ar: 'ميناء بورغاس',
+        },
+        BGVAR_AIR: {
+          en: 'Varna Airport',
+          fr: 'Aéroport de Varna',
+          de: 'Flughafen Warna',
+          es: 'Aeropuerto de Varna',
+          it: 'Aeroporto di Varna',
+          nl: 'Luchthaven Varna',
+          pt: 'Aeroporto de Varna',
+          tr: 'Varna Havaalanı',
+          ru: 'Аэропорт Варна',
+          zh: '瓦尔纳机场',
+          ar: 'مطار فارنا',
+        },
+        BGSOF_RAIL: {
+          en: 'Sofia Central Station',
+          fr: 'Gare centrale de Sofia',
+          de: 'Sofia Hauptbahnhof',
+          es: 'Estación Central de Sofía',
+          it: 'Stazione Centrale di Sofia',
+          nl: 'Centraal Station Sofia',
+          pt: 'Estação Central de Sofia',
+          tr: 'Sofya Merkez İstasyonu',
+          ru: 'Центральный вокзал Софии',
+          zh: '索菲亚中央车站',
+          ar: 'محطة صوفيا المركزية',
+        },
+
+        // === PAYS EN C - TRADUCTIONS COMPLÈTES ===
+
+        // 🇨🇦 Canada - Hub nord-américain majeur
+        CAVAN: {
+          en: 'Port of Vancouver',
+          fr: 'Port de Vancouver',
+          de: 'Hafen Vancouver',
+          es: 'Puerto de Vancouver',
+          it: 'Porto di Vancouver',
+          nl: 'Haven van Vancouver',
+          pt: 'Porto de Vancouver',
+          tr: 'Vancouver Limanı',
+          ru: 'Порт Ванкувер',
+          zh: '温哥华港',
+          ar: 'ميناء فانكوفر',
+        },
+        CAMON: {
+          en: 'Port of Montreal',
+          fr: 'Port de Montréal',
+          de: 'Hafen Montreal',
+          es: 'Puerto de Montreal',
+          it: 'Porto di Montreal',
+          nl: 'Haven van Montreal',
+          pt: 'Porto de Montreal',
+          tr: 'Montreal Limanı',
+          ru: 'Порт Монреаль',
+          zh: '蒙特利尔港',
+          ar: 'ميناء مونتريال',
+        },
+        CAHAL: {
+          en: 'Port of Halifax',
+          fr: 'Port de Halifax',
+          de: 'Hafen Halifax',
+          es: 'Puerto de Halifax',
+          it: 'Porto di Halifax',
+          nl: 'Haven van Halifax',
+          pt: 'Porto de Halifax',
+          tr: 'Halifax Limanı',
+          ru: 'Порт Галифакс',
+          zh: '哈利法克斯港',
+          ar: 'ميناء هاليفاكس',
+        },
+        CAYVR: {
+          en: 'Vancouver International Airport',
+          fr: 'Aéroport international de Vancouver',
+          de: 'Internationaler Flughafen Vancouver',
+          es: 'Aeropuerto Internacional de Vancouver',
+          it: 'Aeroporto Internazionale di Vancouver',
+          nl: 'Internationale Luchthaven Vancouver',
+          pt: 'Aeroporto Internacional de Vancouver',
+          tr: 'Vancouver Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Ванкувер',
+          zh: '温哥华国际机场',
+          ar: 'مطار فانكوفر الدولي',
+        },
+        CAYYZ: {
+          en: 'Toronto Pearson International Airport',
+          fr: 'Aéroport international de Toronto Pearson',
+          de: 'Internationaler Flughafen Toronto Pearson',
+          es: 'Aeropuerto Internacional de Toronto Pearson',
+          it: 'Aeroporto Internazionale di Toronto Pearson',
+          nl: 'Internationale Luchthaven Toronto Pearson',
+          pt: 'Aeroporto Internacional de Toronto Pearson',
+          tr: 'Toronto Pearson Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Торонто Пирсон',
+          zh: '多伦多皮尔逊国际机场',
+          ar: 'مطار تورونتو بيرسون الدولي',
+        },
+        CAYMQ: {
+          en: 'Montreal Pierre Elliott Trudeau International Airport',
+          fr: 'Aéroport international de Montréal Pierre Elliott Trudeau',
+          de: 'Internationaler Flughafen Montreal Pierre Elliott Trudeau',
+          es: 'Aeropuerto Internacional de Montreal Pierre Elliott Trudeau',
+          it: 'Aeroporto Internazionale di Montreal Pierre Elliott Trudeau',
+          nl: 'Internationale Luchthaven Montreal Pierre Elliott Trudeau',
+          pt: 'Aeroporto Internacional de Montreal Pierre Elliott Trudeau',
+          tr: 'Montreal Pierre Elliott Trudeau Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Монреаль Пьер Эллиот Трюдо',
+          zh: '蒙特利尔皮埃尔·埃利奥特·特鲁多国际机场',
+          ar: 'مطار مونتريال بيير إليوت ترودو الدولي',
+        },
+        CAYYC: {
+          en: 'Calgary International Airport',
+          fr: 'Aéroport international de Calgary',
+          de: 'Internationaler Flughafen Calgary',
+          es: 'Aeropuerto Internacional de Calgary',
+          it: 'Aeroporto Internazionale di Calgary',
+          nl: 'Internationale Luchthaven Calgary',
+          pt: 'Aeroporto Internacional de Calgary',
+          tr: 'Calgary Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Калгари',
+          zh: '卡尔加里国际机场',
+          ar: 'مطار كالغاري الدولي',
+        },
+        CAVAN_RAIL: {
+          en: 'Vancouver Pacific Central Station',
+          fr: 'Gare centrale du Pacifique de Vancouver',
+          de: 'Vancouver Pacific Central Bahnhof',
+          es: 'Estación Central del Pacífico de Vancouver',
+          it: 'Stazione Centrale del Pacifico di Vancouver',
+          nl: 'Vancouver Pacific Centraal Station',
+          pt: 'Estação Central do Pacífico de Vancouver',
+          tr: 'Vancouver Pasifik Merkez İstasyonu',
+          ru: 'Центральная тихоокеанская станция Ванкувера',
+          zh: '温哥华太平洋中央车站',
+          ar: 'محطة فانكوفر المركزية للمحيط الهادئ',
+        },
+        CATOR_RAIL: {
+          en: 'Toronto Union Station',
+          fr: 'Gare Union de Toronto',
+          de: 'Toronto Union Station',
+          es: 'Estación Union de Toronto',
+          it: 'Stazione Union di Toronto',
+          nl: 'Toronto Union Station',
+          pt: 'Estação Union de Toronto',
+          tr: 'Toronto Union İstasyonu',
+          ru: 'Юнион Стейшн Торонто',
+          zh: '多伦多联合车站',
+          ar: 'محطة تورونتو يونيون',
+        },
+
+        // 🇨🇳 China (Chine) - Superpuissance logistique mondiale
+        CNSHA: {
+          en: 'Port of Shanghai',
+          fr: 'Port de Shanghai',
+          de: 'Hafen Shanghai',
+          es: 'Puerto de Shanghái',
+          it: 'Porto di Shanghai',
+          nl: 'Haven van Shanghai',
+          pt: 'Porto de Xangai',
+          tr: 'Şanghay Limanı',
+          ru: 'Порт Шанхай',
+          zh: '上海港',
+          ar: 'ميناء شنغهاي',
+        },
+        CNSZX: {
+          en: 'Port of Shenzhen',
+          fr: 'Port de Shenzhen',
+          de: 'Hafen Shenzhen',
+          es: 'Puerto de Shenzhen',
+          it: 'Porto di Shenzhen',
+          nl: 'Haven van Shenzhen',
+          pt: 'Porto de Shenzhen',
+          tr: 'Shenzhen Limanı',
+          ru: 'Порт Шэньчжэнь',
+          zh: '深圳港',
+          ar: 'ميناء شنتشن',
+        },
+        CNNGB: {
+          en: 'Port of Ningbo-Zhoushan',
+          fr: 'Port de Ningbo-Zhoushan',
+          de: 'Hafen Ningbo-Zhoushan',
+          es: 'Puerto de Ningbo-Zhoushan',
+          it: 'Porto di Ningbo-Zhoushan',
+          nl: 'Haven van Ningbo-Zhoushan',
+          pt: 'Porto de Ningbo-Zhoushan',
+          tr: 'Ningbo-Zhoushan Limanı',
+          ru: 'Порт Нинбо-Чжоушань',
+          zh: '宁波舟山港',
+          ar: 'ميناء نينغبو-تشوشان',
+        },
+        CNQIN: {
+          en: 'Port of Qingdao',
+          fr: 'Port de Qingdao',
+          de: 'Hafen Qingdao',
+          es: 'Puerto de Qingdao',
+          it: 'Porto di Qingdao',
+          nl: 'Haven van Qingdao',
+          pt: 'Porto de Qingdao',
+          tr: 'Qingdao Limanı',
+          ru: 'Порт Циндао',
+          zh: '青岛港',
+          ar: 'ميناء تشينغداو',
+        },
+        CNGUA: {
+          en: 'Port of Guangzhou',
+          fr: 'Port de Guangzhou',
+          de: 'Hafen Guangzhou',
+          es: 'Puerto de Guangzhou',
+          it: 'Porto di Guangzhou',
+          nl: 'Haven van Guangzhou',
+          pt: 'Porto de Guangzhou',
+          tr: 'Guangzhou Limanı',
+          ru: 'Порт Гуанчжоу',
+          zh: '广州港',
+          ar: 'ميناء غوانغتشو',
+        },
+        CNTIA: {
+          en: 'Port of Tianjin',
+          fr: 'Port de Tianjin',
+          de: 'Hafen Tianjin',
+          es: 'Puerto de Tianjin',
+          it: 'Porto di Tianjin',
+          nl: 'Haven van Tianjin',
+          pt: 'Porto de Tianjin',
+          tr: 'Tianjin Limanı',
+          ru: 'Порт Тяньцзинь',
+          zh: '天津港',
+          ar: 'ميناء تيانجين',
+        },
+        CNPVG: {
+          en: 'Shanghai Pudong International Airport',
+          fr: 'Aéroport international de Shanghai Pudong',
+          de: 'Internationaler Flughafen Shanghai Pudong',
+          es: 'Aeropuerto Internacional de Shanghái Pudong',
+          it: 'Aeroporto Internazionale di Shanghai Pudong',
+          nl: 'Internationale Luchthaven Shanghai Pudong',
+          pt: 'Aeroporto Internacional de Xangai Pudong',
+          tr: 'Şanghay Pudong Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Шанхай Пудун',
+          zh: '上海浦东国际机场',
+          ar: 'مطار شنغهاي بودونغ الدولي',
+        },
+        CNPEK: {
+          en: 'Beijing Capital International Airport',
+          fr: 'Aéroport international de Pékin Capital',
+          de: 'Internationaler Flughafen Peking Capital',
+          es: 'Aeropuerto Internacional de Pekín Capital',
+          it: 'Aeroporto Internazionale di Pechino Capital',
+          nl: 'Internationale Luchthaven Beijing Capital',
+          pt: 'Aeroporto Internacional de Pequim Capital',
+          tr: 'Pekin Capital Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Пекин Столичный',
+          zh: '北京首都国际机场',
+          ar: 'مطار بكين العاصمة الدولي',
+        },
+        CNCAN: {
+          en: 'Guangzhou Baiyun International Airport',
+          fr: 'Aéroport international de Guangzhou Baiyun',
+          de: 'Internationaler Flughafen Guangzhou Baiyun',
+          es: 'Aeropuerto Internacional de Guangzhou Baiyun',
+          it: 'Aeroporto Internazionale di Guangzhou Baiyun',
+          nl: 'Internationale Luchthaven Guangzhou Baiyun',
+          pt: 'Aeroporto Internacional de Guangzhou Baiyun',
+          tr: 'Guangzhou Baiyun Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Гуанчжоу Байюнь',
+          zh: '广州白云国际机场',
+          ar: 'مطار غوانغتشو بايون الدولي',
+        },
+        CNSZX_AIR: {
+          en: "Shenzhen Bao'an International Airport",
+          fr: "Aéroport international de Shenzhen Bao'an",
+          de: "Internationaler Flughafen Shenzhen Bao'an",
+          es: "Aeropuerto Internacional de Shenzhen Bao'an",
+          it: "Aeroporto Internazionale di Shenzhen Bao'an",
+          nl: "Internationale Luchthaven Shenzhen Bao'an",
+          pt: "Aeroporto Internacional de Shenzhen Bao'an",
+          tr: "Shenzhen Bao'an Uluslararası Havaalanı",
+          ru: 'Международный аэропорт Шэньчжэнь Баоань',
+          zh: '深圳宝安国际机场',
+          ar: 'مطار شنتشن باوآن الدولي',
+        },
+        CNHGH: {
+          en: 'Hangzhou Xiaoshan International Airport',
+          fr: 'Aéroport international de Hangzhou Xiaoshan',
+          de: 'Internationaler Flughafen Hangzhou Xiaoshan',
+          es: 'Aeropuerto Internacional de Hangzhou Xiaoshan',
+          it: 'Aeroporto Internazionale di Hangzhou Xiaoshan',
+          nl: 'Internationale Luchthaven Hangzhou Xiaoshan',
+          pt: 'Aeroporto Internacional de Hangzhou Xiaoshan',
+          tr: 'Hangzhou Xiaoshan Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Ханчжоу Сяошань',
+          zh: '杭州萧山国际机场',
+          ar: 'مطار هانغتشو شياوشان الدولي',
+        },
+        CNBEI_RAIL: {
+          en: 'Beijing Railway Station',
+          fr: 'Gare ferroviaire de Pékin',
+          de: 'Bahnhof Peking',
+          es: 'Estación de Ferrocarril de Pekín',
+          it: 'Stazione Ferroviaria di Pechino',
+          nl: 'Treinstation Beijing',
+          pt: 'Estação Ferroviária de Pequim',
+          tr: 'Pekin Tren İstasyonu',
+          ru: 'Железнодорожная станция Пекин',
+          zh: '北京火车站',
+          ar: 'محطة بكين للسكك الحديدية',
+        },
+        CNSHA_RAIL: {
+          en: 'Shanghai Railway Station',
+          fr: 'Gare ferroviaire de Shanghai',
+          de: 'Bahnhof Shanghai',
+          es: 'Estación de Ferrocarril de Shanghái',
+          it: 'Stazione Ferroviaria di Shanghai',
+          nl: 'Treinstation Shanghai',
+          pt: 'Estação Ferroviária de Xangai',
+          tr: 'Şanghay Tren İstasyonu',
+          ru: 'Железнодорожная станция Шанхай',
+          zh: '上海火车站',
+          ar: 'محطة شنغهاي للسكك الحديدية',
+        },
+        CNGUA_RAIL: {
+          en: 'Guangzhou Railway Station',
+          fr: 'Gare ferroviaire de Guangzhou',
+          de: 'Bahnhof Guangzhou',
+          es: 'Estación de Ferrocarril de Guangzhou',
+          it: 'Stazione Ferroviaria di Guangzhou',
+          nl: 'Treinstation Guangzhou',
+          pt: 'Estação Ferroviária de Guangzhou',
+          tr: 'Guangzhou Tren İstasyonu',
+          ru: 'Железнодорожная станция Гуанчжоу',
+          zh: '广州火车站',
+          ar: 'محطة غوانغتشو للسكك الحديدية',
+        },
+
+        // 🇨🇱 Chile (Chili) - Hub du Pacifique Sud
+        CLVAP: {
+          en: 'Port of Valparaíso',
+          fr: 'Port de Valparaíso',
+          de: 'Hafen Valparaíso',
+          es: 'Puerto de Valparaíso',
+          it: 'Porto di Valparaíso',
+          nl: 'Haven van Valparaíso',
+          pt: 'Porto de Valparaíso',
+          tr: 'Valparaíso Limanı',
+          ru: 'Порт Вальпараисо',
+          zh: '瓦尔帕莱索港',
+          ar: 'ميناء فالبارايسو',
+        },
+        CLSAI: {
+          en: 'Port of San Antonio',
+          fr: 'Port de San Antonio',
+          de: 'Hafen San Antonio',
+          es: 'Puerto de San Antonio',
+          it: 'Porto di San Antonio',
+          nl: 'Haven van San Antonio',
+          pt: 'Porto de San Antonio',
+          tr: 'San Antonio Limanı',
+          ru: 'Порт Сан-Антонио',
+          zh: '圣安东尼奥港',
+          ar: 'ميناء سان أنطونيو',
+        },
+        CLSCL: {
+          en: 'Santiago International Airport',
+          fr: 'Aéroport international de Santiago',
+          de: 'Internationaler Flughafen Santiago',
+          es: 'Aeropuerto Internacional de Santiago',
+          it: 'Aeroporto Internazionale di Santiago',
+          nl: 'Internationale Luchthaven Santiago',
+          pt: 'Aeroporto Internacional de Santiago',
+          tr: 'Santiago Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Сантьяго',
+          zh: '圣地亚哥国际机场',
+          ar: 'مطار سانتياغو الدولي',
+        },
+
+        // 🇨🇴 Colombia (Colombie) - Hub d'Amérique du Sud
+        COCTG: {
+          en: 'Port of Cartagena',
+          fr: 'Port de Cartagena',
+          de: 'Hafen Cartagena',
+          es: 'Puerto de Cartagena',
+          it: 'Porto di Cartagena',
+          nl: 'Haven van Cartagena',
+          pt: 'Porto de Cartagena',
+          tr: 'Cartagena Limanı',
+          ru: 'Порт Картахена',
+          zh: '卡塔赫纳港',
+          ar: 'ميناء قرطاجنة',
+        },
+        COBAR: {
+          en: 'Port of Barranquilla',
+          fr: 'Port de Barranquilla',
+          de: 'Hafen Barranquilla',
+          es: 'Puerto de Barranquilla',
+          it: 'Porto di Barranquilla',
+          nl: 'Haven van Barranquilla',
+          pt: 'Porto de Barranquilla',
+          tr: 'Barranquilla Limanı',
+          ru: 'Порт Барранкилья',
+          zh: '巴兰基亚港',
+          ar: 'ميناء بارانكيا',
+        },
+        COBOG: {
+          en: 'Bogotá El Dorado International Airport',
+          fr: 'Aéroport international de Bogotá El Dorado',
+          de: 'Internationaler Flughafen Bogotá El Dorado',
+          es: 'Aeropuerto Internacional de Bogotá El Dorado',
+          it: 'Aeroporto Internazionale di Bogotá El Dorado',
+          nl: 'Internationale Luchthaven Bogotá El Dorado',
+          pt: 'Aeroporto Internacional de Bogotá El Dorado',
+          tr: 'Bogotá El Dorado Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Богота Эль-Дорадо',
+          zh: '波哥大埃尔多拉多国际机场',
+          ar: 'مطار بوغوتا إل دورادو الدولي',
+        },
+
+        // 🇨🇿 Czech Republic (République tchèque) - Hub d'Europe centrale
+        CZPRG: {
+          en: 'Prague Václav Havel Airport',
+          fr: 'Aéroport de Prague Václav Havel',
+          de: 'Flughafen Prag Václav Havel',
+          es: 'Aeropuerto de Praga Václav Havel',
+          it: 'Aeroporto di Praga Václav Havel',
+          nl: 'Luchthaven Praag Václav Havel',
+          pt: 'Aeroporto de Praga Václav Havel',
+          tr: 'Prag Václav Havel Havaalanı',
+          ru: 'Аэропорт Прага Вацлав Гавел',
+          zh: '布拉格瓦茨拉夫·哈维尔机场',
+          ar: 'مطار براغ فاتسلاف هافيل',
+        },
+        CZPRG_RAIL: {
+          en: 'Prague Central Station',
+          fr: 'Gare centrale de Prague',
+          de: 'Prag Hauptbahnhof',
+          es: 'Estación Central de Praga',
+          it: 'Stazione Centrale di Praga',
+          nl: 'Centraal Station Praag',
+          pt: 'Estação Central de Praga',
+          tr: 'Prag Merkez İstasyonu',
+          ru: 'Центральный вокзал Праги',
+          zh: '布拉格中央车站',
+          ar: 'محطة براغ المركزية',
+        },
+
+        // 🇨🇭 Switzerland (Suisse) - Hub alpin européen
+        CHZUR: {
+          en: 'Zurich Airport',
+          fr: 'Aéroport de Zürich',
+          de: 'Flughafen Zürich',
+          es: 'Aeropuerto de Zúrich',
+          it: 'Aeroporto di Zurigo',
+          nl: 'Luchthaven Zürich',
+          pt: 'Aeroporto de Zurique',
+          tr: 'Zürih Havaalanı',
+          ru: 'Аэропорт Цюрих',
+          zh: '苏黎世机场',
+          ar: 'مطار زيورخ',
+        },
+        CHGVA: {
+          en: 'Geneva Airport',
+          fr: 'Aéroport de Genève',
+          de: 'Flughafen Genf',
+          es: 'Aeropuerto de Ginebra',
+          it: 'Aeroporto di Ginevra',
+          nl: 'Luchthaven Genève',
+          pt: 'Aeroporto de Genebra',
+          tr: 'Cenevre Havaalanı',
+          ru: 'Аэропорт Женева',
+          zh: '日内瓦机场',
+          ar: 'مطار جنيف',
+        },
+        CHZUR_RAIL: {
+          en: 'Zurich Central Station',
+          fr: 'Gare centrale de Zürich',
+          de: 'Zürich Hauptbahnhof',
+          es: 'Estación Central de Zúrich',
+          it: 'Stazione Centrale di Zurigo',
+          nl: 'Centraal Station Zürich',
+          pt: 'Estação Central de Zurique',
+          tr: 'Zürih Merkez İstasyonu',
+          ru: 'Центральный вокзал Цюриха',
+          zh: '苏黎世中央车站',
+          ar: 'محطة زيورخ المركزية',
+        },
+        CHGVA_RAIL: {
+          en: 'Geneva Cornavin Station',
+          fr: 'Gare de Genève-Cornavin',
+          de: 'Bahnhof Genf Cornavin',
+          es: 'Estación de Ginebra Cornavin',
+          it: 'Stazione di Ginevra Cornavin',
+          nl: 'Station Genève-Cornavin',
+          pt: 'Estação de Genebra Cornavin',
+          tr: 'Cenevre Cornavin İstasyonu',
+          ru: 'Вокзал Женева Корнавен',
+          zh: '日内瓦科尔纳万车站',
+          ar: 'محطة جنيف كورنافين',
+        },
+
+        // 🇨🇮 Ivory Coast (Côte d'Ivoire) - Hub d'Afrique de l'Ouest
+        CIABJ: {
+          en: 'Port of Abidjan',
+          fr: "Port d'Abidjan",
+          de: 'Hafen Abidjan',
+          es: 'Puerto de Abiyán',
+          it: 'Porto di Abidjan',
+          nl: 'Haven van Abidjan',
+          pt: 'Porto de Abidjan',
+          tr: 'Abidjan Limanı',
+          ru: 'Порт Абиджан',
+          zh: '阿比让港',
+          ar: 'ميناء أبيدجان',
+        },
+        CISAN: {
+          en: 'Port of San-Pédro',
+          fr: 'Port de San-Pédro',
+          de: 'Hafen San-Pédro',
+          es: 'Puerto de San-Pédro',
+          it: 'Porto di San-Pédro',
+          nl: 'Haven van San-Pédro',
+          pt: 'Porto de San-Pédro',
+          tr: 'San-Pédro Limanı',
+          ru: 'Порт Сан-Педро',
+          zh: '圣佩德罗港',
+          ar: 'ميناء سان بيدرو',
+        },
+        CIABJ_AIR: {
+          en: 'Abidjan Félix Houphouët-Boigny International Airport',
+          fr: "Aéroport international d'Abidjan Félix Houphouët-Boigny",
+          de: 'Internationaler Flughafen Abidjan Félix Houphouët-Boigny',
+          es: 'Aeropuerto Internacional de Abiyán Félix Houphouët-Boigny',
+          it: 'Aeroporto Internazionale di Abidjan Félix Houphouët-Boigny',
+          nl: 'Internationale Luchthaven Abidjan Félix Houphouët-Boigny',
+          pt: 'Aeroporto Internacional de Abidjan Félix Houphouët-Boigny',
+          tr: 'Abidjan Félix Houphouët-Boigny Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Абиджан Феликс Уфуэ-Буаньи',
+          zh: '阿比让费利克斯·乌弗埃-博瓦尼国际机场',
+          ar: 'مطار أبيدجان فيليكس هوفويت بوانيي الدولي',
+        },
+
+        // 🇨🇷 Costa Rica - Hub d'Amérique centrale
+        CRLIM: {
+          en: 'Port of Limón',
+          fr: 'Port de Limón',
+          de: 'Hafen Limón',
+          es: 'Puerto de Limón',
+          it: 'Porto di Limón',
+          nl: 'Haven van Limón',
+          pt: 'Porto de Limón',
+          tr: 'Limón Limanı',
+          ru: 'Порт Лимон',
+          zh: '利蒙港',
+          ar: 'ميناء ليمون',
+        },
+        CRPUN: {
+          en: 'Port of Puntarenas',
+          fr: 'Port de Puntarenas',
+          de: 'Hafen Puntarenas',
+          es: 'Puerto de Puntarenas',
+          it: 'Porto di Puntarenas',
+          nl: 'Haven van Puntarenas',
+          pt: 'Porto de Puntarenas',
+          tr: 'Puntarenas Limanı',
+          ru: 'Порт Пунтаренас',
+          zh: '蓬塔雷纳斯港',
+          ar: 'ميناء بونتاريناس',
+        },
+        CRSJO: {
+          en: 'Juan Santamaría International Airport',
+          fr: 'Aéroport international Juan Santamaría',
+          de: 'Internationaler Flughafen Juan Santamaría',
+          es: 'Aeropuerto Internacional Juan Santamaría',
+          it: 'Aeroporto Internazionale Juan Santamaría',
+          nl: 'Internationale Luchthaven Juan Santamaría',
+          pt: 'Aeroporto Internacional Juan Santamaría',
+          tr: 'Juan Santamaría Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Хуан Сантамария',
+          zh: '胡安·圣玛丽亚国际机场',
+          ar: 'مطار خوان سانتاماريا الدولي',
+        },
+
+        // 🇨🇾 Cyprus (Chypre) - Hub méditerranéen
+        CYLCA: {
+          en: 'Port of Larnaca',
+          fr: 'Port de Larnaca',
+          de: 'Hafen Larnaka',
+          es: 'Puerto de Lárnaca',
+          it: 'Porto di Larnaca',
+          nl: 'Haven van Larnaca',
+          pt: 'Porto de Larnaca',
+          tr: 'Larnaka Limanı',
+          ru: 'Порт Ларнака',
+          zh: '拉纳卡港',
+          ar: 'ميناء لارنكا',
+        },
+        CYPAF: {
+          en: 'Port of Paphos',
+          fr: 'Port de Paphos',
+          de: 'Hafen Paphos',
+          es: 'Puerto de Pafos',
+          it: 'Porto di Pafo',
+          nl: 'Haven van Paphos',
+          pt: 'Porto de Pafos',
+          tr: 'Baf Limanı',
+          ru: 'Порт Пафос',
+          zh: '帕福斯港',
+          ar: 'ميناء بافوس',
+        },
+        CYLCA_AIR: {
+          en: 'Larnaca International Airport',
+          fr: 'Aéroport international de Larnaca',
+          de: 'Internationaler Flughafen Larnaka',
+          es: 'Aeropuerto Internacional de Lárnaca',
+          it: 'Aeroporto Internazionale di Larnaca',
+          nl: 'Internationale Luchthaven Larnaca',
+          pt: 'Aeroporto Internacional de Larnaca',
+          tr: 'Larnaka Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Ларнака',
+          zh: '拉纳卡国际机场',
+          ar: 'مطار لارنكا الدولي',
+        },
+        CYPAF_AIR: {
+          en: 'Paphos International Airport',
+          fr: 'Aéroport international de Paphos',
+          de: 'Internationaler Flughafen Paphos',
+          es: 'Aeropuerto Internacional de Pafos',
+          it: 'Aeroporto Internazionale di Pafo',
+          nl: 'Internationale Luchthaven Paphos',
+          pt: 'Aeroporto Internacional de Pafos',
+          tr: 'Baf Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Пафос',
+          zh: '帕福斯国际机场',
+          ar: 'مطار بافوس الدولي',
+        },
+
+        // === PAYS EN E - TRADUCTIONS COMPLÈTES ===
+
+        // 🇪🇸 Spain (Espagne) - Hub européen majeur
+        ESALG: {
+          en: 'Port of Algeciras',
+          fr: "Port d'Algésiras",
+          de: 'Hafen Algeciras',
+          es: 'Puerto de Algeciras',
+          it: 'Porto di Algeciras',
+          nl: 'Haven van Algeciras',
+          pt: 'Porto de Algeciras',
+          tr: 'Algeciras Limanı',
+          ru: 'Порт Альхесирас',
+          zh: '阿尔赫西拉斯港',
+          ar: 'ميناء الجزيرة الخضراء',
+        },
+        ESVLC: {
+          en: 'Port of Valencia',
+          fr: 'Port de Valence',
+          de: 'Hafen Valencia',
+          es: 'Puerto de Valencia',
+          it: 'Porto di Valencia',
+          nl: 'Haven van Valencia',
+          pt: 'Porto de Valência',
+          tr: 'Valencia Limanı',
+          ru: 'Порт Валенсия',
+          zh: '瓦伦西亚港',
+          ar: 'ميناء بلنسية',
+        },
+        ESBCN: {
+          en: 'Port of Barcelona',
+          fr: 'Port de Barcelone',
+          de: 'Hafen Barcelona',
+          es: 'Puerto de Barcelona',
+          it: 'Porto di Barcellona',
+          nl: 'Haven van Barcelona',
+          pt: 'Porto de Barcelona',
+          tr: 'Barselona Limanı',
+          ru: 'Порт Барселона',
+          zh: '巴塞罗那港',
+          ar: 'ميناء برشلونة',
+        },
+        ESBIL: {
+          en: 'Port of Bilbao',
+          fr: 'Port de Bilbao',
+          de: 'Hafen Bilbao',
+          es: 'Puerto de Bilbao',
+          it: 'Porto di Bilbao',
+          nl: 'Haven van Bilbao',
+          pt: 'Porto de Bilbau',
+          tr: 'Bilbao Limanı',
+          ru: 'Порт Бильбао',
+          zh: '毕尔巴鄂港',
+          ar: 'ميناء بلباو',
+        },
+        ESLAS: {
+          en: 'Port of Las Palmas',
+          fr: 'Port de Las Palmas',
+          de: 'Hafen Las Palmas',
+          es: 'Puerto de Las Palmas',
+          it: 'Porto di Las Palmas',
+          nl: 'Haven van Las Palmas',
+          pt: 'Porto de Las Palmas',
+          tr: 'Las Palmas Limanı',
+          ru: 'Порт Лас-Пальмас',
+          zh: '拉斯帕尔马斯港',
+          ar: 'ميناء لاس بالماس',
+        },
+        ESMAD: {
+          en: 'Madrid-Barajas Airport',
+          fr: 'Aéroport de Madrid-Barajas',
+          de: 'Flughafen Madrid-Barajas',
+          es: 'Aeropuerto de Madrid-Barajas',
+          it: 'Aeroporto di Madrid-Barajas',
+          nl: 'Luchthaven Madrid-Barajas',
+          pt: 'Aeroporto de Madrid-Barajas',
+          tr: 'Madrid-Barajas Havaalanı',
+          ru: 'Аэропорт Мадрид-Барахас',
+          zh: '马德里-巴拉哈斯机场',
+          ar: 'مطار مدريد-باراخاس',
+        },
+        ESBCN_AIR: {
+          en: 'Barcelona Airport',
+          fr: 'Aéroport de Barcelone',
+          de: 'Flughafen Barcelona',
+          es: 'Aeropuerto de Barcelona',
+          it: 'Aeroporto di Barcellona',
+          nl: 'Luchthaven Barcelona',
+          pt: 'Aeroporto de Barcelona',
+          tr: 'Barselona Havaalanı',
+          ru: 'Аэропорт Барселона',
+          zh: '巴塞罗那机场',
+          ar: 'مطار برشلونة',
+        },
+        ESVLC_AIR: {
+          en: 'Valencia Airport',
+          fr: 'Aéroport de Valence',
+          de: 'Flughafen Valencia',
+          es: 'Aeropuerto de Valencia',
+          it: 'Aeroporto di Valencia',
+          nl: 'Luchthaven Valencia',
+          pt: 'Aeroporto de Valência',
+          tr: 'Valencia Havaalanı',
+          ru: 'Аэропорт Валенсия',
+          zh: '瓦伦西亚机场',
+          ar: 'مطار بلنسية',
+        },
+        ESBIL_AIR: {
+          en: 'Bilbao Airport',
+          fr: 'Aéroport de Bilbao',
+          de: 'Flughafen Bilbao',
+          es: 'Aeropuerto de Bilbao',
+          it: 'Aeroporto di Bilbao',
+          nl: 'Luchthaven Bilbao',
+          pt: 'Aeroporto de Bilbau',
+          tr: 'Bilbao Havaalanı',
+          ru: 'Аэропорт Бильбао',
+          zh: '毕尔巴鄂机场',
+          ar: 'مطار بلباو',
+        },
+        ESMAD_RAIL: {
+          en: 'Madrid Atocha Station',
+          fr: 'Gare de Madrid Atocha',
+          de: 'Bahnhof Madrid Atocha',
+          es: 'Estación de Madrid Atocha',
+          it: 'Stazione di Madrid Atocha',
+          nl: 'Station Madrid Atocha',
+          pt: 'Estação de Madrid Atocha',
+          tr: 'Madrid Atocha İstasyonu',
+          ru: 'Вокзал Мадрид Аточа',
+          zh: '马德里阿托查车站',
+          ar: 'محطة مدريد أتوتشا',
+        },
+        ESBCN_RAIL: {
+          en: 'Barcelona Sants Station',
+          fr: 'Gare de Barcelona Sants',
+          de: 'Bahnhof Barcelona Sants',
+          es: 'Estación de Barcelona Sants',
+          it: 'Stazione di Barcelona Sants',
+          nl: 'Station Barcelona Sants',
+          pt: 'Estação de Barcelona Sants',
+          tr: 'Barcelona Sants İstasyonu',
+          ru: 'Вокзал Барселона Сантс',
+          zh: '巴塞罗那桑茨车站',
+          ar: 'محطة برشلونة سانتس',
+        },
+        ESVLC_RAIL: {
+          en: 'Valencia Joaquín Sorolla Station',
+          fr: 'Gare de Valencia Joaquín Sorolla',
+          de: 'Bahnhof Valencia Joaquín Sorolla',
+          es: 'Estación de Valencia Joaquín Sorolla',
+          it: 'Stazione di Valencia Joaquín Sorolla',
+          nl: 'Station Valencia Joaquín Sorolla',
+          pt: 'Estação de Valencia Joaquín Sorolla',
+          tr: 'Valencia Joaquín Sorolla İstasyonu',
+          ru: 'Вокзал Валенсия Хоакин Сорола',
+          zh: '瓦伦西亚华金·索罗拉车站',
+          ar: 'محطة بلنسية خواكين سورولا',
+        },
+
+        // 🇪🇬 Egypt (Égypte) - Hub du canal de Suez
+        EGALY: {
+          en: 'Port of Alexandria',
+          fr: "Port d'Alexandrie",
+          de: 'Hafen Alexandria',
+          es: 'Puerto de Alejandría',
+          it: 'Porto di Alessandria',
+          nl: 'Haven van Alexandrië',
+          pt: 'Porto de Alexandria',
+          tr: 'İskenderiye Limanı',
+          ru: 'Порт Александрия',
+          zh: '亚历山大港',
+          ar: 'ميناء الإسكندرية',
+        },
+        EGDKH: {
+          en: 'Port of Damietta',
+          fr: 'Port de Damiette',
+          de: 'Hafen Damiette',
+          es: 'Puerto de Damieta',
+          it: 'Porto di Damietta',
+          nl: 'Haven van Damietta',
+          pt: 'Porto de Damieta',
+          tr: 'Dimyat Limanı',
+          ru: 'Порт Дамиетта',
+          zh: '达米埃塔港',
+          ar: 'ميناء دمياط',
+        },
+        EGSEZ: {
+          en: 'Port of Suez',
+          fr: 'Port de Suez',
+          de: 'Hafen Suez',
+          es: 'Puerto de Suez',
+          it: 'Porto di Suez',
+          nl: 'Haven van Suez',
+          pt: 'Porto de Suez',
+          tr: 'Süveyş Limanı',
+          ru: 'Порт Суэц',
+          zh: '苏伊士港',
+          ar: 'ميناء السويس',
+        },
+        EGCAI: {
+          en: 'Cairo International Airport',
+          fr: 'Aéroport international du Caire',
+          de: 'Internationaler Flughafen Kairo',
+          es: 'Aeropuerto Internacional de El Cairo',
+          it: 'Aeroporto Internazionale del Cairo',
+          nl: 'Internationale Luchthaven Caïro',
+          pt: 'Aeroporto Internacional do Cairo',
+          tr: 'Kahire Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Каир',
+          zh: '开罗国际机场',
+          ar: 'مطار القاهرة الدولي',
+        },
+
+        // 🇪🇪 Estonia (Estonie) - Hub balte
+        EETLL: {
+          en: 'Port of Tallinn',
+          fr: 'Port de Tallinn',
+          de: 'Hafen Tallinn',
+          es: 'Puerto de Tallin',
+          it: 'Porto di Tallinn',
+          nl: 'Haven van Tallinn',
+          pt: 'Porto de Tallinn',
+          tr: 'Tallinn Limanı',
+          ru: 'Порт Таллинн',
+          zh: '塔林港',
+          ar: 'ميناء تالين',
+        },
+        EETLL_AIR: {
+          en: 'Tallinn Lennart Meri Airport',
+          fr: 'Aéroport de Tallinn Lennart Meri',
+          de: 'Flughafen Tallinn Lennart Meri',
+          es: 'Aeropuerto de Tallin Lennart Meri',
+          it: 'Aeroporto di Tallinn Lennart Meri',
+          nl: 'Luchthaven Tallinn Lennart Meri',
+          pt: 'Aeroporto de Tallinn Lennart Meri',
+          tr: 'Tallinn Lennart Meri Havaalanı',
+          ru: 'Аэропорт Таллинн Леннарт Мери',
+          zh: '塔林伦纳特·梅里机场',
+          ar: 'مطار تالين لينارت ميري',
+        },
+        EETLL_RAIL: {
+          en: 'Tallinn Railway Station',
+          fr: 'Gare ferroviaire de Tallinn',
+          de: 'Bahnhof Tallinn',
+          es: 'Estación de Ferrocarril de Tallin',
+          it: 'Stazione Ferroviaria di Tallinn',
+          nl: 'Treinstation Tallinn',
+          pt: 'Estação Ferroviária de Tallinn',
+          tr: 'Tallinn Tren İstasyonu',
+          ru: 'Железнодорожная станция Таллинн',
+          zh: '塔林火车站',
+          ar: 'محطة تالين للسكك الحديدية',
+        },
+
+        // 🇪🇹 Ethiopia (Éthiopie) - Hub de la Corne de l'Afrique
+        ETADD: {
+          en: 'Addis Ababa Bole International Airport',
+          fr: "Aéroport international d'Addis-Abeba Bole",
+          de: 'Internationaler Flughafen Addis Abeba Bole',
+          es: 'Aeropuerto Internacional de Addis Abeba Bole',
+          it: 'Aeroporto Internazionale di Addis Abeba Bole',
+          nl: 'Internationale Luchthaven Addis Abeba Bole',
+          pt: 'Aeroporto Internacional de Addis Abeba Bole',
+          tr: 'Addis Ababa Bole Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Аддис-Абеба Боле',
+          zh: '亚的斯亚贝巴博莱国际机场',
+          ar: 'مطار أديس أبابا بولي الدولي',
+        },
+        ETADD_RAIL: {
+          en: 'Addis Ababa Railway Station',
+          fr: "Gare ferroviaire d'Addis-Abeba",
+          de: 'Bahnhof Addis Abeba',
+          es: 'Estación de Ferrocarril de Addis Abeba',
+          it: 'Stazione Ferroviaria di Addis Abeba',
+          nl: 'Treinstation Addis Abeba',
+          pt: 'Estação Ferroviária de Addis Abeba',
+          tr: 'Addis Ababa Tren İstasyonu',
+          ru: 'Железнодорожная станция Аддис-Абеба',
+          zh: '亚的斯亚贝巴火车站',
+          ar: 'محطة أديس أبابا للسكك الحديدية',
+        },
+
+        // 🇪🇨 Ecuador (Équateur) - Hub du Pacifique
+        ECGYE: {
+          en: 'Port of Guayaquil',
+          fr: 'Port de Guayaquil',
+          de: 'Hafen Guayaquil',
+          es: 'Puerto de Guayaquil',
+          it: 'Porto di Guayaquil',
+          nl: 'Haven van Guayaquil',
+          pt: 'Porto de Guayaquil',
+          tr: 'Guayaquil Limanı',
+          ru: 'Порт Гуаякиль',
+          zh: '瓜亚基尔港',
+          ar: 'ميناء غواياكيل',
+        },
+        ECMNT: {
+          en: 'Port of Manta',
+          fr: 'Port de Manta',
+          de: 'Hafen Manta',
+          es: 'Puerto de Manta',
+          it: 'Porto di Manta',
+          nl: 'Haven van Manta',
+          pt: 'Porto de Manta',
+          tr: 'Manta Limanı',
+          ru: 'Порт Манта',
+          zh: '曼塔港',
+          ar: 'ميناء مانتا',
+        },
+        ECUIO: {
+          en: 'Quito Mariscal Sucre International Airport',
+          fr: 'Aéroport international de Quito Mariscal Sucre',
+          de: 'Internationaler Flughafen Quito Mariscal Sucre',
+          es: 'Aeropuerto Internacional de Quito Mariscal Sucre',
+          it: 'Aeroporto Internazionale di Quito Mariscal Sucre',
+          nl: 'Internationale Luchthaven Quito Mariscal Sucre',
+          pt: 'Aeroporto Internacional de Quito Mariscal Sucre',
+          tr: 'Quito Mariscal Sucre Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Кито Марискаль Сукре',
+          zh: '基多马里斯卡尔苏克雷国际机场',
+          ar: 'مطار كيتو ماريسكال سوكري الدولي',
+        },
+        ECGYE_AIR: {
+          en: 'Guayaquil José Joaquín de Olmedo International Airport',
+          fr: 'Aéroport international de Guayaquil José Joaquín de Olmedo',
+          de: 'Internationaler Flughafen Guayaquil José Joaquín de Olmedo',
+          es: 'Aeropuerto Internacional de Guayaquil José Joaquín de Olmedo',
+          it: 'Aeroporto Internazionale di Guayaquil José Joaquín de Olmedo',
+          nl: 'Internationale Luchthaven Guayaquil José Joaquín de Olmedo',
+          pt: 'Aeroporto Internacional de Guayaquil José Joaquín de Olmedo',
+          tr: 'Guayaquil José Joaquín de Olmedo Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Гуаякиль Хосе Хоакин де Ольмедо',
+          zh: '瓜亚基尔何塞·华金·德·奥尔梅多国际机场',
+          ar: 'مطار غواياكيل خوسيه خواكين دي أولميدو الدولي',
+        },
+        ECUIO_RAIL: {
+          en: 'Quito Railway Station',
+          fr: 'Gare ferroviaire de Quito',
+          de: 'Bahnhof Quito',
+          es: 'Estación de Ferrocarril de Quito',
+          it: 'Stazione Ferroviaria di Quito',
+          nl: 'Treinstation Quito',
+          pt: 'Estação Ferroviária de Quito',
+          tr: 'Quito Tren İstasyonu',
+          ru: 'Железнодорожная станция Кито',
+          zh: '基多火车站',
+          ar: 'محطة كيتو للسكك الحديدية',
+        },
+
+        // === PAYS EN F - TRADUCTIONS COMPLÈTES ===
+
+        // 🇫🇷 France - Hub européen majeur
+        FRMRS: {
+          en: 'Port of Marseille-Fos',
+          fr: 'Port de Marseille-Fos',
+          de: 'Hafen Marseille-Fos',
+          es: 'Puerto de Marsella-Fos',
+          it: 'Porto di Marsiglia-Fos',
+          nl: 'Haven van Marseille-Fos',
+          pt: 'Porto de Marselha-Fos',
+          tr: 'Marsilya-Fos Limanı',
+          ru: 'Порт Марсель-Фос',
+          zh: '马赛-福斯港',
+          ar: 'ميناء مرسيليا-فوس',
+        },
+        FRLEH: {
+          en: 'Port of Le Havre',
+          fr: 'Port du Havre',
+          de: 'Hafen Le Havre',
+          es: 'Puerto de Le Havre',
+          it: 'Porto di Le Havre',
+          nl: 'Haven van Le Havre',
+          pt: 'Porto de Le Havre',
+          tr: 'Le Havre Limanı',
+          ru: 'Порт Гавр',
+          zh: '勒阿弗尔港',
+          ar: 'ميناء لو هافر',
+        },
+        FRDKK: {
+          en: 'Port of Dunkirk',
+          fr: 'Port de Dunkerque',
+          de: 'Hafen Dünkirchen',
+          es: 'Puerto de Dunkerque',
+          it: 'Porto di Dunkerque',
+          nl: 'Haven van Duinkerke',
+          pt: 'Porto de Dunquerque',
+          tr: 'Dunkerque Limanı',
+          ru: 'Порт Дюнкерк',
+          zh: '敦刻尔克港',
+          ar: 'ميناء دونكيرك',
+        },
+        FRLRT: {
+          en: 'Port of La Rochelle',
+          fr: 'Port de La Rochelle',
+          de: 'Hafen La Rochelle',
+          es: 'Puerto de La Rochelle',
+          it: 'Porto di La Rochelle',
+          nl: 'Haven van La Rochelle',
+          pt: 'Porto de La Rochelle',
+          tr: 'La Rochelle Limanı',
+          ru: 'Порт Ла-Рошель',
+          zh: '拉罗谢尔港',
+          ar: 'ميناء لا روشيل',
+        },
+        FRNTS: {
+          en: 'Port of Nantes Saint-Nazaire',
+          fr: 'Port de Nantes Saint-Nazaire',
+          de: 'Hafen Nantes Saint-Nazaire',
+          es: 'Puerto de Nantes Saint-Nazaire',
+          it: 'Porto di Nantes Saint-Nazaire',
+          nl: 'Haven van Nantes Saint-Nazaire',
+          pt: 'Porto de Nantes Saint-Nazaire',
+          tr: 'Nantes Saint-Nazaire Limanı',
+          ru: 'Порт Нант Сен-Назер',
+          zh: '南特圣纳泽尔港',
+          ar: 'ميناء نانت سان نازير',
+        },
+        FRBOD: {
+          en: 'Port of Bordeaux',
+          fr: 'Port de Bordeaux',
+          de: 'Hafen Bordeaux',
+          es: 'Puerto de Burdeos',
+          it: 'Porto di Bordeaux',
+          nl: 'Haven van Bordeaux',
+          pt: 'Porto de Bordéus',
+          tr: 'Bordeaux Limanı',
+          ru: 'Порт Бордо',
+          zh: '波尔多港',
+          ar: 'ميناء بوردو',
+        },
+        FRCDG: {
+          en: 'Charles de Gaulle Airport',
+          fr: 'Aéroport Charles de Gaulle',
+          de: 'Flughafen Charles de Gaulle',
+          es: 'Aeropuerto Charles de Gaulle',
+          it: 'Aeroporto Charles de Gaulle',
+          nl: 'Luchthaven Charles de Gaulle',
+          pt: 'Aeroporto Charles de Gaulle',
+          tr: 'Charles de Gaulle Havaalanı',
+          ru: 'Аэропорт Шарль де Голль',
+          zh: '戴高乐机场',
+          ar: 'مطار شارل ديغول',
+        },
+        FRORY: {
+          en: 'Paris-Orly Airport',
+          fr: 'Aéroport Paris-Orly',
+          de: 'Flughafen Paris-Orly',
+          es: 'Aeropuerto París-Orly',
+          it: 'Aeroporto Parigi-Orly',
+          nl: 'Luchthaven Parijs-Orly',
+          pt: 'Aeroporto Paris-Orly',
+          tr: 'Paris-Orly Havaalanı',
+          ru: 'Аэропорт Париж-Орли',
+          zh: '巴黎-奥利机场',
+          ar: 'مطار باريس-أورلي',
+        },
+        FRLYS: {
+          en: 'Lyon Saint-Exupéry Airport',
+          fr: 'Aéroport Lyon Saint-Exupéry',
+          de: 'Flughafen Lyon Saint-Exupéry',
+          es: 'Aeropuerto Lyon Saint-Exupéry',
+          it: 'Aeroporto Lione Saint-Exupéry',
+          nl: 'Luchthaven Lyon Saint-Exupéry',
+          pt: 'Aeroporto Lyon Saint-Exupéry',
+          tr: 'Lyon Saint-Exupéry Havaalanı',
+          ru: 'Аэропорт Лион Сент-Экзюпери',
+          zh: '里昂圣埃克苏佩里机场',
+          ar: 'مطار ليون سان إكزوبيري',
+        },
+        FRMRS_AIR: {
+          en: 'Marseille Provence Airport',
+          fr: 'Aéroport Marseille Provence',
+          de: 'Flughafen Marseille Provence',
+          es: 'Aeropuerto Marsella Provenza',
+          it: 'Aeroporto Marsiglia Provenza',
+          nl: 'Luchthaven Marseille Provence',
+          pt: 'Aeroporto Marselha Provence',
+          tr: 'Marsilya Provence Havaalanı',
+          ru: 'Аэропорт Марсель Прованс',
+          zh: '马赛普罗旺斯机场',
+          ar: 'مطار مرسيليا بروفانس',
+        },
+        FRNTE: {
+          en: "Nice Côte d'Azur Airport",
+          fr: "Aéroport Nice Côte d'Azur",
+          de: "Flughafen Nizza Côte d'Azur",
+          es: 'Aeropuerto Niza Costa Azul',
+          it: 'Aeroporto Nizza Costa Azzurra',
+          nl: "Luchthaven Nice Côte d'Azur",
+          pt: "Aeroporto Nice Côte d'Azur",
+          tr: "Nice Côte d'Azur Havaalanı",
+          ru: 'Аэропорт Ницца Лазурный Берег',
+          zh: '尼斯蓝色海岸机场',
+          ar: 'مطار نيس كوت دازور',
+        },
+        FRTLS: {
+          en: 'Toulouse-Blagnac Airport',
+          fr: 'Aéroport Toulouse-Blagnac',
+          de: 'Flughafen Toulouse-Blagnac',
+          es: 'Aeropuerto Toulouse-Blagnac',
+          it: 'Aeroporto Tolosa-Blagnac',
+          nl: 'Luchthaven Toulouse-Blagnac',
+          pt: 'Aeroporto Toulouse-Blagnac',
+          tr: 'Toulouse-Blagnac Havaalanı',
+          ru: 'Аэропорт Тулуза-Бланьяк',
+          zh: '图卢兹-布拉尼亚克机场',
+          ar: 'مطار تولوز-بلانياك',
+        },
+        FRPARIS_RAIL: {
+          en: 'Paris Railway Terminals',
+          fr: 'Gares de Paris',
+          de: 'Bahnhöfe Paris',
+          es: 'Estaciones de París',
+          it: 'Stazioni di Parigi',
+          nl: 'Stations Parijs',
+          pt: 'Estações de Paris',
+          tr: 'Paris Tren İstasyonları',
+          ru: 'Железнодорожные вокзалы Парижа',
+          zh: '巴黎火车站',
+          ar: 'محطات باريس للسكك الحديدية',
+        },
+        FRLYON_RAIL: {
+          en: 'Lyon Part-Dieu Station',
+          fr: 'Gare de Lyon Part-Dieu',
+          de: 'Bahnhof Lyon Part-Dieu',
+          es: 'Estación de Lyon Part-Dieu',
+          it: 'Stazione di Lione Part-Dieu',
+          nl: 'Station Lyon Part-Dieu',
+          pt: 'Estação de Lyon Part-Dieu',
+          tr: 'Lyon Part-Dieu İstasyonu',
+          ru: 'Вокзал Лион Пар-Дьё',
+          zh: '里昂帕丢车站',
+          ar: 'محطة ليون بارت ديو',
+        },
+        FRMARS_RAIL: {
+          en: 'Marseille Saint-Charles Station',
+          fr: 'Gare de Marseille Saint-Charles',
+          de: 'Bahnhof Marseille Saint-Charles',
+          es: 'Estación de Marsella Saint-Charles',
+          it: 'Stazione di Marsiglia Saint-Charles',
+          nl: 'Station Marseille Saint-Charles',
+          pt: 'Estação de Marselha Saint-Charles',
+          tr: 'Marsilya Saint-Charles İstasyonu',
+          ru: 'Вокзал Марсель Сен-Шарль',
+          zh: '马赛圣夏尔车站',
+          ar: 'محطة مرسيليا سان شارل',
+        },
+
+        // 🇫🇮 Finland (Finlande) - Hub nordique
+        FIHAM: {
+          en: 'Port of Hamina-Kotka',
+          fr: 'Port de Hamina-Kotka',
+          de: 'Hafen Hamina-Kotka',
+          es: 'Puerto de Hamina-Kotka',
+          it: 'Porto di Hamina-Kotka',
+          nl: 'Haven van Hamina-Kotka',
+          pt: 'Porto de Hamina-Kotka',
+          tr: 'Hamina-Kotka Limanı',
+          ru: 'Порт Хамина-Котка',
+          zh: '哈米纳-科特卡港',
+          ar: 'ميناء هامينا-كوتكا',
+        },
+        FIHEL: {
+          en: 'Port of Helsinki',
+          fr: "Port d'Helsinki",
+          de: 'Hafen Helsinki',
+          es: 'Puerto de Helsinki',
+          it: 'Porto di Helsinki',
+          nl: 'Haven van Helsinki',
+          pt: 'Porto de Helsinki',
+          tr: 'Helsinki Limanı',
+          ru: 'Порт Хельсинки',
+          zh: '赫尔辛基港',
+          ar: 'ميناء هلسنكي',
+        },
+        FIHEL_AIR: {
+          en: 'Helsinki-Vantaa Airport',
+          fr: "Aéroport d'Helsinki-Vantaa",
+          de: 'Flughafen Helsinki-Vantaa',
+          es: 'Aeropuerto de Helsinki-Vantaa',
+          it: 'Aeroporto di Helsinki-Vantaa',
+          nl: 'Luchthaven Helsinki-Vantaa',
+          pt: 'Aeroporto de Helsinki-Vantaa',
+          tr: 'Helsinki-Vantaa Havaalanı',
+          ru: 'Аэропорт Хельсинки-Вантаа',
+          zh: '赫尔辛基-万塔机场',
+          ar: 'مطار هلسنكي-فانتا',
+        },
+        FIHEL_RAIL: {
+          en: 'Helsinki Central Station',
+          fr: "Gare centrale d'Helsinki",
+          de: 'Hauptbahnhof Helsinki',
+          es: 'Estación Central de Helsinki',
+          it: 'Stazione Centrale di Helsinki',
+          nl: 'Centraal Station Helsinki',
+          pt: 'Estação Central de Helsinki',
+          tr: 'Helsinki Merkez İstasyonu',
+          ru: 'Центральный вокзал Хельсинки',
+          zh: '赫尔辛基中央车站',
+          ar: 'محطة هلسنكي المركزية',
+        },
+
+        // 🇫🇯 Fiji (Fidji) - Hub du Pacifique Sud
+        FJLAU: {
+          en: 'Port of Lautoka',
+          fr: 'Port de Lautoka',
+          de: 'Hafen Lautoka',
+          es: 'Puerto de Lautoka',
+          it: 'Porto di Lautoka',
+          nl: 'Haven van Lautoka',
+          pt: 'Porto de Lautoka',
+          tr: 'Lautoka Limanı',
+          ru: 'Порт Лаутока',
+          zh: '劳托卡港',
+          ar: 'ميناء لاوتوكا',
+        },
+        FJSUV_AIR: {
+          en: 'Suva Nausori Airport',
+          fr: 'Aéroport de Suva Nausori',
+          de: 'Flughafen Suva Nausori',
+          es: 'Aeropuerto de Suva Nausori',
+          it: 'Aeroporto di Suva Nausori',
+          nl: 'Luchthaven Suva Nausori',
+          pt: 'Aeroporto de Suva Nausori',
+          tr: 'Suva Nausori Havaalanı',
+          ru: 'Аэропорт Сува Наусори',
+          zh: '苏瓦瑙索里机场',
+          ar: 'مطار سوفا ناوسوري',
+        },
+
+        // === PAYS EN G - TRADUCTIONS COMPLÈTES ===
+
+        // 🇬🇧 United Kingdom (Royaume-Uni) - Hub européen majeur
+        GBFXT: {
+          en: 'Port of Felixstowe',
+          fr: 'Port de Felixstowe',
+          de: 'Hafen Felixstowe',
+          es: 'Puerto de Felixstowe',
+          it: 'Porto di Felixstowe',
+          nl: 'Haven van Felixstowe',
+          pt: 'Porto de Felixstowe',
+          tr: 'Felixstowe Limanı',
+          ru: 'Порт Феликстоу',
+          zh: '费利克斯托港',
+          ar: 'ميناء فيليكستو',
+        },
+        GBSOU: {
+          en: 'Port of Southampton',
+          fr: 'Port de Southampton',
+          de: 'Hafen Southampton',
+          es: 'Puerto de Southampton',
+          it: 'Porto di Southampton',
+          nl: 'Haven van Southampton',
+          pt: 'Porto de Southampton',
+          tr: 'Southampton Limanı',
+          ru: 'Порт Саутгемптон',
+          zh: '南安普敦港',
+          ar: 'ميناء ساوثهامبتون',
+        },
+        GBLIV: {
+          en: 'Port of Liverpool',
+          fr: 'Port de Liverpool',
+          de: 'Hafen Liverpool',
+          es: 'Puerto de Liverpool',
+          it: 'Porto di Liverpool',
+          nl: 'Haven van Liverpool',
+          pt: 'Porto de Liverpool',
+          tr: 'Liverpool Limanı',
+          ru: 'Порт Ливерпуль',
+          zh: '利物浦港',
+          ar: 'ميناء ليفربول',
+        },
+        GBLOND: {
+          en: 'Port of London',
+          fr: 'Port de Londres',
+          de: 'Hafen London',
+          es: 'Puerto de Londres',
+          it: 'Porto di Londra',
+          nl: 'Haven van Londen',
+          pt: 'Porto de Londres',
+          tr: 'Londra Limanı',
+          ru: 'Порт Лондон',
+          zh: '伦敦港',
+          ar: 'ميناء لندن',
+        },
+        GBIMM: {
+          en: 'Port of Immingham',
+          fr: "Port d'Immingham",
+          de: 'Hafen Immingham',
+          es: 'Puerto de Immingham',
+          it: 'Porto di Immingham',
+          nl: 'Haven van Immingham',
+          pt: 'Porto de Immingham',
+          tr: 'Immingham Limanı',
+          ru: 'Порт Иммингем',
+          zh: '伊明汉姆港',
+          ar: 'ميناء إيمنغهام',
+        },
+        GBDOV: {
+          en: 'Port of Dover',
+          fr: 'Port de Douvres',
+          de: 'Hafen Dover',
+          es: 'Puerto de Dover',
+          it: 'Porto di Dover',
+          nl: 'Haven van Dover',
+          pt: 'Porto de Dover',
+          tr: 'Dover Limanı',
+          ru: 'Порт Дувр',
+          zh: '多佛港',
+          ar: 'ميناء دوفر',
+        },
+        GBLHR: {
+          en: 'London Heathrow Airport',
+          fr: 'Aéroport de Londres Heathrow',
+          de: 'Flughafen London Heathrow',
+          es: 'Aeropuerto de Londres Heathrow',
+          it: 'Aeroporto di Londra Heathrow',
+          nl: 'Luchthaven Londen Heathrow',
+          pt: 'Aeroporto de Londres Heathrow',
+          tr: 'Londra Heathrow Havaalanı',
+          ru: 'Аэропорт Лондон Хитроу',
+          zh: '伦敦希思罗机场',
+          ar: 'مطار لندن هيثرو',
+        },
+        GBLGW: {
+          en: 'London Gatwick Airport',
+          fr: 'Aéroport de Londres Gatwick',
+          de: 'Flughafen London Gatwick',
+          es: 'Aeropuerto de Londres Gatwick',
+          it: 'Aeroporto di Londra Gatwick',
+          nl: 'Luchthaven Londen Gatwick',
+          pt: 'Aeroporto de Londres Gatwick',
+          tr: 'Londra Gatwick Havaalanı',
+          ru: 'Аэропорт Лондон Гатвик',
+          zh: '伦敦盖特威克机场',
+          ar: 'مطار لندن غاتويك',
+        },
+        GBSTN: {
+          en: 'London Stansted Airport',
+          fr: 'Aéroport de Londres Stansted',
+          de: 'Flughafen London Stansted',
+          es: 'Aeropuerto de Londres Stansted',
+          it: 'Aeroporto di Londra Stansted',
+          nl: 'Luchthaven Londen Stansted',
+          pt: 'Aeroporto de Londres Stansted',
+          tr: 'Londra Stansted Havaalanı',
+          ru: 'Аэропорт Лондон Станстед',
+          zh: '伦敦斯坦斯特德机场',
+          ar: 'مطار لندن ستانستيد',
+        },
+        GBLUTON: {
+          en: 'London Luton Airport',
+          fr: 'Aéroport de Londres Luton',
+          de: 'Flughafen London Luton',
+          es: 'Aeropuerto de Londres Luton',
+          it: 'Aeroporto di Londra Luton',
+          nl: 'Luchthaven Londen Luton',
+          pt: 'Aeroporto de Londres Luton',
+          tr: 'Londra Luton Havaalanı',
+          ru: 'Аэропорт Лондон Лутон',
+          zh: '伦敦卢顿机场',
+          ar: 'مطار لندن لوتون',
+        },
+        GBMAN: {
+          en: 'Manchester Airport',
+          fr: 'Aéroport de Manchester',
+          de: 'Flughafen Manchester',
+          es: 'Aeropuerto de Manchester',
+          it: 'Aeroporto di Manchester',
+          nl: 'Luchthaven Manchester',
+          pt: 'Aeroporto de Manchester',
+          tr: 'Manchester Havaalanı',
+          ru: 'Аэропорт Манчестер',
+          zh: '曼彻斯特机场',
+          ar: 'مطار مانشستر',
+        },
+        GBEDI: {
+          en: 'Edinburgh Airport',
+          fr: "Aéroport d'Édimbourg",
+          de: 'Flughafen Edinburgh',
+          es: 'Aeropuerto de Edimburgo',
+          it: 'Aeroporto di Edimburgo',
+          nl: 'Luchthaven Edinburgh',
+          pt: 'Aeroporto de Edimburgo',
+          tr: 'Edinburgh Havaalanı',
+          ru: 'Аэропорт Эдинбург',
+          zh: '爱丁堡机场',
+          ar: 'مطار إدنبرة',
+        },
+        GBBHM: {
+          en: 'Birmingham Airport',
+          fr: 'Aéroport de Birmingham',
+          de: 'Flughafen Birmingham',
+          es: 'Aeropuerto de Birmingham',
+          it: 'Aeroporto di Birmingham',
+          nl: 'Luchthaven Birmingham',
+          pt: 'Aeroporto de Birmingham',
+          tr: 'Birmingham Havaalanı',
+          ru: 'Аэропорт Бирмингем',
+          zh: '伯明翰机场',
+          ar: 'مطار برمنغهام',
+        },
+        GBLOND_RAIL: {
+          en: 'London St Pancras International',
+          fr: 'Gare de Londres St Pancras International',
+          de: 'Bahnhof London St Pancras International',
+          es: 'Estación de Londres St Pancras International',
+          it: 'Stazione di Londra St Pancras International',
+          nl: 'Station Londen St Pancras International',
+          pt: 'Estação de Londres St Pancras International',
+          tr: 'Londra St Pancras International İstasyonu',
+          ru: 'Вокзал Лондон Сент-Панкрас Интернешнл',
+          zh: '伦敦圣潘克拉斯国际车站',
+          ar: 'محطة لندن سانت بانكراس الدولية',
+        },
+        GBMAN_RAIL: {
+          en: 'Manchester Piccadilly Station',
+          fr: 'Gare de Manchester Piccadilly',
+          de: 'Bahnhof Manchester Piccadilly',
+          es: 'Estación de Manchester Piccadilly',
+          it: 'Stazione di Manchester Piccadilly',
+          nl: 'Station Manchester Piccadilly',
+          pt: 'Estação de Manchester Piccadilly',
+          tr: 'Manchester Piccadilly İstasyonu',
+          ru: 'Вокзал Манчестер Пикадилли',
+          zh: '曼彻斯特皮卡迪利车站',
+          ar: 'محطة مانشستر بيكاديلي',
+        },
+        GBBHM_RAIL: {
+          en: 'Birmingham New Street Station',
+          fr: 'Gare de Birmingham New Street',
+          de: 'Bahnhof Birmingham New Street',
+          es: 'Estación de Birmingham New Street',
+          it: 'Stazione di Birmingham New Street',
+          nl: 'Station Birmingham New Street',
+          pt: 'Estação de Birmingham New Street',
+          tr: 'Birmingham New Street İstasyonu',
+          ru: 'Вокзал Бирмингем Нью-Стрит',
+          zh: '伯明翰新街车站',
+          ar: 'محطة برمنغهام نيو ستريت',
+        },
+
+        // 🇬🇷 Greece (Grèce) - Hub méditerranéen
+        GRPIR: {
+          en: 'Port of Piraeus',
+          fr: 'Port du Pirée',
+          de: 'Hafen Piräus',
+          es: 'Puerto del Pireo',
+          it: 'Porto del Pireo',
+          nl: 'Haven van Piraeus',
+          pt: 'Porto do Pireu',
+          tr: 'Pire Limanı',
+          ru: 'Порт Пирей',
+          zh: '比雷埃夫斯港',
+          ar: 'ميناء بيريوس',
+        },
+        GRTHE: {
+          en: 'Port of Thessaloniki',
+          fr: 'Port de Thessalonique',
+          de: 'Hafen Thessaloniki',
+          es: 'Puerto de Tesalónica',
+          it: 'Porto di Salonicco',
+          nl: 'Haven van Thessaloniki',
+          pt: 'Porto de Tessalônica',
+          tr: 'Selanik Limanı',
+          ru: 'Порт Салоники',
+          zh: '塞萨洛尼基港',
+          ar: 'ميناء سالونيك',
+        },
+        GRATH: {
+          en: 'Athens Eleftherios Venizelos Airport',
+          fr: "Aéroport d'Athènes Elefthérios Venizélos",
+          de: 'Flughafen Athen Eleftherios Venizelos',
+          es: 'Aeropuerto de Atenas Eleftherios Venizelos',
+          it: 'Aeroporto di Atene Eleftherios Venizelos',
+          nl: 'Luchthaven Athene Eleftherios Venizelos',
+          pt: 'Aeroporto de Atenas Eleftherios Venizelos',
+          tr: 'Atina Eleftherios Venizelos Havaalanı',
+          ru: 'Аэропорт Афины Элефтериос Венизелос',
+          zh: '雅典埃莱夫塞里奥斯·韦尼泽洛斯机场',
+          ar: 'مطار أثينا إليفثيريوس فينيزيلوس',
+        },
+        GRATH_RAIL: {
+          en: 'Athens Railway Station',
+          fr: "Gare d'Athènes",
+          de: 'Bahnhof Athen',
+          es: 'Estación de Atenas',
+          it: 'Stazione di Atene',
+          nl: 'Station Athene',
+          pt: 'Estação de Atenas',
+          tr: 'Atina Tren İstasyonu',
+          ru: 'Железнодорожная станция Афины',
+          zh: '雅典火车站',
+          ar: 'محطة أثينا للسكك الحديدية',
+        },
+
+        // 🇬🇭 Ghana - Hub ouest-africain
+        GHTEM: {
+          en: 'Port of Tema',
+          fr: 'Port de Tema',
+          de: 'Hafen Tema',
+          es: 'Puerto de Tema',
+          it: 'Porto di Tema',
+          nl: 'Haven van Tema',
+          pt: 'Porto de Tema',
+          tr: 'Tema Limanı',
+          ru: 'Порт Тема',
+          zh: '特马港',
+          ar: 'ميناء تيما',
+        },
+        GHTKO: {
+          en: 'Port of Takoradi',
+          fr: 'Port de Takoradi',
+          de: 'Hafen Takoradi',
+          es: 'Puerto de Takoradi',
+          it: 'Porto di Takoradi',
+          nl: 'Haven van Takoradi',
+          pt: 'Porto de Takoradi',
+          tr: 'Takoradi Limanı',
+          ru: 'Порт Такоради',
+          zh: '塔科拉迪港',
+          ar: 'ميناء تاكورادي',
+        },
+        GHACC: {
+          en: 'Accra Kotoka International Airport',
+          fr: "Aéroport international d'Accra Kotoka",
+          de: 'Internationaler Flughafen Accra Kotoka',
+          es: 'Aeropuerto Internacional de Accra Kotoka',
+          it: 'Aeroporto Internazionale di Accra Kotoka',
+          nl: 'Internationale Luchthaven Accra Kotoka',
+          pt: 'Aeroporto Internacional de Accra Kotoka',
+          tr: 'Accra Kotoka Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Аккра Котока',
+          zh: '阿克拉科托卡国际机场',
+          ar: 'مطار أكرا كوتوكا الدولي',
+        },
+
+        // 🇬🇹 Guatemala - Hub centraméricain
+        GTGUA: {
+          en: 'Port of Guatemala',
+          fr: 'Port de Guatemala',
+          de: 'Hafen Guatemala',
+          es: 'Puerto de Guatemala',
+          it: 'Porto di Guatemala',
+          nl: 'Haven van Guatemala',
+          pt: 'Porto da Guatemala',
+          tr: 'Guatemala Limanı',
+          ru: 'Порт Гватемала',
+          zh: '危地马拉港',
+          ar: 'ميناء غواتيمالا',
+        },
+        GTPAC: {
+          en: 'Port Quetzal',
+          fr: 'Port Quetzal',
+          de: 'Hafen Quetzal',
+          es: 'Puerto Quetzal',
+          it: 'Porto Quetzal',
+          nl: 'Haven Quetzal',
+          pt: 'Porto Quetzal',
+          tr: 'Quetzal Limanı',
+          ru: 'Порт Кетсаль',
+          zh: '克萨尔港',
+          ar: 'ميناء كيتزال',
+        },
+        GTGUA_AIR: {
+          en: 'Guatemala City La Aurora International Airport',
+          fr: 'Aéroport international de Guatemala City La Aurora',
+          de: 'Internationaler Flughafen Guatemala City La Aurora',
+          es: 'Aeropuerto Internacional La Aurora de Ciudad de Guatemala',
+          it: 'Aeroporto Internazionale La Aurora di Città del Guatemala',
+          nl: 'Internationale Luchthaven Guatemala City La Aurora',
+          pt: 'Aeroporto Internacional de Guatemala City La Aurora',
+          tr: 'Guatemala City La Aurora Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Гватемала Сити Ла Аурора',
+          zh: '危地马拉城拉奥罗拉国际机场',
+          ar: 'مطار مدينة غواتيمالا لا أورورا الدولي',
+        },
+
+        // === PAYS EN H - TRADUCTIONS COMPLÈTES ===
+
+        // 🇭🇰 Hong Kong - Hub asiatique majeur
+        HKHKG_AIR: {
+          en: 'Hong Kong International Airport',
+          fr: 'Aéroport international de Hong Kong',
+          de: 'Internationaler Flughafen Hongkong',
+          es: 'Aeropuerto Internacional de Hong Kong',
+          it: 'Aeroporto Internazionale di Hong Kong',
+          nl: 'Internationale Luchthaven Hong Kong',
+          pt: 'Aeroporto Internacional de Hong Kong',
+          tr: 'Hong Kong Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Гонконг',
+          zh: '香港国际机场',
+          ar: 'مطار هونغ كونغ الدولي',
+        },
+
+        // 🇭🇷 Croatia (Croatie) - Hub adriatique
+        HRRJK: {
+          en: 'Port of Rijeka',
+          fr: 'Port de Rijeka',
+          de: 'Hafen Rijeka',
+          es: 'Puerto de Rijeka',
+          it: 'Porto di Rijeka',
+          nl: 'Haven van Rijeka',
+          pt: 'Porto de Rijeka',
+          tr: 'Rijeka Limanı',
+          ru: 'Порт Риека',
+          zh: '里耶卡港',
+          ar: 'ميناء رييكا',
+        },
+        HRSPT: {
+          en: 'Port of Split',
+          fr: 'Port de Split',
+          de: 'Hafen Split',
+          es: 'Puerto de Split',
+          it: 'Porto di Spalato',
+          nl: 'Haven van Split',
+          pt: 'Porto de Split',
+          tr: 'Split Limanı',
+          ru: 'Порт Сплит',
+          zh: '斯普利特港',
+          ar: 'ميناء سبليت',
+        },
+        HRZAG: {
+          en: 'Port of Zadar',
+          fr: 'Port de Zadar',
+          de: 'Hafen Zadar',
+          es: 'Puerto de Zadar',
+          it: 'Porto di Zara',
+          nl: 'Haven van Zadar',
+          pt: 'Porto de Zadar',
+          tr: 'Zadar Limanı',
+          ru: 'Порт Задар',
+          zh: '扎达尔港',
+          ar: 'ميناء زادار',
+        },
+        HRZAG_AIR: {
+          en: 'Zagreb Franjo Tuđman Airport',
+          fr: 'Aéroport de Zagreb Franjo Tuđman',
+          de: 'Flughafen Zagreb Franjo Tuđman',
+          es: 'Aeropuerto de Zagreb Franjo Tuđman',
+          it: 'Aeroporto di Zagabria Franjo Tuđman',
+          nl: 'Luchthaven Zagreb Franjo Tuđman',
+          pt: 'Aeroporto de Zagreb Franjo Tuđman',
+          tr: 'Zagreb Franjo Tuđman Havaalanı',
+          ru: 'Аэропорт Загреб Франьо Туджман',
+          zh: '萨格勒布弗拉尼奥·图季曼机场',
+          ar: 'مطار زغرب فرانيو توجمان',
+        },
+        HRSPT_AIR: {
+          en: 'Split Airport',
+          fr: 'Aéroport de Split',
+          de: 'Flughafen Split',
+          es: 'Aeropuerto de Split',
+          it: 'Aeroporto di Spalato',
+          nl: 'Luchthaven Split',
+          pt: 'Aeroporto de Split',
+          tr: 'Split Havaalanı',
+          ru: 'Аэропорт Сплит',
+          zh: '斯普利特机场',
+          ar: 'مطار سبليت',
+        },
+        HRZAG_RAIL: {
+          en: 'Zagreb Central Station',
+          fr: 'Gare centrale de Zagreb',
+          de: 'Hauptbahnhof Zagreb',
+          es: 'Estación Central de Zagreb',
+          it: 'Stazione Centrale di Zagabria',
+          nl: 'Centraal Station Zagreb',
+          pt: 'Estação Central de Zagreb',
+          tr: 'Zagreb Merkez İstasyonu',
+          ru: 'Центральный вокзал Загреб',
+          zh: '萨格勒布中央车站',
+          ar: 'محطة زغرب المركزية',
+        },
+
+        // 🇭🇺 Hungary (Hongrie) - Hub fluvial
+        HUBUD: {
+          en: 'Port of Budapest',
+          fr: 'Port de Budapest',
+          de: 'Hafen Budapest',
+          es: 'Puerto de Budapest',
+          it: 'Porto di Budapest',
+          nl: 'Haven van Boedapest',
+          pt: 'Porto de Budapeste',
+          tr: 'Budapeşte Limanı',
+          ru: 'Порт Будапешт',
+          zh: '布达佩斯港',
+          ar: 'ميناء بودابست',
+        },
+        HUBUD_AIR: {
+          en: 'Budapest Liszt Ferenc International Airport',
+          fr: 'Aéroport international de Budapest Liszt Ferenc',
+          de: 'Internationaler Flughafen Budapest Liszt Ferenc',
+          es: 'Aeropuerto Internacional de Budapest Liszt Ferenc',
+          it: 'Aeroporto Internazionale di Budapest Liszt Ferenc',
+          nl: 'Internationale Luchthaven Budapest Liszt Ferenc',
+          pt: 'Aeroporto Internacional de Budapeste Liszt Ferenc',
+          tr: 'Budapeşte Liszt Ferenc Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Будапешт Лист Ференц',
+          zh: '布达佩斯李斯特·费伦茨国际机场',
+          ar: 'مطار بودابست ليست فيرينتس الدولي',
+        },
+        HUBUD_RAIL: {
+          en: 'Budapest Keleti Railway Station',
+          fr: 'Gare de Budapest Keleti',
+          de: 'Bahnhof Budapest Keleti',
+          es: 'Estación de Budapest Keleti',
+          it: 'Stazione di Budapest Keleti',
+          nl: 'Station Budapest Keleti',
+          pt: 'Estação de Budapeste Keleti',
+          tr: 'Budapeşte Keleti İstasyonu',
+          ru: 'Вокзал Будапешт Келети',
+          zh: '布达佩斯东站',
+          ar: 'محطة بودابست كيليتي',
+        },
+
+        // === PAYS EN I - TRADUCTIONS COMPLÈTES ===
+
+        // 🇮🇹 Italy (Italie) - Hub méditerranéen majeur
+        ITGOA: {
+          en: 'Port of Genoa',
+          fr: 'Port de Gênes',
+          de: 'Hafen Genua',
+          es: 'Puerto de Génova',
+          it: 'Porto di Genova',
+          nl: 'Haven van Genua',
+          pt: 'Porto de Gênova',
+          tr: 'Cenova Limanı',
+          ru: 'Порт Генуя',
+          zh: '热那亚港',
+          ar: 'ميناء جنوة',
+        },
+        ITLSP: {
+          en: 'Port of La Spezia',
+          fr: 'Port de La Spezia',
+          de: 'Hafen La Spezia',
+          es: 'Puerto de La Spezia',
+          it: 'Porto della Spezia',
+          nl: 'Haven van La Spezia',
+          pt: 'Porto de La Spezia',
+          tr: 'La Spezia Limanı',
+          ru: 'Порт Ла-Специя',
+          zh: '拉斯佩齐亚港',
+          ar: 'ميناء لا سبيتسيا',
+        },
+        ITLIV: {
+          en: 'Port of Livorno',
+          fr: 'Port de Livourne',
+          de: 'Hafen Livorno',
+          es: 'Puerto de Livorno',
+          it: 'Porto di Livorno',
+          nl: 'Haven van Livorno',
+          pt: 'Porto de Livorno',
+          tr: 'Livorno Limanı',
+          ru: 'Порт Ливорно',
+          zh: '里窝那港',
+          ar: 'ميناء ليفورنو',
+        },
+        ITNAS: {
+          en: 'Port of Naples',
+          fr: 'Port de Naples',
+          de: 'Hafen Neapel',
+          es: 'Puerto de Nápoles',
+          it: 'Porto di Napoli',
+          nl: 'Haven van Napels',
+          pt: 'Porto de Nápoles',
+          tr: 'Napoli Limanı',
+          ru: 'Порт Неаполь',
+          zh: '那不勒斯港',
+          ar: 'ميناء نابولي',
+        },
+        ITVEN: {
+          en: 'Port of Venice',
+          fr: 'Port de Venise',
+          de: 'Hafen Venedig',
+          es: 'Puerto de Venecia',
+          it: 'Porto di Venezia',
+          nl: 'Haven van Venetië',
+          pt: 'Porto de Veneza',
+          tr: 'Venedik Limanı',
+          ru: 'Порт Венеция',
+          zh: '威尼斯港',
+          ar: 'ميناء البندقية',
+        },
+        ITROM: {
+          en: 'Rome Fiumicino Airport',
+          fr: 'Aéroport de Rome Fiumicino',
+          de: 'Flughafen Rom Fiumicino',
+          es: 'Aeropuerto de Roma Fiumicino',
+          it: 'Aeroporto di Roma Fiumicino',
+          nl: 'Luchthaven Rome Fiumicino',
+          pt: 'Aeroporto de Roma Fiumicino',
+          tr: 'Roma Fiumicino Havaalanı',
+          ru: 'Аэропорт Рим Фьюмичино',
+          zh: '罗马菲乌米奇诺机场',
+          ar: 'مطار روما فيوميتشينو',
+        },
+        ITMIL: {
+          en: 'Milan Malpensa Airport',
+          fr: 'Aéroport de Milan Malpensa',
+          de: 'Flughafen Mailand Malpensa',
+          es: 'Aeropuerto de Milán Malpensa',
+          it: 'Aeroporto di Milano Malpensa',
+          nl: 'Luchthaven Milaan Malpensa',
+          pt: 'Aeroporto de Milão Malpensa',
+          tr: 'Milano Malpensa Havaalanı',
+          ru: 'Аэропорт Милан Мальпенса',
+          zh: '米兰马尔彭萨机场',
+          ar: 'مطار ميلان مالبينسا',
+        },
+        ITVEN_AIR: {
+          en: 'Venice Marco Polo Airport',
+          fr: 'Aéroport de Venise Marco Polo',
+          de: 'Flughafen Venedig Marco Polo',
+          es: 'Aeropuerto de Venecia Marco Polo',
+          it: 'Aeroporto di Venezia Marco Polo',
+          nl: 'Luchthaven Venetië Marco Polo',
+          pt: 'Aeroporto de Veneza Marco Polo',
+          tr: 'Venedik Marco Polo Havaalanı',
+          ru: 'Аэропорт Венеция Марко Поло',
+          zh: '威尼斯马可波罗机场',
+          ar: 'مطار البندقية ماركو بولو',
+        },
+        ITNAS_AIR: {
+          en: 'Naples Airport',
+          fr: 'Aéroport de Naples',
+          de: 'Flughafen Neapel',
+          es: 'Aeropuerto de Nápoles',
+          it: 'Aeroporto di Napoli',
+          nl: 'Luchthaven Napels',
+          pt: 'Aeroporto de Nápoles',
+          tr: 'Napoli Havaalanı',
+          ru: 'Аэропорт Неаполь',
+          zh: '那不勒斯机场',
+          ar: 'مطار نابولي',
+        },
+        ITROM_RAIL: {
+          en: 'Roma Termini Station',
+          fr: 'Gare de Roma Termini',
+          de: 'Bahnhof Roma Termini',
+          es: 'Estación Roma Termini',
+          it: 'Stazione Roma Termini',
+          nl: 'Station Roma Termini',
+          pt: 'Estação Roma Termini',
+          tr: 'Roma Termini İstasyonu',
+          ru: 'Вокзал Рома Термини',
+          zh: '罗马特米尼车站',
+          ar: 'محطة روما تيرميني',
+        },
+        ITMIL_RAIL: {
+          en: 'Milano Centrale Station',
+          fr: 'Gare Milano Centrale',
+          de: 'Bahnhof Milano Centrale',
+          es: 'Estación Milano Centrale',
+          it: 'Stazione Milano Centrale',
+          nl: 'Station Milano Centrale',
+          pt: 'Estação Milano Centrale',
+          tr: 'Milano Centrale İstasyonu',
+          ru: 'Вокзал Милано Чентрале',
+          zh: '米兰中央车站',
+          ar: 'محطة ميلانو تشنترالي',
+        },
+        ITVEN_RAIL: {
+          en: 'Venezia Santa Lucia Station',
+          fr: 'Gare Venezia Santa Lucia',
+          de: 'Bahnhof Venezia Santa Lucia',
+          es: 'Estación Venezia Santa Lucia',
+          it: 'Stazione Venezia Santa Lucia',
+          nl: 'Station Venezia Santa Lucia',
+          pt: 'Estação Venezia Santa Lucia',
+          tr: 'Venezia Santa Lucia İstasyonu',
+          ru: 'Вокзал Венеция Санта-Лючия',
+          zh: '威尼斯圣露西亚车站',
+          ar: 'محطة البندقية سانتا لوتشيا',
+        },
+
+        // 🇮🇳 India (Inde) - Hub asiatique majeur
+        INJNP: {
+          en: 'Jawaharlal Nehru Port',
+          fr: 'Port de Jawaharlal Nehru',
+          de: 'Hafen Jawaharlal Nehru',
+          es: 'Puerto de Jawaharlal Nehru',
+          it: 'Porto di Jawaharlal Nehru',
+          nl: 'Haven van Jawaharlal Nehru',
+          pt: 'Porto de Jawaharlal Nehru',
+          tr: 'Jawaharlal Nehru Limanı',
+          ru: 'Порт Джавахарлал Неру',
+          zh: '贾瓦哈拉尔尼赫鲁港',
+          ar: 'ميناء جواهرلال نهرو',
+        },
+        INMUN: {
+          en: 'Port of Mumbai',
+          fr: 'Port de Mumbai',
+          de: 'Hafen Mumbai',
+          es: 'Puerto de Mumbai',
+          it: 'Porto di Mumbai',
+          nl: 'Haven van Mumbai',
+          pt: 'Porto de Mumbai',
+          tr: 'Mumbai Limanı',
+          ru: 'Порт Мумбаи',
+          zh: '孟买港',
+          ar: 'ميناء مومباي',
+        },
+        INCHE: {
+          en: 'Port of Chennai',
+          fr: 'Port de Chennai',
+          de: 'Hafen Chennai',
+          es: 'Puerto de Chennai',
+          it: 'Porto di Chennai',
+          nl: 'Haven van Chennai',
+          pt: 'Porto de Chennai',
+          tr: 'Chennai Limanı',
+          ru: 'Порт Ченнаи',
+          zh: '钦奈港',
+          ar: 'ميناء تشيناي',
+        },
+        INCOK: {
+          en: 'Port of Cochin',
+          fr: 'Port de Cochin',
+          de: 'Hafen Cochin',
+          es: 'Puerto de Cochín',
+          it: 'Porto di Cochin',
+          nl: 'Haven van Cochin',
+          pt: 'Porto de Cochim',
+          tr: 'Cochin Limanı',
+          ru: 'Порт Кочин',
+          zh: '科钦港',
+          ar: 'ميناء كوتشين',
+        },
+        INDEL: {
+          en: 'Delhi Indira Gandhi International Airport',
+          fr: 'Aéroport international de Delhi Indira Gandhi',
+          de: 'Internationaler Flughafen Delhi Indira Gandhi',
+          es: 'Aeropuerto Internacional de Delhi Indira Gandhi',
+          it: 'Aeroporto Internazionale di Delhi Indira Gandhi',
+          nl: 'Internationale Luchthaven Delhi Indira Gandhi',
+          pt: 'Aeroporto Internacional de Delhi Indira Gandhi',
+          tr: 'Delhi Indira Gandhi Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Дели Индира Ганди',
+          zh: '德里英迪拉·甘地国际机场',
+          ar: 'مطار دلهي إنديرا غاندي الدولي',
+        },
+        INMUN_AIR: {
+          en: 'Mumbai Chhatrapati Shivaji Maharaj International Airport',
+          fr: 'Aéroport international de Mumbai Chhatrapati Shivaji Maharaj',
+          de: 'Internationaler Flughafen Mumbai Chhatrapati Shivaji Maharaj',
+          es: 'Aeropuerto Internacional de Mumbai Chhatrapati Shivaji Maharaj',
+          it: 'Aeroporto Internazionale di Mumbai Chhatrapati Shivaji Maharaj',
+          nl: 'Internationale Luchthaven Mumbai Chhatrapati Shivaji Maharaj',
+          pt: 'Aeroporto Internacional de Mumbai Chhatrapati Shivaji Maharaj',
+          tr: 'Mumbai Chhatrapati Shivaji Maharaj Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Мумбаи Чхатрапати Шиваджи Махарадж',
+          zh: '孟买贾特拉帕蒂·希瓦吉·马哈拉杰国际机场',
+          ar: 'مطار مومباي تشاتراباتي شيفاجي ماهاراج الدولي',
+        },
+        INBLR: {
+          en: 'Bangalore Kempegowda International Airport',
+          fr: 'Aéroport international de Bangalore Kempegowda',
+          de: 'Internationaler Flughafen Bangalore Kempegowda',
+          es: 'Aeropuerto Internacional de Bangalore Kempegowda',
+          it: 'Aeroporto Internazionale di Bangalore Kempegowda',
+          nl: 'Internationale Luchthaven Bangalore Kempegowda',
+          pt: 'Aeroporto Internacional de Bangalore Kempegowda',
+          tr: 'Bangalore Kempegowda Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Бангалор Кемпегоуда',
+          zh: '班加罗尔肯佩戈达国际机场',
+          ar: 'مطار بنغالور كيمبيغودا الدولي',
+        },
+        INCHE_AIR: {
+          en: 'Chennai International Airport',
+          fr: 'Aéroport international de Chennai',
+          de: 'Internationaler Flughafen Chennai',
+          es: 'Aeropuerto Internacional de Chennai',
+          it: 'Aeroporto Internazionale di Chennai',
+          nl: 'Internationale Luchthaven Chennai',
+          pt: 'Aeroporto Internacional de Chennai',
+          tr: 'Chennai Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Ченнаи',
+          zh: '钦奈国际机场',
+          ar: 'مطار تشيناي الدولي',
+        },
+
+        // 🇮🇪 Ireland (Irlande) - Hub européen
+        IEDUB: {
+          en: 'Port of Dublin',
+          fr: 'Port de Dublin',
+          de: 'Hafen Dublin',
+          es: 'Puerto de Dublín',
+          it: 'Porto di Dublino',
+          nl: 'Haven van Dublin',
+          pt: 'Porto de Dublin',
+          tr: 'Dublin Limanı',
+          ru: 'Порт Дублин',
+          zh: '都柏林港',
+          ar: 'ميناء دبلن',
+        },
+        IECOR: {
+          en: 'Port of Cork',
+          fr: 'Port de Cork',
+          de: 'Hafen Cork',
+          es: 'Puerto de Cork',
+          it: 'Porto di Cork',
+          nl: 'Haven van Cork',
+          pt: 'Porto de Cork',
+          tr: 'Cork Limanı',
+          ru: 'Порт Корк',
+          zh: '科克港',
+          ar: 'ميناء كورك',
+        },
+        IEDUB_AIR: {
+          en: 'Dublin Airport',
+          fr: 'Aéroport de Dublin',
+          de: 'Flughafen Dublin',
+          es: 'Aeropuerto de Dublín',
+          it: 'Aeroporto di Dublino',
+          nl: 'Luchthaven Dublin',
+          pt: 'Aeroporto de Dublin',
+          tr: 'Dublin Havaalanı',
+          ru: 'Аэропорт Дублин',
+          zh: '都柏林机场',
+          ar: 'مطار دبلن',
+        },
+        IECOR_AIR: {
+          en: 'Cork Airport',
+          fr: 'Aéroport de Cork',
+          de: 'Flughafen Cork',
+          es: 'Aeropuerto de Cork',
+          it: 'Aeroporto di Cork',
+          nl: 'Luchthaven Cork',
+          pt: 'Aeroporto de Cork',
+          tr: 'Cork Havaalanı',
+          ru: 'Аэропорт Корк',
+          zh: '科克机场',
+          ar: 'مطار كورك',
+        },
+        IEDUB_RAIL: {
+          en: 'Dublin Heuston Station',
+          fr: 'Gare de Dublin Heuston',
+          de: 'Bahnhof Dublin Heuston',
+          es: 'Estación de Dublín Heuston',
+          it: 'Stazione di Dublino Heuston',
+          nl: 'Station Dublin Heuston',
+          pt: 'Estação de Dublin Heuston',
+          tr: 'Dublin Heuston İstasyonu',
+          ru: 'Вокзал Дублин Хьюстон',
+          zh: '都柏林休斯顿车站',
+          ar: 'محطة دبلن هيوستن',
+        },
+
+        // 🇮🇩 Indonesia (Indonésie) - Hub du Sud-Est asiatique
+        IDJKT: {
+          en: 'Jakarta Tanjung Priok Port',
+          fr: 'Port de Jakarta Tanjung Priok',
+          de: 'Hafen Jakarta Tanjung Priok',
+          es: 'Puerto de Jakarta Tanjung Priok',
+          it: 'Porto di Jakarta Tanjung Priok',
+          nl: 'Haven van Jakarta Tanjung Priok',
+          pt: 'Porto de Jakarta Tanjung Priok',
+          tr: 'Jakarta Tanjung Priok Limanı',
+          ru: 'Порт Джакарта Танджунг Приок',
+          zh: '雅加达丹戎不碌港',
+          ar: 'ميناء جاكرتا تانجونغ بريوك',
+        },
+        IDSUB: {
+          en: 'Port of Surabaya',
+          fr: 'Port de Surabaya',
+          de: 'Hafen Surabaya',
+          es: 'Puerto de Surabaya',
+          it: 'Porto di Surabaya',
+          nl: 'Haven van Surabaya',
+          pt: 'Porto de Surabaya',
+          tr: 'Surabaya Limanı',
+          ru: 'Порт Сурабая',
+          zh: '泗水港',
+          ar: 'ميناء سورابايا',
+        },
+        IDBLW: {
+          en: 'Belawan Medan Port',
+          fr: 'Port de Belawan Medan',
+          de: 'Hafen Belawan Medan',
+          es: 'Puerto de Belawan Medan',
+          it: 'Porto di Belawan Medan',
+          nl: 'Haven van Belawan Medan',
+          pt: 'Porto de Belawan Medan',
+          tr: 'Belawan Medan Limanı',
+          ru: 'Порт Белаван Медан',
+          zh: '勿拉湾棉兰港',
+          ar: 'ميناء بيلاوان ميدان',
+        },
+        IDJKT_AIR: {
+          en: 'Jakarta Soekarno-Hatta International Airport',
+          fr: 'Aéroport international de Jakarta Soekarno-Hatta',
+          de: 'Internationaler Flughafen Jakarta Soekarno-Hatta',
+          es: 'Aeropuerto Internacional de Jakarta Soekarno-Hatta',
+          it: 'Aeroporto Internazionale di Jakarta Soekarno-Hatta',
+          nl: 'Internationale Luchthaven Jakarta Soekarno-Hatta',
+          pt: 'Aeroporto Internacional de Jakarta Soekarno-Hatta',
+          tr: 'Jakarta Soekarno-Hatta Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Джакарта Сукарно-Хатта',
+          zh: '雅加达苏加诺-哈达国际机场',
+          ar: 'مطار جاكرتا سوكارنو-هاتا الدولي',
+        },
+        IDSUB_AIR: {
+          en: 'Surabaya Juanda International Airport',
+          fr: 'Aéroport international de Surabaya Juanda',
+          de: 'Internationaler Flughafen Surabaya Juanda',
+          es: 'Aeropuerto Internacional de Surabaya Juanda',
+          it: 'Aeroporto Internazionale di Surabaya Juanda',
+          nl: 'Internationale Luchthaven Surabaya Juanda',
+          pt: 'Aeroporto Internacional de Surabaya Juanda',
+          tr: 'Surabaya Juanda Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Сурабая Джуанда',
+          zh: '泗水朱安达国际机场',
+          ar: 'مطار سورابايا جواندا الدولي',
+        },
+        IDMED_AIR: {
+          en: 'Medan Kualanamu International Airport',
+          fr: 'Aéroport international de Medan Kualanamu',
+          de: 'Internationaler Flughafen Medan Kualanamu',
+          es: 'Aeropuerto Internacional de Medan Kualanamu',
+          it: 'Aeroporto Internazionale di Medan Kualanamu',
+          nl: 'Internationale Luchthaven Medan Kualanamu',
+          pt: 'Aeroporto Internacional de Medan Kualanamu',
+          tr: 'Medan Kualanamu Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Медан Куаланаму',
+          zh: '棉兰瓜拉纳木国际机场',
+          ar: 'مطار ميدان كوالانامو الدولي',
+        },
+
+        // 🇮🇱 Israel (Israël) - Hub du Moyen-Orient
+        ILHFA: {
+          en: 'Port of Haifa',
+          fr: 'Port de Haïfa',
+          de: 'Hafen Haifa',
+          es: 'Puerto de Haifa',
+          it: 'Porto di Haifa',
+          nl: 'Haven van Haifa',
+          pt: 'Porto de Haifa',
+          tr: 'Hayfa Limanı',
+          ru: 'Порт Хайфа',
+          zh: '海法港',
+          ar: 'ميناء حيفا',
+        },
+        ILASD: {
+          en: 'Port of Ashdod',
+          fr: "Port d'Ashdod",
+          de: 'Hafen Ashdod',
+          es: 'Puerto de Ashdod',
+          it: 'Porto di Ashdod',
+          nl: 'Haven van Ashdod',
+          pt: 'Porto de Ashdod',
+          tr: 'Aşdod Limanı',
+          ru: 'Порт Ашдод',
+          zh: '阿什杜德港',
+          ar: 'ميناء أشدود',
+        },
+        ILEIL: {
+          en: 'Port of Eilat',
+          fr: "Port d'Eilat",
+          de: 'Hafen Eilat',
+          es: 'Puerto de Eilat',
+          it: 'Porto di Eilat',
+          nl: 'Haven van Eilat',
+          pt: 'Porto de Eilat',
+          tr: 'Eylat Limanı',
+          ru: 'Порт Эйлат',
+          zh: '埃拉特港',
+          ar: 'ميناء إيلات',
+        },
+        ILTLV: {
+          en: 'Tel Aviv Ben Gurion Airport',
+          fr: 'Aéroport de Tel Aviv Ben Gurion',
+          de: 'Flughafen Tel Aviv Ben Gurion',
+          es: 'Aeropuerto de Tel Aviv Ben Gurion',
+          it: 'Aeroporto di Tel Aviv Ben Gurion',
+          nl: 'Luchthaven Tel Aviv Ben Gurion',
+          pt: 'Aeroporto de Tel Aviv Ben Gurion',
+          tr: 'Tel Aviv Ben Gurion Havaalanı',
+          ru: 'Аэропорт Тель-Авив Бен-Гурион',
+          zh: '特拉维夫本-古里安机场',
+          ar: 'مطار تل أبيب بن غوريون',
+        },
+        ILHFA_AIR: {
+          en: 'Haifa Airport',
+          fr: 'Aéroport de Haïfa',
+          de: 'Flughafen Haifa',
+          es: 'Aeropuerto de Haifa',
+          it: 'Aeroporto di Haifa',
+          nl: 'Luchthaven Haifa',
+          pt: 'Aeroporto de Haifa',
+          tr: 'Hayfa Havaalanı',
+          ru: 'Аэропорт Хайфа',
+          zh: '海法机场',
+          ar: 'مطار حيفا',
+        },
+
+        // 🇮🇷 Iran (Iran) - Hub du Golfe Persique
+        IRBND: {
+          en: 'Port of Bandar Abbas',
+          fr: 'Port de Bandar Abbas',
+          de: 'Hafen Bandar Abbas',
+          es: 'Puerto de Bandar Abbas',
+          it: 'Porto di Bandar Abbas',
+          nl: 'Haven van Bandar Abbas',
+          pt: 'Porto de Bandar Abbas',
+          tr: 'Bandar Abbas Limanı',
+          ru: 'Порт Бендер-Аббас',
+          zh: '阿巴斯港',
+          ar: 'ميناء بندر عباس',
+        },
+        IRIMAM: {
+          en: 'Imam Khomeini Port',
+          fr: "Port d'Imam Khomeini",
+          de: 'Hafen Imam Khomeini',
+          es: 'Puerto de Imam Jomeini',
+          it: 'Porto di Imam Khomeini',
+          nl: 'Haven van Imam Khomeini',
+          pt: 'Porto de Imam Khomeini',
+          tr: 'İmam Humeyni Limanı',
+          ru: 'Порт Имам Хомейни',
+          zh: '伊玛目霍梅尼港',
+          ar: 'ميناء الإمام الخميني',
+        },
+        IRBZG: {
+          en: 'Port of Bushehr',
+          fr: 'Port de Bushehr',
+          de: 'Hafen Bushehr',
+          es: 'Puerto de Bushehr',
+          it: 'Porto di Bushehr',
+          nl: 'Haven van Bushehr',
+          pt: 'Porto de Bushehr',
+          tr: 'Buşehr Limanı',
+          ru: 'Порт Бушер',
+          zh: '布什尔港',
+          ar: 'ميناء بوشهر',
+        },
+        IRIKU: {
+          en: 'Tehran Imam Khomeini International Airport',
+          fr: 'Aéroport international de Téhéran Imam Khomeini',
+          de: 'Internationaler Flughafen Teheran Imam Khomeini',
+          es: 'Aeropuerto Internacional de Teherán Imam Jomeini',
+          it: 'Aeroporto Internazionale di Teheran Imam Khomeini',
+          nl: 'Internationale Luchthaven Teheran Imam Khomeini',
+          pt: 'Aeroporto Internacional de Teerã Imam Khomeini',
+          tr: 'Tahran İmam Humeyni Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Тегеран Имам Хомейни',
+          zh: '德黑兰伊玛目霍梅尼国际机场',
+          ar: 'مطار طهران الإمام الخميني الدولي',
+        },
+        IRMHD: {
+          en: 'Mashhad Airport',
+          fr: 'Aéroport de Mashhad',
+          de: 'Flughafen Mashhad',
+          es: 'Aeropuerto de Mashhad',
+          it: 'Aeroporto di Mashhad',
+          nl: 'Luchthaven Mashhad',
+          pt: 'Aeroporto de Mashhad',
+          tr: 'Meşhed Havaalanı',
+          ru: 'Аэропорт Мешхед',
+          zh: '马什哈德机场',
+          ar: 'مطار مشهد',
+        },
+        IRTEH_RAIL: {
+          en: 'Tehran Railway Station',
+          fr: 'Gare de Téhéran',
+          de: 'Bahnhof Teheran',
+          es: 'Estación de Teherán',
+          it: 'Stazione di Teheran',
+          nl: 'Station Teheran',
+          pt: 'Estação de Teerã',
+          tr: 'Tahran Tren İstasyonu',
+          ru: 'Железнодорожная станция Тегеран',
+          zh: '德黑兰火车站',
+          ar: 'محطة طهران للسكك الحديدية',
+        },
+        IRISF_RAIL: {
+          en: 'Isfahan Railway Station',
+          fr: "Gare d'Isfahan",
+          de: 'Bahnhof Isfahan',
+          es: 'Estación de Isfahan',
+          it: 'Stazione di Isfahan',
+          nl: 'Station Isfahan',
+          pt: 'Estação de Isfahan',
+          tr: 'Isfahan Tren İstasyonu',
+          ru: 'Железнодорожная станция Исфахан',
+          zh: '伊斯法罕火车站',
+          ar: 'محطة أصفهان للسكك الحديدية',
+        },
+
+        // 🇮🇸 Iceland (Islande) - Hub nordique (mis à jour)
+        ISAKR: {
+          en: 'Port of Akranes',
+          fr: "Port d'Akranes",
+          de: 'Hafen Akranes',
+          es: 'Puerto de Akranes',
+          it: 'Porto di Akranes',
+          nl: 'Haven van Akranes',
+          pt: 'Porto de Akranes',
+          tr: 'Akranes Limanı',
+          ru: 'Порт Акранес',
+          zh: '阿克拉内斯港',
+          ar: 'ميناء أكرانيس',
+        },
+        ISREY_AIR: {
+          en: 'Reykjavik Airport',
+          fr: 'Aéroport de Reykjavik',
+          de: 'Flughafen Reykjavik',
+          es: 'Aeropuerto de Reykjavik',
+          it: 'Aeroporto di Reykjavik',
+          nl: 'Luchthaven Reykjavik',
+          pt: 'Aeroporto de Reykjavik',
+          tr: 'Reykjavik Havaalanı',
+          ru: 'Аэропорт Рейкьявик',
+          zh: '雷克雅未克机场',
+          ar: 'مطار ريكيافيك',
+        },
+
+        // === PAYS EN J - TRADUCTIONS COMPLÈTES ===
+
+        // 🇯🇵 Japan (Japon) - Puissance asiatique majeure
+        JPTYO: {
+          en: 'Port of Tokyo',
+          fr: 'Port de Tokyo',
+          de: 'Hafen Tokio',
+          es: 'Puerto de Tokio',
+          it: 'Porto di Tokyo',
+          nl: 'Haven van Tokyo',
+          pt: 'Porto de Tóquio',
+          tr: 'Tokyo Limanı',
+          ru: 'Порт Токио',
+          zh: '东京港',
+          ar: 'ميناء طوكيو',
+        },
+        JPYOK: {
+          en: 'Port of Yokohama',
+          fr: 'Port de Yokohama',
+          de: 'Hafen Yokohama',
+          es: 'Puerto de Yokohama',
+          it: 'Porto di Yokohama',
+          nl: 'Haven van Yokohama',
+          pt: 'Porto de Yokohama',
+          tr: 'Yokohama Limanı',
+          ru: 'Порт Йокогама',
+          zh: '横滨港',
+          ar: 'ميناء يوكوهاما',
+        },
+        JPOSA: {
+          en: 'Port of Osaka',
+          fr: "Port d'Osaka",
+          de: 'Hafen Osaka',
+          es: 'Puerto de Osaka',
+          it: 'Porto di Osaka',
+          nl: 'Haven van Osaka',
+          pt: 'Porto de Osaka',
+          tr: 'Osaka Limanı',
+          ru: 'Порт Осака',
+          zh: '大阪港',
+          ar: 'ميناء أوساكا',
+        },
+        JPNGO: {
+          en: 'Port of Nagoya',
+          fr: 'Port de Nagoya',
+          de: 'Hafen Nagoya',
+          es: 'Puerto de Nagoya',
+          it: 'Porto di Nagoya',
+          nl: 'Haven van Nagoya',
+          pt: 'Porto de Nagoya',
+          tr: 'Nagoya Limanı',
+          ru: 'Порт Нагоя',
+          zh: '名古屋港',
+          ar: 'ميناء ناغويا',
+        },
+        JPKOB: {
+          en: 'Port of Kobe',
+          fr: 'Port de Kobe',
+          de: 'Hafen Kobe',
+          es: 'Puerto de Kobe',
+          it: 'Porto di Kobe',
+          nl: 'Haven van Kobe',
+          pt: 'Porto de Kobe',
+          tr: 'Kobe Limanı',
+          ru: 'Порт Кобе',
+          zh: '神户港',
+          ar: 'ميناء كوبي',
+        },
+        JPNRT: {
+          en: 'Tokyo Narita International Airport',
+          fr: 'Aéroport international de Tokyo Narita',
+          de: 'Internationaler Flughafen Tokyo Narita',
+          es: 'Aeropuerto Internacional de Tokio Narita',
+          it: 'Aeroporto Internazionale di Tokyo Narita',
+          nl: 'Internationale Luchthaven Tokyo Narita',
+          pt: 'Aeroporto Internacional de Tóquio Narita',
+          tr: 'Tokyo Narita Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Токио Нарита',
+          zh: '东京成田国际机场',
+          ar: 'مطار طوكيو ناريتا الدولي',
+        },
+        JPHND: {
+          en: 'Tokyo Haneda Airport',
+          fr: 'Aéroport de Tokyo Haneda',
+          de: 'Flughafen Tokyo Haneda',
+          es: 'Aeropuerto de Tokio Haneda',
+          it: 'Aeroporto di Tokyo Haneda',
+          nl: 'Luchthaven Tokyo Haneda',
+          pt: 'Aeroporto de Tóquio Haneda',
+          tr: 'Tokyo Haneda Havaalanı',
+          ru: 'Аэропорт Токио Ханеда',
+          zh: '东京羽田机场',
+          ar: 'مطار طوكيو هانيدا',
+        },
+        JPKIX: {
+          en: 'Osaka Kansai International Airport',
+          fr: "Aéroport international d'Osaka Kansai",
+          de: 'Internationaler Flughafen Osaka Kansai',
+          es: 'Aeropuerto Internacional de Osaka Kansai',
+          it: 'Aeroporto Internazionale di Osaka Kansai',
+          nl: 'Internationale Luchthaven Osaka Kansai',
+          pt: 'Aeroporto Internacional de Osaka Kansai',
+          tr: 'Osaka Kansai Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Осака Кансай',
+          zh: '大阪关西国际机场',
+          ar: 'مطار أوساكا كانساي الدولي',
+        },
+        JPNGO_AIR: {
+          en: 'Nagoya Chubu Centrair International Airport',
+          fr: 'Aéroport international de Nagoya Chubu Centrair',
+          de: 'Internationaler Flughafen Nagoya Chubu Centrair',
+          es: 'Aeropuerto Internacional de Nagoya Chubu Centrair',
+          it: 'Aeroporto Internazionale di Nagoya Chubu Centrair',
+          nl: 'Internationale Luchthaven Nagoya Chubu Centrair',
+          pt: 'Aeroporto Internacional de Nagoya Chubu Centrair',
+          tr: 'Nagoya Chubu Centrair Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Нагоя Чубу Центрэйр',
+          zh: '名古屋中部国际机场',
+          ar: 'مطار ناغويا تشوبو سنترير الدولي',
+        },
+        JPTYO_RAIL: {
+          en: 'Tokyo Station',
+          fr: 'Gare de Tokyo',
+          de: 'Bahnhof Tokyo',
+          es: 'Estación de Tokio',
+          it: 'Stazione di Tokyo',
+          nl: 'Station Tokyo',
+          pt: 'Estação de Tóquio',
+          tr: 'Tokyo İstasyonu',
+          ru: 'Вокзал Токио',
+          zh: '东京站',
+          ar: 'محطة طوكيو',
+        },
+        JPOSA_RAIL: {
+          en: 'Osaka Station',
+          fr: "Gare d'Osaka",
+          de: 'Bahnhof Osaka',
+          es: 'Estación de Osaka',
+          it: 'Stazione di Osaka',
+          nl: 'Station Osaka',
+          pt: 'Estação de Osaka',
+          tr: 'Osaka İstasyonu',
+          ru: 'Вокзал Осака',
+          zh: '大阪站',
+          ar: 'محطة أوساكا',
+        },
+        JPNGO_RAIL: {
+          en: 'Nagoya Station',
+          fr: 'Gare de Nagoya',
+          de: 'Bahnhof Nagoya',
+          es: 'Estación de Nagoya',
+          it: 'Stazione di Nagoya',
+          nl: 'Station Nagoya',
+          pt: 'Estação de Nagoya',
+          tr: 'Nagoya İstasyonu',
+          ru: 'Вокзал Нагоя',
+          zh: '名古屋站',
+          ar: 'محطة ناغويا',
+        },
+
+        // 🇯🇴 Jordan (Jordanie) - Hub du Moyen-Orient
+        JOAQJ: {
+          en: 'Port of Aqaba',
+          fr: "Port d'Aqaba",
+          de: 'Hafen Aqaba',
+          es: 'Puerto de Aqaba',
+          it: 'Porto di Aqaba',
+          nl: 'Haven van Aqaba',
+          pt: 'Porto de Aqaba',
+          tr: 'Akabe Limanı',
+          ru: 'Порт Акаба',
+          zh: '亚喀巴港',
+          ar: 'ميناء العقبة',
+        },
+        JOAMM: {
+          en: 'Amman Queen Alia International Airport',
+          fr: "Aéroport international d'Amman Queen Alia",
+          de: 'Internationaler Flughafen Amman Queen Alia',
+          es: 'Aeropuerto Internacional de Ammán Queen Alia',
+          it: 'Aeroporto Internazionale di Amman Queen Alia',
+          nl: 'Internationale Luchthaven Amman Queen Alia',
+          pt: 'Aeroporto Internacional de Amã Queen Alia',
+          tr: 'Amman Queen Alia Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Амман имени королевы Алии',
+          zh: '安曼阿丽娅王后国际机场',
+          ar: 'مطار عمان الملكة علياء الدولي',
+        },
+        JOAQJ_AIR: {
+          en: 'Aqaba King Hussein International Airport',
+          fr: "Aéroport international d'Aqaba King Hussein",
+          de: 'Internationaler Flughafen Aqaba King Hussein',
+          es: 'Aeropuerto Internacional de Aqaba King Hussein',
+          it: 'Aeroporto Internazionale di Aqaba King Hussein',
+          nl: 'Internationale Luchthaven Aqaba King Hussein',
+          pt: 'Aeroporto Internacional de Aqaba King Hussein',
+          tr: 'Akabe King Hussein Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Акаба имени короля Хусейна',
+          zh: '亚喀巴胡塞因国王国际机场',
+          ar: 'مطار العقبة الملك الحسين الدولي',
+        },
+
+        // 🇯🇲 Jamaica (Jamaïque) - Hub des Caraïbes
+        JMKIN: {
+          en: 'Port of Kingston',
+          fr: 'Port de Kingston',
+          de: 'Hafen Kingston',
+          es: 'Puerto de Kingston',
+          it: 'Porto di Kingston',
+          nl: 'Haven van Kingston',
+          pt: 'Porto de Kingston',
+          tr: 'Kingston Limanı',
+          ru: 'Порт Кингстон',
+          zh: '金斯敦港',
+          ar: 'ميناء كينغستون',
+        },
+        JMMBY: {
+          en: 'Port of Montego Bay',
+          fr: 'Port de Montego Bay',
+          de: 'Hafen Montego Bay',
+          es: 'Puerto de Montego Bay',
+          it: 'Porto di Montego Bay',
+          nl: 'Haven van Montego Bay',
+          pt: 'Porto de Montego Bay',
+          tr: 'Montego Bay Limanı',
+          ru: 'Порт Монтего-Бей',
+          zh: '蒙特哥贝港',
+          ar: 'ميناء مونتيغو باي',
+        },
+        JMKIN_AIR: {
+          en: 'Kingston Norman Manley International Airport',
+          fr: 'Aéroport international de Kingston Norman Manley',
+          de: 'Internationaler Flughafen Kingston Norman Manley',
+          es: 'Aeropuerto Internacional de Kingston Norman Manley',
+          it: 'Aeroporto Internazionale di Kingston Norman Manley',
+          nl: 'Internationale Luchthaven Kingston Norman Manley',
+          pt: 'Aeroporto Internacional de Kingston Norman Manley',
+          tr: 'Kingston Norman Manley Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Кингстон Норман Мэнли',
+          zh: '金斯敦诺曼·曼利国际机场',
+          ar: 'مطار كينغستون نورمان مانلي الدولي',
+        },
+        JMMBY_AIR: {
+          en: 'Montego Bay Sangster International Airport',
+          fr: 'Aéroport international de Montego Bay Sangster',
+          de: 'Internationaler Flughafen Montego Bay Sangster',
+          es: 'Aeropuerto Internacional de Montego Bay Sangster',
+          it: 'Aeroporto Internazionale di Montego Bay Sangster',
+          nl: 'Internationale Luchthaven Montego Bay Sangster',
+          pt: 'Aeroporto Internacional de Montego Bay Sangster',
+          tr: 'Montego Bay Sangster Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Монтего-Бей Сангстер',
+          zh: '蒙特哥贝桑斯特国际机场',
+          ar: 'مطار مونتيغو باي سانغستر الدولي',
+        },
+
+        // === PAYS EN K - TRADUCTIONS COMPLÈTES ===
+
+        // 🇰🇷 South Korea (Corée du Sud) - Tigre asiatique
+        KRPUS: {
+          en: 'Port of Busan',
+          fr: 'Port de Busan',
+          de: 'Hafen Busan',
+          es: 'Puerto de Busan',
+          it: 'Porto di Busan',
+          nl: 'Haven van Busan',
+          pt: 'Porto de Busan',
+          tr: 'Busan Limanı',
+          ru: 'Порт Пусан',
+          zh: '釜山港',
+          ar: 'ميناء بوسان',
+        },
+        KRICN: {
+          en: 'Port of Incheon',
+          fr: "Port d'Incheon",
+          de: 'Hafen Incheon',
+          es: 'Puerto de Incheon',
+          it: 'Porto di Incheon',
+          nl: 'Haven van Incheon',
+          pt: 'Porto de Incheon',
+          tr: 'Incheon Limanı',
+          ru: 'Порт Инчхон',
+          zh: '仁川港',
+          ar: 'ميناء إنشيون',
+        },
+        KRULZ: {
+          en: 'Port of Ulsan',
+          fr: "Port d'Ulsan",
+          de: 'Hafen Ulsan',
+          es: 'Puerto de Ulsan',
+          it: 'Porto di Ulsan',
+          nl: 'Haven van Ulsan',
+          pt: 'Porto de Ulsan',
+          tr: 'Ulsan Limanı',
+          ru: 'Порт Ульсан',
+          zh: '蔚山港',
+          ar: 'ميناء أولسان',
+        },
+        KRICN_AIR: {
+          en: 'Incheon International Airport',
+          fr: "Aéroport international d'Incheon",
+          de: 'Internationaler Flughafen Incheon',
+          es: 'Aeropuerto Internacional de Incheon',
+          it: 'Aeroporto Internazionale di Incheon',
+          nl: 'Internationale Luchthaven Incheon',
+          pt: 'Aeroporto Internacional de Incheon',
+          tr: 'Incheon Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Инчхон',
+          zh: '仁川国际机场',
+          ar: 'مطار إنشيون الدولي',
+        },
+        KRGMP: {
+          en: 'Gimpo Airport',
+          fr: 'Aéroport de Gimpo',
+          de: 'Flughafen Gimpo',
+          es: 'Aeropuerto de Gimpo',
+          it: 'Aeroporto di Gimpo',
+          nl: 'Luchthaven Gimpo',
+          pt: 'Aeroporto de Gimpo',
+          tr: 'Gimpo Havaalanı',
+          ru: 'Аэропорт Кимпо',
+          zh: '金浦机场',
+          ar: 'مطار جيمبو',
+        },
+        KRPUS_AIR: {
+          en: 'Busan Gimhae International Airport',
+          fr: 'Aéroport international de Busan Gimhae',
+          de: 'Internationaler Flughafen Busan Gimhae',
+          es: 'Aeropuerto Internacional de Busan Gimhae',
+          it: 'Aeroporto Internazionale di Busan Gimhae',
+          nl: 'Internationale Luchthaven Busan Gimhae',
+          pt: 'Aeroporto Internacional de Busan Gimhae',
+          tr: 'Busan Gimhae Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Пусан Кимхэ',
+          zh: '釜山金海国际机场',
+          ar: 'مطار بوسان جيمهاي الدولي',
+        },
+        KRSEO_RAIL: {
+          en: 'Seoul Station',
+          fr: 'Gare de Séoul',
+          de: 'Bahnhof Seoul',
+          es: 'Estación de Seúl',
+          it: 'Stazione di Seoul',
+          nl: 'Station Seoul',
+          pt: 'Estação de Seul',
+          tr: 'Seoul İstasyonu',
+          ru: 'Вокзал Сеул',
+          zh: '首尔站',
+          ar: 'محطة سيول',
+        },
+        KRPUS_RAIL: {
+          en: 'Busan Station',
+          fr: 'Gare de Busan',
+          de: 'Bahnhof Busan',
+          es: 'Estación de Busan',
+          it: 'Stazione di Busan',
+          nl: 'Station Busan',
+          pt: 'Estação de Busan',
+          tr: 'Busan İstasyonu',
+          ru: 'Вокзал Пусан',
+          zh: '釜山站',
+          ar: 'محطة بوسان',
+        },
+
+        // 🇰🇿 Kazakhstan (Kazakhstan) - Hub eurasiatique
+        KZAKT: {
+          en: 'Port of Aktau',
+          fr: "Port d'Aktau",
+          de: 'Hafen Aktau',
+          es: 'Puerto de Aktau',
+          it: 'Porto di Aktau',
+          nl: 'Haven van Aktau',
+          pt: 'Porto de Aktau',
+          tr: 'Aktau Limanı',
+          ru: 'Порт Актау',
+          zh: '阿克套港',
+          ar: 'ميناء أكتاو',
+        },
+        KZALA: {
+          en: 'Almaty International Airport',
+          fr: "Aéroport international d'Almaty",
+          de: 'Internationaler Flughafen Almaty',
+          es: 'Aeropuerto Internacional de Almaty',
+          it: 'Aeroporto Internazionale di Almaty',
+          nl: 'Internationale Luchthaven Almaty',
+          pt: 'Aeroporto Internacional de Almaty',
+          tr: 'Almatı Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Алматы',
+          zh: '阿拉木图国际机场',
+          ar: 'مطار آلماتي الدولي',
+        },
+        KZNUR: {
+          en: 'Nur-Sultan Nazarbayev International Airport',
+          fr: 'Aéroport international de Nur-Sultan Nazarbayev',
+          de: 'Internationaler Flughafen Nur-Sultan Nazarbayev',
+          es: 'Aeropuerto Internacional de Nur-Sultan Nazarbayev',
+          it: 'Aeroporto Internazionale di Nur-Sultan Nazarbayev',
+          nl: 'Internationale Luchthaven Nur-Sultan Nazarbayev',
+          pt: 'Aeroporto Internacional de Nur-Sultan Nazarbayev',
+          tr: 'Nur-Sultan Nazarbayev Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Нур-Султан Назарбаев',
+          zh: '努尔苏丹纳扎尔巴耶夫国际机场',
+          ar: 'مطار نور سلطان نزارباييف الدولي',
+        },
+        KZALA_RAIL: {
+          en: 'Almaty Railway Station',
+          fr: "Gare d'Almaty",
+          de: 'Bahnhof Almaty',
+          es: 'Estación de Almaty',
+          it: 'Stazione di Almaty',
+          nl: 'Station Almaty',
+          pt: 'Estação de Almaty',
+          tr: 'Almatı Tren İstasyonu',
+          ru: 'Железнодорожная станция Алматы',
+          zh: '阿拉木图火车站',
+          ar: 'محطة آلماتي للسكك الحديدية',
+        },
+        KZNUR_RAIL: {
+          en: 'Nur-Sultan Railway Station',
+          fr: 'Gare de Nur-Sultan',
+          de: 'Bahnhof Nur-Sultan',
+          es: 'Estación de Nur-Sultan',
+          it: 'Stazione di Nur-Sultan',
+          nl: 'Station Nur-Sultan',
+          pt: 'Estação de Nur-Sultan',
+          tr: 'Nur-Sultan Tren İstasyonu',
+          ru: 'Железнодорожная станция Нур-Султан',
+          zh: '努尔苏丹火车站',
+          ar: 'محطة نور سلطان للسكك الحديدية',
+        },
+
+        // 🇰🇼 Kuwait (Koweït) - Hub du Golfe Persique
+        KWKWI: {
+          en: 'Port of Kuwait',
+          fr: 'Port de Koweït',
+          de: 'Hafen Kuwait',
+          es: 'Puerto de Kuwait',
+          it: 'Porto del Kuwait',
+          nl: 'Haven van Koeweit',
+          pt: 'Porto do Kuwait',
+          tr: 'Kuveyt Limanı',
+          ru: 'Порт Кувейт',
+          zh: '科威特港',
+          ar: 'ميناء الكويت',
+        },
+        KWSHU: {
+          en: 'Port of Shuwaikh',
+          fr: 'Port de Shuwaikh',
+          de: 'Hafen Shuwaikh',
+          es: 'Puerto de Shuwaikh',
+          it: 'Porto di Shuwaikh',
+          nl: 'Haven van Shuwaikh',
+          pt: 'Porto de Shuwaikh',
+          tr: 'Şuveyh Limanı',
+          ru: 'Порт Шувайх',
+          zh: '舒瓦伊赫港',
+          ar: 'ميناء الشويخ',
+        },
+        KWKWI_AIR: {
+          en: 'Kuwait International Airport',
+          fr: 'Aéroport international du Koweït',
+          de: 'Internationaler Flughafen Kuwait',
+          es: 'Aeropuerto Internacional de Kuwait',
+          it: 'Aeroporto Internazionale del Kuwait',
+          nl: 'Internationale Luchthaven Koeweit',
+          pt: 'Aeroporto Internacional do Kuwait',
+          tr: 'Kuveyt Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Кувейт',
+          zh: '科威特国际机场',
+          ar: 'مطار الكويت الدولي',
+        },
+
+        // 🇰🇪 Kenya (Kenya) - Hub de l'Afrique de l'Est
+        KEMSA: {
+          en: 'Port of Mombasa',
+          fr: 'Port de Mombasa',
+          de: 'Hafen Mombasa',
+          es: 'Puerto de Mombasa',
+          it: 'Porto di Mombasa',
+          nl: 'Haven van Mombasa',
+          pt: 'Porto de Mombasa',
+          tr: 'Mombasa Limanı',
+          ru: 'Порт Момбаса',
+          zh: '蒙巴萨港',
+          ar: 'ميناء مومباسا',
+        },
+        KEKIS: {
+          en: 'Port of Kisumu',
+          fr: 'Port de Kisumu',
+          de: 'Hafen Kisumu',
+          es: 'Puerto de Kisumu',
+          it: 'Porto di Kisumu',
+          nl: 'Haven van Kisumu',
+          pt: 'Porto de Kisumu',
+          tr: 'Kisumu Limanı',
+          ru: 'Порт Кисуму',
+          zh: '基苏木港',
+          ar: 'ميناء كيسومو',
+        },
+        KENBO: {
+          en: 'Nairobi Jomo Kenyatta International Airport',
+          fr: 'Aéroport international de Nairobi Jomo Kenyatta',
+          de: 'Internationaler Flughafen Nairobi Jomo Kenyatta',
+          es: 'Aeropuerto Internacional de Nairobi Jomo Kenyatta',
+          it: 'Aeroporto Internazionale di Nairobi Jomo Kenyatta',
+          nl: 'Internationale Luchthaven Nairobi Jomo Kenyatta',
+          pt: 'Aeroporto Internacional de Nairobi Jomo Kenyatta',
+          tr: 'Nairobi Jomo Kenyatta Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Найроби Джомо Кениата',
+          zh: '内罗毕乔莫·肯雅塔国际机场',
+          ar: 'مطار نيروبي جومو كينياتا الدولي',
+        },
+        KEMSA_AIR: {
+          en: 'Mombasa Moi International Airport',
+          fr: 'Aéroport international de Mombasa Moi',
+          de: 'Internationaler Flughafen Mombasa Moi',
+          es: 'Aeropuerto Internacional de Mombasa Moi',
+          it: 'Aeroporto Internazionale di Mombasa Moi',
+          nl: 'Internationale Luchthaven Mombasa Moi',
+          pt: 'Aeroporto Internacional de Mombasa Moi',
+          tr: 'Mombasa Moi Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Момбаса Мои',
+          zh: '蒙巴萨莫伊国际机场',
+          ar: 'مطار مومباسا موي الدولي',
+        },
+        KENBO_RAIL: {
+          en: 'Nairobi Railway Station',
+          fr: 'Gare de Nairobi',
+          de: 'Bahnhof Nairobi',
+          es: 'Estación de Nairobi',
+          it: 'Stazione di Nairobi',
+          nl: 'Station Nairobi',
+          pt: 'Estação de Nairobi',
+          tr: 'Nairobi Tren İstasyonu',
+          ru: 'Железнодорожная станция Найроби',
+          zh: '内罗毕火车站',
+          ar: 'محطة نيروبي للسكك الحديدية',
+        },
+        KEMSA_RAIL: {
+          en: 'Mombasa Railway Station',
+          fr: 'Gare de Mombasa',
+          de: 'Bahnhof Mombasa',
+          es: 'Estación de Mombasa',
+          it: 'Stazione di Mombasa',
+          nl: 'Station Mombasa',
+          pt: 'Estação de Mombasa',
+          tr: 'Mombasa Tren İstasyonu',
+          ru: 'Железнодорожная станция Момбаса',
+          zh: '蒙巴萨火车站',
+          ar: 'محطة مومباسا للسكك الحديدية',
+        },
+
+        // === PAYS EN L - TRADUCTIONS COMPLÈTES ===
+
+        // 🇱🇰 Sri Lanka (Sri Lanka) - Perle de l'Océan Indien
+        LKCMB: {
+          en: 'Port of Colombo',
+          fr: 'Port de Colombo',
+          de: 'Hafen Colombo',
+          es: 'Puerto de Colombo',
+          it: 'Porto di Colombo',
+          nl: 'Haven van Colombo',
+          pt: 'Porto de Colombo',
+          tr: 'Kolombo Limanı',
+          ru: 'Порт Коломбо',
+          zh: '科伦坡港',
+          ar: 'ميناء كولومبو',
+        },
+        LKHMS: {
+          en: 'Port of Hambantota',
+          fr: 'Port de Hambantota',
+          de: 'Hafen Hambantota',
+          es: 'Puerto de Hambantota',
+          it: 'Porto di Hambantota',
+          nl: 'Haven van Hambantota',
+          pt: 'Porto de Hambantota',
+          tr: 'Hambantota Limanı',
+          ru: 'Порт Хамбантота',
+          zh: '汉班托塔港',
+          ar: 'ميناء هامبانتوتا',
+        },
+        LKCMB_AIR: {
+          en: 'Colombo Bandaranaike International Airport',
+          fr: 'Aéroport international de Colombo Bandaranaike',
+          de: 'Internationaler Flughafen Colombo Bandaranaike',
+          es: 'Aeropuerto Internacional de Colombo Bandaranaike',
+          it: 'Aeroporto Internazionale di Colombo Bandaranaike',
+          nl: 'Internationale Luchthaven Colombo Bandaranaike',
+          pt: 'Aeroporto Internacional de Colombo Bandaranaike',
+          tr: 'Kolombo Bandaranaike Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Коломбо Бандаранаике',
+          zh: '科伦坡班达拉奈克国际机场',
+          ar: 'مطار كولومبو بانداراناياكا الدولي',
+        },
+
+        // 🇱🇧 Lebanon (Liban) - Gateway du Moyen-Orient
+        LBBEY: {
+          en: 'Port of Beirut',
+          fr: 'Port de Beyrouth',
+          de: 'Hafen Beirut',
+          es: 'Puerto de Beirut',
+          it: 'Porto di Beirut',
+          nl: 'Haven van Beiroet',
+          pt: 'Porto de Beirute',
+          tr: 'Beyrut Limanı',
+          ru: 'Порт Бейрут',
+          zh: '贝鲁特港',
+          ar: 'ميناء بيروت',
+        },
+        LBTRI: {
+          en: 'Port of Tripoli',
+          fr: 'Port de Tripoli',
+          de: 'Hafen Tripoli',
+          es: 'Puerto de Trípoli',
+          it: 'Porto di Tripoli',
+          nl: 'Haven van Tripoli',
+          pt: 'Porto de Trípoli',
+          tr: 'Trablusşam Limanı',
+          ru: 'Порт Триполи',
+          zh: '的黎波里港',
+          ar: 'ميناء طرابلس',
+        },
+        LBBEY_AIR: {
+          en: 'Beirut Rafic Hariri International Airport',
+          fr: 'Aéroport international de Beyrouth Rafic Hariri',
+          de: 'Internationaler Flughafen Beirut Rafic Hariri',
+          es: 'Aeropuerto Internacional de Beirut Rafic Hariri',
+          it: 'Aeroporto Internazionale di Beirut Rafic Hariri',
+          nl: 'Internationale Luchthaven Beiroet Rafic Hariri',
+          pt: 'Aeroporto Internacional de Beirute Rafic Hariri',
+          tr: 'Beyrut Refik Hariri Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Бейрут Рафика Харири',
+          zh: '贝鲁特拉菲克·哈里里国际机场',
+          ar: 'مطار بيروت رفيق الحريري الدولي',
+        },
+
+        // 🇱🇹 Lithuania (Lituanie) - Hub balte
+        LTKLA: {
+          en: 'Port of Klaipeda',
+          fr: 'Port de Klaipeda',
+          de: 'Hafen Klaipeda',
+          es: 'Puerto de Klaipeda',
+          it: 'Porto di Klaipeda',
+          nl: 'Haven van Klaipeda',
+          pt: 'Porto de Klaipeda',
+          tr: 'Klaipeda Limanı',
+          ru: 'Порт Клайпеда',
+          zh: '克莱佩达港',
+          ar: 'ميناء كلايبيدا',
+        },
+        LTVIL: {
+          en: 'Vilnius Airport',
+          fr: 'Aéroport de Vilnius',
+          de: 'Flughafen Vilnius',
+          es: 'Aeropuerto de Vilnius',
+          it: 'Aeroporto di Vilnius',
+          nl: 'Luchthaven Vilnius',
+          pt: 'Aeroporto de Vilnius',
+          tr: 'Vilnius Havaalanı',
+          ru: 'Аэропорт Вильнюс',
+          zh: '维尔纽斯机场',
+          ar: 'مطار فيلنيوس',
+        },
+        LTKUN: {
+          en: 'Kaunas Airport',
+          fr: 'Aéroport de Kaunas',
+          de: 'Flughafen Kaunas',
+          es: 'Aeropuerto de Kaunas',
+          it: 'Aeroporto di Kaunas',
+          nl: 'Luchthaven Kaunas',
+          pt: 'Aeroporto de Kaunas',
+          tr: 'Kaunas Havaalanı',
+          ru: 'Аэропорт Каунас',
+          zh: '考纳斯机场',
+          ar: 'مطار كاوناس',
+        },
+        LTVIL_RAIL: {
+          en: 'Vilnius Railway Station',
+          fr: 'Gare de Vilnius',
+          de: 'Bahnhof Vilnius',
+          es: 'Estación de Vilnius',
+          it: 'Stazione di Vilnius',
+          nl: 'Station Vilnius',
+          pt: 'Estação de Vilnius',
+          tr: 'Vilnius Tren İstasyonu',
+          ru: 'Железнодорожная станция Вильнюс',
+          zh: '维尔纽斯火车站',
+          ar: 'محطة فيلنيوس للسكك الحديدية',
+        },
+        LTKLA_RAIL: {
+          en: 'Klaipeda Railway Station',
+          fr: 'Gare de Klaipeda',
+          de: 'Bahnhof Klaipeda',
+          es: 'Estación de Klaipeda',
+          it: 'Stazione di Klaipeda',
+          nl: 'Station Klaipeda',
+          pt: 'Estação de Klaipeda',
+          tr: 'Klaipeda Tren İstasyonu',
+          ru: 'Железнодорожная станция Клайпеда',
+          zh: '克莱佩达火车站',
+          ar: 'محطة كلايبيدا للسكك الحديدية',
+        },
+
+        // 🇱🇻 Latvia (Lettonie) - Hub balte
+        LVRIX: {
+          en: 'Port of Riga',
+          fr: 'Port de Riga',
+          de: 'Hafen Riga',
+          es: 'Puerto de Riga',
+          it: 'Porto di Riga',
+          nl: 'Haven van Riga',
+          pt: 'Porto de Riga',
+          tr: 'Riga Limanı',
+          ru: 'Порт Рига',
+          zh: '里加港',
+          ar: 'ميناء ريغا',
+        },
+        LVVEN: {
+          en: 'Port of Ventspils',
+          fr: 'Port de Ventspils',
+          de: 'Hafen Ventspils',
+          es: 'Puerto de Ventspils',
+          it: 'Porto di Ventspils',
+          nl: 'Haven van Ventspils',
+          pt: 'Porto de Ventspils',
+          tr: 'Ventspils Limanı',
+          ru: 'Порт Вентспилс',
+          zh: '文茨皮尔斯港',
+          ar: 'ميناء فينتسبيلس',
+        },
+        LVRIX_AIR: {
+          en: 'Riga Airport',
+          fr: 'Aéroport de Riga',
+          de: 'Flughafen Riga',
+          es: 'Aeropuerto de Riga',
+          it: 'Aeroporto di Riga',
+          nl: 'Luchthaven Riga',
+          pt: 'Aeroporto de Riga',
+          tr: 'Riga Havaalanı',
+          ru: 'Аэропорт Рига',
+          zh: '里加机场',
+          ar: 'مطار ريغا',
+        },
+        LVRIX_RAIL: {
+          en: 'Riga Central Station',
+          fr: 'Gare centrale de Riga',
+          de: 'Hauptbahnhof Riga',
+          es: 'Estación Central de Riga',
+          it: 'Stazione Centrale di Riga',
+          nl: 'Centraal Station Riga',
+          pt: 'Estação Central de Riga',
+          tr: 'Riga Merkez İstasyonu',
+          ru: 'Центральный вокзал Рига',
+          zh: '里加中央车站',
+          ar: 'محطة ريغا المركزية',
+        },
+
+        // 🇱🇺 Luxembourg (Luxembourg) - Hub financier européen (mis à jour)
+        LULUX_RAIL: {
+          en: 'Luxembourg Central Station',
+          fr: 'Gare centrale de Luxembourg',
+          de: 'Hauptbahnhof Luxemburg',
+          es: 'Estación Central de Luxemburgo',
+          it: 'Stazione Centrale di Lussemburgo',
+          nl: 'Centraal Station Luxemburg',
+          pt: 'Estação Central de Luxemburgo',
+          tr: 'Lüksemburg Merkez İstasyonu',
+          ru: 'Центральный вокзал Люксембург',
+          zh: '卢森堡中央车站',
+          ar: 'محطة لوكسمبورغ المركزية',
+        },
+
+        // 🇱🇮 Liechtenstein (Liechtenstein) - Principauté alpine
+        LIVAD_RAIL: {
+          en: 'Vaduz Railway Connection',
+          fr: 'Connexion ferroviaire de Vaduz',
+          de: 'Bahnverbindung Vaduz',
+          es: 'Conexión ferroviaria de Vaduz',
+          it: 'Collegamento ferroviario di Vaduz',
+          nl: 'Spoorverbinding Vaduz',
+          pt: 'Conexão ferroviária de Vaduz',
+          tr: 'Vaduz Demiryolu Bağlantısı',
+          ru: 'Железнодорожное соединение Вадуц',
+          zh: '瓦杜兹铁路连接',
+          ar: 'اتصال السكك الحديدية في فادوتس',
+        },
+
+        // === PAYS EN M - TRADUCTIONS COMPLÈTES ===
+
+        // 🇲🇾 Malaysia (Malaisie) - Tigre asiatique
+        MYPKG: {
+          en: 'Port Klang',
+          fr: 'Port Klang',
+          de: 'Hafen Klang',
+          es: 'Puerto Klang',
+          it: 'Porto Klang',
+          nl: 'Haven van Klang',
+          pt: 'Porto Klang',
+          tr: 'Klang Limanı',
+          ru: 'Порт Кланг',
+          zh: '巴生港',
+          ar: 'ميناء كلانغ',
+        },
+        MYTPP: {
+          en: 'Port of Tanjung Pelepas',
+          fr: 'Port de Tanjung Pelepas',
+          de: 'Hafen Tanjung Pelepas',
+          es: 'Puerto de Tanjung Pelepas',
+          it: 'Porto di Tanjung Pelepas',
+          nl: 'Haven van Tanjung Pelepas',
+          pt: 'Porto de Tanjung Pelepas',
+          tr: 'Tanjung Pelepas Limanı',
+          ru: 'Порт Танджунг Пелепас',
+          zh: '丹戎帕拉帕斯港',
+          ar: 'ميناء تانجونغ بيليباس',
+        },
+        MYKUL: {
+          en: 'Kuala Lumpur International Airport',
+          fr: 'Aéroport international de Kuala Lumpur',
+          de: 'Internationaler Flughafen Kuala Lumpur',
+          es: 'Aeropuerto Internacional de Kuala Lumpur',
+          it: 'Aeroporto Internazionale di Kuala Lumpur',
+          nl: 'Internationale Luchthaven Kuala Lumpur',
+          pt: 'Aeroporto Internacional de Kuala Lumpur',
+          tr: 'Kuala Lumpur Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Куала-Лумпур',
+          zh: '吉隆坡国际机场',
+          ar: 'مطار كوالالمبور الدولي',
+        },
+
+        // 🇲🇽 Mexico (Mexique) - Giant latino-américain
+        MXMAN: {
+          en: 'Port of Manzanillo',
+          fr: 'Port de Manzanillo',
+          de: 'Hafen Manzanillo',
+          es: 'Puerto de Manzanillo',
+          it: 'Porto di Manzanillo',
+          nl: 'Haven van Manzanillo',
+          pt: 'Porto de Manzanillo',
+          tr: 'Manzanillo Limanı',
+          ru: 'Порт Мансанильо',
+          zh: '曼萨尼约港',
+          ar: 'ميناء مانزانيلو',
+        },
+        MXLAZ: {
+          en: 'Port of Lázaro Cárdenas',
+          fr: 'Port de Lázaro Cárdenas',
+          de: 'Hafen Lázaro Cárdenas',
+          es: 'Puerto de Lázaro Cárdenas',
+          it: 'Porto di Lázaro Cárdenas',
+          nl: 'Haven van Lázaro Cárdenas',
+          pt: 'Porto de Lázaro Cárdenas',
+          tr: 'Lázaro Cárdenas Limanı',
+          ru: 'Порт Ласаро Карденас',
+          zh: '拉萨罗卡德纳斯港',
+          ar: 'ميناء لازارو كارديناس',
+        },
+        MXVER: {
+          en: 'Port of Veracruz',
+          fr: 'Port de Veracruz',
+          de: 'Hafen Veracruz',
+          es: 'Puerto de Veracruz',
+          it: 'Porto di Veracruz',
+          nl: 'Haven van Veracruz',
+          pt: 'Porto de Veracruz',
+          tr: 'Veracruz Limanı',
+          ru: 'Порт Веракрус',
+          zh: '韦拉克鲁斯港',
+          ar: 'ميناء فيراكروز',
+        },
+        MXMEX: {
+          en: 'Mexico City International Airport',
+          fr: 'Aéroport international de Mexico',
+          de: 'Internationaler Flughafen Mexiko-Stadt',
+          es: 'Aeropuerto Internacional de la Ciudad de México',
+          it: 'Aeroporto Internazionale di Città del Messico',
+          nl: 'Internationale Luchthaven Mexico-Stad',
+          pt: 'Aeroporto Internacional da Cidade do México',
+          tr: 'Mexico City Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Мехико',
+          zh: '墨西哥城国际机场',
+          ar: 'مطار مكسيكو سيتي الدولي',
+        },
+        MXCUN: {
+          en: 'Cancún International Airport',
+          fr: 'Aéroport international de Cancún',
+          de: 'Internationaler Flughafen Cancún',
+          es: 'Aeropuerto Internacional de Cancún',
+          it: 'Aeroporto Internazionale di Cancún',
+          nl: 'Internationale Luchthaven Cancún',
+          pt: 'Aeroporto Internacional de Cancún',
+          tr: 'Cancún Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Канкун',
+          zh: '坎昆国际机场',
+          ar: 'مطار كانكون الدولي',
+        },
+
+        // 🇲🇦 Morocco (Maroc) - Gateway maghrébin
+        MACAS: {
+          en: 'Port of Casablanca',
+          fr: 'Port de Casablanca',
+          de: 'Hafen Casablanca',
+          es: 'Puerto de Casablanca',
+          it: 'Porto di Casablanca',
+          nl: 'Haven van Casablanca',
+          pt: 'Porto de Casablanca',
+          tr: 'Kazablanka Limanı',
+          ru: 'Порт Касабланка',
+          zh: '卡萨布兰卡港',
+          ar: 'ميناء الدار البيضاء',
+        },
+        MATAN: {
+          en: 'Port of Tanger Med',
+          fr: 'Port de Tanger Med',
+          de: 'Hafen Tanger Med',
+          es: 'Puerto de Tánger Med',
+          it: 'Porto di Tangeri Med',
+          nl: 'Haven van Tanger Med',
+          pt: 'Porto de Tânger Med',
+          tr: 'Tanger Med Limanı',
+          ru: 'Порт Танжер Мед',
+          zh: '丹吉尔地中海港',
+          ar: 'ميناء طنجة المتوسط',
+        },
+        MACMN: {
+          en: 'Casablanca Mohammed V International Airport',
+          fr: 'Aéroport international de Casablanca Mohammed V',
+          de: 'Internationaler Flughafen Casablanca Mohammed V',
+          es: 'Aeropuerto Internacional de Casablanca Mohammed V',
+          it: 'Aeroporto Internazionale di Casablanca Mohammed V',
+          nl: 'Internationale Luchthaven Casablanca Mohammed V',
+          pt: 'Aeroporto Internacional de Casablanca Mohammed V',
+          tr: 'Kazablanka Mohammed V Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Касабланка Мохаммед V',
+          zh: '卡萨布兰卡穆罕默德五世国际机场',
+          ar: 'مطار الدار البيضاء محمد الخامس الدولي',
+        },
+
+        // 🇲🇿 Mozambique (Mozambique) - Gateway d'Afrique australe
+        MZMPM: {
+          en: 'Port of Maputo',
+          fr: 'Port de Maputo',
+          de: 'Hafen Maputo',
+          es: 'Puerto de Maputo',
+          it: 'Porto di Maputo',
+          nl: 'Haven van Maputo',
+          pt: 'Porto de Maputo',
+          tr: 'Maputo Limanı',
+          ru: 'Порт Мапуту',
+          zh: '马普托港',
+          ar: 'ميناء مابوتو',
+        },
+        MZBEI: {
+          en: 'Port of Beira',
+          fr: 'Port de Beira',
+          de: 'Hafen Beira',
+          es: 'Puerto de Beira',
+          it: 'Porto di Beira',
+          nl: 'Haven van Beira',
+          pt: 'Porto da Beira',
+          tr: 'Beira Limanı',
+          ru: 'Порт Бейра',
+          zh: '贝拉港',
+          ar: 'ميناء بيرا',
+        },
+        MZNAC: {
+          en: 'Port of Nacala',
+          fr: 'Port de Nacala',
+          de: 'Hafen Nacala',
+          es: 'Puerto de Nacala',
+          it: 'Porto di Nacala',
+          nl: 'Haven van Nacala',
+          pt: 'Porto de Nacala',
+          tr: 'Nacala Limanı',
+          ru: 'Порт Накала',
+          zh: '纳卡拉港',
+          ar: 'ميناء ناكالا',
+        },
+        MZMPM_AIR: {
+          en: 'Maputo International Airport',
+          fr: 'Aéroport international de Maputo',
+          de: 'Internationaler Flughafen Maputo',
+          es: 'Aeropuerto Internacional de Maputo',
+          it: 'Aeroporto Internazionale di Maputo',
+          nl: 'Internationale Luchthaven Maputo',
+          pt: 'Aeroporto Internacional de Maputo',
+          tr: 'Maputo Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Мапуту',
+          zh: '马普托国际机场',
+          ar: 'مطار مابوتو الدولي',
+        },
+        MZMPM_RAIL: {
+          en: 'Maputo Railway Station',
+          fr: 'Gare de Maputo',
+          de: 'Bahnhof Maputo',
+          es: 'Estación de Maputo',
+          it: 'Stazione di Maputo',
+          nl: 'Station Maputo',
+          pt: 'Estação de Maputo',
+          tr: 'Maputo Tren İstasyonu',
+          ru: 'Железнодорожная станция Мапуту',
+          zh: '马普托火车站',
+          ar: 'محطة مابوتو للسكك الحديدية',
+        },
+
+        // 🇲🇨 Monaco (Monaco) - Principauté luxueuse (mis à jour)
+        MCNCE: {
+          en: "Nice Côte d'Azur Airport",
+          fr: "Aéroport de Nice Côte d'Azur",
+          de: "Flughafen Nizza Côte d'Azur",
+          es: 'Aeropuerto de Niza Costa Azul',
+          it: 'Aeroporto di Nizza Costa Azzurra',
+          nl: "Luchthaven Nice Côte d'Azur",
+          pt: "Aeroporto de Nice Côte d'Azur",
+          tr: "Nice Côte d'Azur Havaalanı",
+          ru: 'Аэропорт Ницца Лазурный Берег',
+          zh: '尼斯蓝色海岸机场',
+          ar: 'مطار نيس كوت دازور',
+        },
+
+        // 🇲🇹 Malta (Malte) - Hub méditerranéen (mis à jour)
+        MTMLA_AIR: {
+          en: 'Malta International Airport',
+          fr: 'Aéroport international de Malte',
+          de: 'Internationaler Flughafen Malta',
+          es: 'Aeropuerto Internacional de Malta',
+          it: 'Aeroporto Internazionale di Malta',
+          nl: 'Internationale Luchthaven Malta',
+          pt: 'Aeroporto Internacional de Malta',
+          tr: 'Malta Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Мальта',
+          zh: '马耳他国际机场',
+          ar: 'مطار مالطا الدولي',
+        },
+
+        // 🇲🇺 Mauritius (Maurice) - Perle de l'Océan Indien (mis à jour)
+        MUPLN: {
+          en: 'Plaine Corail Airport',
+          fr: 'Aéroport de Plaine Corail',
+          de: 'Flughafen Plaine Corail',
+          es: 'Aeropuerto de Plaine Corail',
+          it: 'Aeroporto di Plaine Corail',
+          nl: 'Luchthaven Plaine Corail',
+          pt: 'Aeroporto de Plaine Corail',
+          tr: 'Plaine Corail Havaalanı',
+          ru: 'Аэропорт Плейн Корайл',
+          zh: '平原珊瑚机场',
+          ar: 'مطار بلين كورايل',
+        },
+
+        // 🇲🇻 Maldives (Maldives) - Archipel tropical (mis à jour)
+        MVMAL: {
+          en: 'Port of Malé',
+          fr: 'Port de Malé',
+          de: 'Hafen Malé',
+          es: 'Puerto de Malé',
+          it: 'Porto di Malé',
+          nl: 'Haven van Malé',
+          pt: 'Porto de Malé',
+          tr: 'Male Limanı',
+          ru: 'Порт Мале',
+          zh: '马累港',
+          ar: 'ميناء ماليه',
+        },
+        MVGAN: {
+          en: 'Port of Gan',
+          fr: 'Port de Gan',
+          de: 'Hafen Gan',
+          es: 'Puerto de Gan',
+          it: 'Porto di Gan',
+          nl: 'Haven van Gan',
+          pt: 'Porto de Gan',
+          tr: 'Gan Limanı',
+          ru: 'Порт Ган',
+          zh: '甘港',
+          ar: 'ميناء غان',
+        },
+        MVGAN_AIR: {
+          en: 'Gan International Airport',
+          fr: 'Aéroport international de Gan',
+          de: 'Internationaler Flughafen Gan',
+          es: 'Aeropuerto Internacional de Gan',
+          it: 'Aeroporto Internazionale di Gan',
+          nl: 'Internationale Luchthaven Gan',
+          pt: 'Aeroporto Internacional de Gan',
+          tr: 'Gan Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Ган',
+          zh: '甘国际机场',
+          ar: 'مطار غان الدولي',
+        },
+
+        // === PAYS EN N - TRADUCTIONS COMPLÈTES ===
+
+        // 🇳🇱 Netherlands (Pays-Bas) - Hub logistique européen
+        NLRTM: {
+          en: 'Port of Rotterdam',
+          fr: 'Port de Rotterdam',
+          de: 'Hafen Rotterdam',
+          es: 'Puerto de Rotterdam',
+          it: 'Porto di Rotterdam',
+          nl: 'Haven van Rotterdam',
+          pt: 'Porto de Roterdão',
+          tr: 'Rotterdam Limanı',
+          ru: 'Порт Роттердам',
+          zh: '鹿特丹港',
+          ar: 'ميناء روتردام',
+        },
+        NLAMS: {
+          en: 'Port of Amsterdam',
+          fr: "Port d'Amsterdam",
+          de: 'Hafen Amsterdam',
+          es: 'Puerto de Ámsterdam',
+          it: 'Porto di Amsterdam',
+          nl: 'Haven van Amsterdam',
+          pt: 'Porto de Amsterdã',
+          tr: 'Amsterdam Limanı',
+          ru: 'Порт Амстердам',
+          zh: '阿姆斯特丹港',
+          ar: 'ميناء أمستردام',
+        },
+        NLAMS_AIR: {
+          en: 'Amsterdam Schiphol Airport',
+          fr: "Aéroport d'Amsterdam Schiphol",
+          de: 'Flughafen Amsterdam Schiphol',
+          es: 'Aeropuerto de Ámsterdam Schiphol',
+          it: 'Aeroporto di Amsterdam Schiphol',
+          nl: 'Luchthaven Amsterdam Schiphol',
+          pt: 'Aeroporto de Amsterdã Schiphol',
+          tr: 'Amsterdam Schiphol Havaalanı',
+          ru: 'Аэропорт Амстердам Схипхол',
+          zh: '阿姆斯特丹史基浦机场',
+          ar: 'مطار أمستردام شيبهول',
+        },
+        NLEIN: {
+          en: 'Eindhoven Airport',
+          fr: "Aéroport d'Eindhoven",
+          de: 'Flughafen Eindhoven',
+          es: 'Aeropuerto de Eindhoven',
+          it: 'Aeroporto di Eindhoven',
+          nl: 'Luchthaven Eindhoven',
+          pt: 'Aeroporto de Eindhoven',
+          tr: 'Eindhoven Havaalanı',
+          ru: 'Аэропорт Эйндховен',
+          zh: '埃因霍温机场',
+          ar: 'مطار آيندهوفن',
+        },
+        NLAMS_RAIL: {
+          en: 'Amsterdam Centraal Station',
+          fr: "Gare centrale d'Amsterdam",
+          de: 'Hauptbahnhof Amsterdam',
+          es: 'Estación Central de Ámsterdam',
+          it: 'Stazione Centrale di Amsterdam',
+          nl: 'Amsterdam Centraal',
+          pt: 'Estação Central de Amsterdã',
+          tr: 'Amsterdam Merkez İstasyonu',
+          ru: 'Центральный вокзал Амстердам',
+          zh: '阿姆斯特丹中央车站',
+          ar: 'محطة أمستردام المركزية',
+        },
+        NLRTM_RAIL: {
+          en: 'Rotterdam Centraal Station',
+          fr: 'Gare centrale de Rotterdam',
+          de: 'Hauptbahnhof Rotterdam',
+          es: 'Estación Central de Rotterdam',
+          it: 'Stazione Centrale di Rotterdam',
+          nl: 'Rotterdam Centraal',
+          pt: 'Estação Central de Roterdão',
+          tr: 'Rotterdam Merkez İstasyonu',
+          ru: 'Центральный вокзал Роттердам',
+          zh: '鹿特丹中央车站',
+          ar: 'محطة روتردام المركزية',
+        },
+        NLHAG_RAIL: {
+          en: 'Den Haag Centraal Station',
+          fr: 'Gare centrale de La Haye',
+          de: 'Hauptbahnhof Den Haag',
+          es: 'Estación Central de La Haya',
+          it: "Stazione Centrale dell'Aia",
+          nl: 'Den Haag Centraal',
+          pt: 'Estação Central de Haia',
+          tr: 'Den Haag Merkez İstasyonu',
+          ru: 'Центральный вокзал Гаага',
+          zh: '海牙中央车站',
+          ar: 'محطة لاهاي المركزية',
+        },
+
+        // 🇳🇬 Nigeria (Nigeria) - Giant africain
+        NGLAG: {
+          en: 'Port of Lagos Apapa',
+          fr: 'Port de Lagos Apapa',
+          de: 'Hafen Lagos Apapa',
+          es: 'Puerto de Lagos Apapa',
+          it: 'Porto di Lagos Apapa',
+          nl: 'Haven van Lagos Apapa',
+          pt: 'Porto de Lagos Apapa',
+          tr: 'Lagos Apapa Limanı',
+          ru: 'Порт Лагос Апапа',
+          zh: '拉各斯阿帕帕港',
+          ar: 'ميناء لاغوس أبابا',
+        },
+        NGTCR: {
+          en: 'Port of Tin Can Island',
+          fr: 'Port de Tin Can Island',
+          de: 'Hafen Tin Can Island',
+          es: 'Puerto de Tin Can Island',
+          it: 'Porto di Tin Can Island',
+          nl: 'Haven van Tin Can Island',
+          pt: 'Porto de Tin Can Island',
+          tr: 'Tin Can Island Limanı',
+          ru: 'Порт Тин Кан Айленд',
+          zh: '锡罐岛港',
+          ar: 'ميناء تين كان آيلاند',
+        },
+        NGLOS: {
+          en: 'Lagos Murtala Muhammed International Airport',
+          fr: 'Aéroport international de Lagos Murtala Muhammed',
+          de: 'Internationaler Flughafen Lagos Murtala Muhammed',
+          es: 'Aeropuerto Internacional de Lagos Murtala Muhammed',
+          it: 'Aeroporto Internazionale di Lagos Murtala Muhammed',
+          nl: 'Internationale Luchthaven Lagos Murtala Muhammed',
+          pt: 'Aeroporto Internacional de Lagos Murtala Muhammed',
+          tr: 'Lagos Murtala Muhammed Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Лагос Муртала Мухаммед',
+          zh: '拉各斯穆尔塔拉·穆罕默德国际机场',
+          ar: 'مطار لاغوس مرتضى محمد الدولي',
+        },
+
+        // 🇳🇴 Norway (Norvège) - Hub nordique
+        NOOSL: {
+          en: 'Port of Oslo',
+          fr: "Port d'Oslo",
+          de: 'Hafen Oslo',
+          es: 'Puerto de Oslo',
+          it: 'Porto di Oslo',
+          nl: 'Haven van Oslo',
+          pt: 'Porto de Oslo',
+          tr: 'Oslo Limanı',
+          ru: 'Порт Осло',
+          zh: '奥斯陆港',
+          ar: 'ميناء أوسلو',
+        },
+        NOBERG: {
+          en: 'Port of Bergen',
+          fr: 'Port de Bergen',
+          de: 'Hafen Bergen',
+          es: 'Puerto de Bergen',
+          it: 'Porto di Bergen',
+          nl: 'Haven van Bergen',
+          pt: 'Porto de Bergen',
+          tr: 'Bergen Limanı',
+          ru: 'Порт Берген',
+          zh: '卑尔根港',
+          ar: 'ميناء بيرغن',
+        },
+        NOOSL_AIR: {
+          en: 'Oslo Gardermoen Airport',
+          fr: "Aéroport d'Oslo Gardermoen",
+          de: 'Flughafen Oslo Gardermoen',
+          es: 'Aeropuerto de Oslo Gardermoen',
+          it: 'Aeroporto di Oslo Gardermoen',
+          nl: 'Luchthaven Oslo Gardermoen',
+          pt: 'Aeroporto de Oslo Gardermoen',
+          tr: 'Oslo Gardermoen Havaalanı',
+          ru: 'Аэропорт Осло Гардермуэн',
+          zh: '奥斯陆加勒穆恩机场',
+          ar: 'مطار أوسلو غاردرموين',
+        },
+        NOOSL_RAIL: {
+          en: 'Oslo Central Station',
+          fr: "Gare centrale d'Oslo",
+          de: 'Hauptbahnhof Oslo',
+          es: 'Estación Central de Oslo',
+          it: 'Stazione Centrale di Oslo',
+          nl: 'Centraal Station Oslo',
+          pt: 'Estação Central de Oslo',
+          tr: 'Oslo Merkez İstasyonu',
+          ru: 'Центральный вокзал Осло',
+          zh: '奥斯陆中央车站',
+          ar: 'محطة أوسلو المركزية',
+        },
+
+        // 🇳🇿 New Zealand (Nouvelle-Zélande) - Hub du Pacifique Sud
+        NZAKL: {
+          en: 'Port of Auckland',
+          fr: "Port d'Auckland",
+          de: 'Hafen Auckland',
+          es: 'Puerto de Auckland',
+          it: 'Porto di Auckland',
+          nl: 'Haven van Auckland',
+          pt: 'Porto de Auckland',
+          tr: 'Auckland Limanı',
+          ru: 'Порт Окленд',
+          zh: '奥克兰港',
+          ar: 'ميناء أوكلاند',
+        },
+        NZTRG: {
+          en: 'Port of Tauranga',
+          fr: 'Port de Tauranga',
+          de: 'Hafen Tauranga',
+          es: 'Puerto de Tauranga',
+          it: 'Porto di Tauranga',
+          nl: 'Haven van Tauranga',
+          pt: 'Porto de Tauranga',
+          tr: 'Tauranga Limanı',
+          ru: 'Порт Тауранга',
+          zh: '陶朗加港',
+          ar: 'ميناء تاورانغا',
+        },
+        NZWEL: {
+          en: 'Port of Wellington',
+          fr: 'Port de Wellington',
+          de: 'Hafen Wellington',
+          es: 'Puerto de Wellington',
+          it: 'Porto di Wellington',
+          nl: 'Haven van Wellington',
+          pt: 'Porto de Wellington',
+          tr: 'Wellington Limanı',
+          ru: 'Порт Веллингтон',
+          zh: '惠灵顿港',
+          ar: 'ميناء ويلينغتون',
+        },
+        NZAKL_AIR: {
+          en: 'Auckland Airport',
+          fr: "Aéroport d'Auckland",
+          de: 'Flughafen Auckland',
+          es: 'Aeropuerto de Auckland',
+          it: 'Aeroporto di Auckland',
+          nl: 'Luchthaven Auckland',
+          pt: 'Aeroporto de Auckland',
+          tr: 'Auckland Havaalanı',
+          ru: 'Аэропорт Окленд',
+          zh: '奥克兰机场',
+          ar: 'مطار أوكلاند',
+        },
+        NZWEL_AIR: {
+          en: 'Wellington Airport',
+          fr: 'Aéroport de Wellington',
+          de: 'Flughafen Wellington',
+          es: 'Aeropuerto de Wellington',
+          it: 'Aeroporto di Wellington',
+          nl: 'Luchthaven Wellington',
+          pt: 'Aeroporto de Wellington',
+          tr: 'Wellington Havaalanı',
+          ru: 'Аэропорт Веллингтон',
+          zh: '惠灵顿机场',
+          ar: 'مطار ويلينغتون',
+        },
+        NZCHC_AIR: {
+          en: 'Christchurch Airport',
+          fr: 'Aéroport de Christchurch',
+          de: 'Flughafen Christchurch',
+          es: 'Aeropuerto de Christchurch',
+          it: 'Aeroporto di Christchurch',
+          nl: 'Luchthaven Christchurch',
+          pt: 'Aeroporto de Christchurch',
+          tr: 'Christchurch Havaalanı',
+          ru: 'Аэропорт Крайстчерч',
+          zh: '基督城机场',
+          ar: 'مطار كرايستشيرش',
+        },
+
+        // === PAYS EN O - TRADUCTIONS COMPLÈTES ===
+
+        // 🇴🇲 Oman (Oman) - Sultanat du Golfe Persique
+        OMSAL: {
+          en: 'Port of Salalah',
+          fr: 'Port de Salalah',
+          de: 'Hafen Salalah',
+          es: 'Puerto de Salalah',
+          it: 'Porto di Salalah',
+          nl: 'Haven van Salalah',
+          pt: 'Porto de Salalah',
+          tr: 'Salalah Limanı',
+          ru: 'Порт Салала',
+          zh: '萨拉拉港',
+          ar: 'ميناء صلالة',
+        },
+        OMMUS: {
+          en: 'Port of Muscat',
+          fr: 'Port de Mascate',
+          de: 'Hafen Maskat',
+          es: 'Puerto de Mascate',
+          it: 'Porto di Mascate',
+          nl: 'Haven van Muscat',
+          pt: 'Porto de Mascate',
+          tr: 'Maskat Limanı',
+          ru: 'Порт Маскат',
+          zh: '马斯喀特港',
+          ar: 'ميناء مسقط',
+        },
+        OMSOH: {
+          en: 'Port of Sohar',
+          fr: 'Port de Sohar',
+          de: 'Hafen Sohar',
+          es: 'Puerto de Sohar',
+          it: 'Porto di Sohar',
+          nl: 'Haven van Sohar',
+          pt: 'Porto de Sohar',
+          tr: 'Sohar Limanı',
+          ru: 'Порт Сохар',
+          zh: '苏哈尔港',
+          ar: 'ميناء صحار',
+        },
+        OMMUS_AIR: {
+          en: 'Muscat International Airport',
+          fr: 'Aéroport international de Mascate',
+          de: 'Internationaler Flughafen Maskat',
+          es: 'Aeropuerto Internacional de Mascate',
+          it: 'Aeroporto Internazionale di Mascate',
+          nl: 'Internationale Luchthaven Muscat',
+          pt: 'Aeroporto Internacional de Mascate',
+          tr: 'Maskat Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Маскат',
+          zh: '马斯喀特国际机场',
+          ar: 'مطار مسقط الدولي',
+        },
+        OMSAL_AIR: {
+          en: 'Salalah Airport',
+          fr: 'Aéroport de Salalah',
+          de: 'Flughafen Salalah',
+          es: 'Aeropuerto de Salalah',
+          it: 'Aeroporto di Salalah',
+          nl: 'Luchthaven Salalah',
+          pt: 'Aeroporto de Salalah',
+          tr: 'Salalah Havaalanı',
+          ru: 'Аэропорт Салала',
+          zh: '萨拉拉机场',
+          ar: 'مطار صلالة',
+        },
+
+        // === PAYS EN Q - TRADUCTIONS COMPLÈTES ===
+
+        // 🇶🇦 Qatar (Qatar) - Émirat gazier du Golfe
+        QADOH: {
+          en: 'Port of Doha',
+          fr: 'Port de Doha',
+          de: 'Hafen Doha',
+          es: 'Puerto de Doha',
+          it: 'Porto di Doha',
+          nl: 'Haven van Doha',
+          pt: 'Porto de Doha',
+          tr: 'Doha Limanı',
+          ru: 'Порт Доха',
+          zh: '多哈港',
+          ar: 'ميناء الدوحة',
+        },
+        QAMES: {
+          en: 'Port of Mesaieed',
+          fr: 'Port de Mesaieed',
+          de: 'Hafen Mesaieed',
+          es: 'Puerto de Mesaieed',
+          it: 'Porto di Mesaieed',
+          nl: 'Haven van Mesaieed',
+          pt: 'Porto de Mesaieed',
+          tr: 'Mesaieed Limanı',
+          ru: 'Порт Месайеед',
+          zh: '梅赛义德港',
+          ar: 'ميناء مسيعيد',
+        },
+
+        // === PAYS EN R - TRADUCTIONS COMPLÈTES ===
+
+        // 🇷🇺 Russia (Russie) - Géant eurasiatique
+        RULED: {
+          en: 'Port of Saint Petersburg',
+          fr: 'Port de Saint-Pétersbourg',
+          de: 'Hafen Sankt Petersburg',
+          es: 'Puerto de San Petersburgo',
+          it: 'Porto di San Pietroburgo',
+          nl: 'Haven van Sint-Petersburg',
+          pt: 'Porto de São Petersburgo',
+          tr: 'Sankt Petersburg Limanı',
+          ru: 'Порт Санкт-Петербург',
+          zh: '圣彼得堡港',
+          ar: 'ميناء سانت بطرسبرغ',
+        },
+        RUNVS: {
+          en: 'Port of Novorossiysk',
+          fr: 'Port de Novorossiysk',
+          de: 'Hafen Noworossijsk',
+          es: 'Puerto de Novorossiysk',
+          it: 'Porto di Novorossiysk',
+          nl: 'Haven van Novorossiysk',
+          pt: 'Porto de Novorossiysk',
+          tr: 'Novorossiysk Limanı',
+          ru: 'Порт Новороссийск',
+          zh: '新罗西斯克港',
+          ar: 'ميناء نوفوروسيسك',
+        },
+        RUVVO: {
+          en: 'Port of Vladivostok',
+          fr: 'Port de Vladivostok',
+          de: 'Hafen Wladiwostok',
+          es: 'Puerto de Vladivostok',
+          it: 'Porto di Vladivostok',
+          nl: 'Haven van Vladivostok',
+          pt: 'Porto de Vladivostok',
+          tr: 'Vladivostok Limanı',
+          ru: 'Порт Владивосток',
+          zh: '符拉迪沃斯托克港',
+          ar: 'ميناء فلاديفوستوك',
+        },
+        RUSVO: {
+          en: 'Moscow Sheremetyevo International Airport',
+          fr: 'Aéroport international de Moscou Sheremetyevo',
+          de: 'Internationaler Flughafen Moskau Scheremetjewo',
+          es: 'Aeropuerto Internacional de Moscú Sheremetyevo',
+          it: 'Aeroporto Internazionale di Mosca Sheremetyevo',
+          nl: 'Internationale Luchthaven Moskou Sheremetyevo',
+          pt: 'Aeroporto Internacional de Moscou Sheremetyevo',
+          tr: 'Moskova Şeremetyevo Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Москва Шереметьево',
+          zh: '莫斯科谢列梅捷沃国际机场',
+          ar: 'مطار موسكو شيريميتيفو الدولي',
+        },
+        RULED_AIR: {
+          en: 'Saint Petersburg Pulkovo Airport',
+          fr: 'Aéroport de Saint-Pétersbourg Pulkovo',
+          de: 'Flughafen Sankt Petersburg Pulkowo',
+          es: 'Aeropuerto de San Petersburgo Pulkovo',
+          it: 'Aeroporto di San Pietroburgo Pulkovo',
+          nl: 'Luchthaven Sint-Petersburg Pulkovo',
+          pt: 'Aeroporto de São Petersburgo Pulkovo',
+          tr: 'Sankt Petersburg Pulkovo Havaalanı',
+          ru: 'Аэропорт Санкт-Петербург Пулково',
+          zh: '圣彼得堡普尔科沃机场',
+          ar: 'مطار سانت بطرسبرغ بولكوفو',
+        },
+        RUMOS_RAIL: {
+          en: 'Moscow Kazansky Railway Station',
+          fr: 'Gare de Moscou Kazansky',
+          de: 'Bahnhof Moskau Kasanski',
+          es: 'Estación de Moscú Kazansky',
+          it: 'Stazione di Mosca Kazansky',
+          nl: 'Station Moskou Kazansky',
+          pt: 'Estação de Moscou Kazansky',
+          tr: 'Moskova Kazansky Tren İstasyonu',
+          ru: 'Казанский вокзал',
+          zh: '莫斯科喀山火车站',
+          ar: 'محطة موسكو كازانسكي',
+        },
+        RULED_RAIL: {
+          en: 'Saint Petersburg Baltic Station',
+          fr: 'Gare baltique de Saint-Pétersbourg',
+          de: 'Baltischer Bahnhof Sankt Petersburg',
+          es: 'Estación Báltica de San Petersburgo',
+          it: 'Stazione Baltica di San Pietroburgo',
+          nl: 'Baltisch Station Sint-Petersburg',
+          pt: 'Estação Báltica de São Petersburgo',
+          tr: 'Sankt Petersburg Baltık İstasyonu',
+          ru: 'Балтийский вокзал',
+          zh: '圣彼得堡波罗的海火车站',
+          ar: 'محطة سانت بطرسبرغ البلطيقية',
+        },
+
+        // 🇷🇴 Romania (Roumanie) - Gateway des Balkans (traductions améliorées)
+        ROCND_AIR: {
+          en: 'Constanta Airport',
+          fr: 'Aéroport de Constanta',
+          de: 'Flughafen Konstanza',
+          es: 'Aeropuerto de Constanza',
+          it: 'Aeroporto di Costanza',
+          nl: 'Luchthaven Constanta',
+          pt: 'Aeroporto de Constanta',
+          tr: 'Köstence Havaalanı',
+          ru: 'Аэропорт Констанца',
+          zh: '康斯坦察机场',
+          ar: 'مطار كونستانتا',
+        },
+        ROBUH_RAIL: {
+          en: 'Bucharest North Railway Station',
+          fr: 'Gare du Nord de Bucarest',
+          de: 'Nordbahnhof Bukarest',
+          es: 'Estación Norte de Bucarest',
+          it: 'Stazione Nord di Bucarest',
+          nl: 'Noordstation Boekarest',
+          pt: 'Estação Norte de Bucareste',
+          tr: 'Bükreş Kuzey Tren İstasyonu',
+          ru: 'Северный вокзал Бухарест',
+          zh: '布加勒斯特北站',
+          ar: 'محطة بوخارست الشمالية',
+        },
+        ROCND_RAIL: {
+          en: 'Constanta Railway Station',
+          fr: 'Gare de Constanta',
+          de: 'Bahnhof Konstanza',
+          es: 'Estación de Constanza',
+          it: 'Stazione di Costanza',
+          nl: 'Station Constanta',
+          pt: 'Estação de Constanta',
+          tr: 'Köstence Tren İstasyonu',
+          ru: 'Железнодорожная станция Констанца',
+          zh: '康斯坦察火车站',
+          ar: 'محطة كونستانتا للسكك الحديدية',
+        },
+
+        // 🇷🇸 Serbia (Serbie) - Cœur des Balkans
+        RSBEG: {
+          en: 'Port of Belgrade',
+          fr: 'Port de Belgrade',
+          de: 'Hafen Belgrad',
+          es: 'Puerto de Belgrado',
+          it: 'Porto di Belgrado',
+          nl: 'Haven van Belgrado',
+          pt: 'Porto de Belgrado',
+          tr: 'Belgrad Limanı',
+          ru: 'Порт Белград',
+          zh: '贝尔格莱德港',
+          ar: 'ميناء بلغراد',
+        },
+        RSNOV: {
+          en: 'Port of Novi Sad',
+          fr: 'Port de Novi Sad',
+          de: 'Hafen Novi Sad',
+          es: 'Puerto de Novi Sad',
+          it: 'Porto di Novi Sad',
+          nl: 'Haven van Novi Sad',
+          pt: 'Porto de Novi Sad',
+          tr: 'Novi Sad Limanı',
+          ru: 'Порт Нови Сад',
+          zh: '诺维萨德港',
+          ar: 'ميناء نوفي ساد',
+        },
+        RSBEG_AIR: {
+          en: 'Belgrade Nikola Tesla Airport',
+          fr: 'Aéroport de Belgrade Nikola Tesla',
+          de: 'Flughafen Belgrad Nikola Tesla',
+          es: 'Aeropuerto de Belgrado Nikola Tesla',
+          it: 'Aeroporto di Belgrado Nikola Tesla',
+          nl: 'Luchthaven Belgrado Nikola Tesla',
+          pt: 'Aeroporto de Belgrado Nikola Tesla',
+          tr: 'Belgrad Nikola Tesla Havaalanı',
+          ru: 'Аэропорт Белград имени Николы Теслы',
+          zh: '贝尔格莱德尼古拉·特斯拉机场',
+          ar: 'مطار بلغراد نيكولا تيسلا',
+        },
+        RSBEG_RAIL: {
+          en: 'Belgrade Central Station',
+          fr: 'Gare centrale de Belgrade',
+          de: 'Hauptbahnhof Belgrad',
+          es: 'Estación Central de Belgrado',
+          it: 'Stazione Centrale di Belgrado',
+          nl: 'Centraal Station Belgrado',
+          pt: 'Estação Central de Belgrado',
+          tr: 'Belgrad Merkez İstasyonu',
+          ru: 'Центральный вокзал Белград',
+          zh: '贝尔格莱德中央车站',
+          ar: 'محطة بلغراد المركزية',
+        },
+
+        // 🇷🇼 Rwanda (Rwanda) - Perle de l'Afrique de l'Est (traduction améliorée)
+        RWKGL_RAIL: {
+          en: 'Kigali Railway Station',
+          fr: 'Gare de Kigali',
+          de: 'Bahnhof Kigali',
+          es: 'Estación de Kigali',
+          it: 'Stazione di Kigali',
+          nl: 'Station Kigali',
+          pt: 'Estação de Kigali',
+          tr: 'Kigali Tren İstasyonu',
+          ru: 'Железнодорожная станция Кигали',
+          zh: '基加利火车站',
+          ar: 'محطة كيغالي للسكك الحديدية',
+        },
+
+        // === PAYS EN S - TRADUCTIONS COMPLÈTES ===
+
+        // 🇸🇬 Singapore (Singapour) - Cité-État du commerce mondial
+        SGSIN: {
+          en: 'Port of Singapore',
+          fr: 'Port de Singapour',
+          de: 'Hafen Singapur',
+          es: 'Puerto de Singapur',
+          it: 'Porto di Singapore',
+          nl: 'Haven van Singapore',
+          pt: 'Porto de Singapura',
+          tr: 'Singapur Limanı',
+          ru: 'Порт Сингапур',
+          zh: '新加坡港',
+          ar: 'ميناء سنغافورة',
+        },
+        SGSIN_AIR: {
+          en: 'Singapore Changi Airport',
+          fr: 'Aéroport de Singapour Changi',
+          de: 'Flughafen Singapur Changi',
+          es: 'Aeropuerto de Singapur Changi',
+          it: 'Aeroporto di Singapore Changi',
+          nl: 'Luchthaven Singapore Changi',
+          pt: 'Aeroporto de Singapura Changi',
+          tr: 'Singapur Changi Havaalanı',
+          ru: 'Аэропорт Сингапур Чанги',
+          zh: '新加坡樟宜机场',
+          ar: 'مطار سنغافورة تشانغي',
+        },
+
+        // 🇸🇪 Sweden (Suède) - Royaume nordique du design
+        SEGOT: {
+          en: 'Port of Gothenburg',
+          fr: 'Port de Göteborg',
+          de: 'Hafen Göteborg',
+          es: 'Puerto de Gotemburgo',
+          it: 'Porto di Göteborg',
+          nl: 'Haven van Göteborg',
+          pt: 'Porto de Gotemburgo',
+          tr: 'Göteborg Limanı',
+          ru: 'Порт Гётеборг',
+          zh: '哥德堡港',
+          ar: 'ميناء غوتنبرغ',
+        },
+        SESTO: {
+          en: 'Port of Stockholm',
+          fr: 'Port de Stockholm',
+          de: 'Hafen Stockholm',
+          es: 'Puerto de Estocolmo',
+          it: 'Porto di Stoccolma',
+          nl: 'Haven van Stockholm',
+          pt: 'Porto de Estocolmo',
+          tr: 'Stockholm Limanı',
+          ru: 'Порт Стокгольм',
+          zh: '斯德哥尔摩港',
+          ar: 'ميناء ستوكهولم',
+        },
+        SEARN: {
+          en: 'Stockholm Arlanda Airport',
+          fr: 'Aéroport de Stockholm Arlanda',
+          de: 'Flughafen Stockholm Arlanda',
+          es: 'Aeropuerto de Estocolmo Arlanda',
+          it: 'Aeroporto di Stoccolma Arlanda',
+          nl: 'Luchthaven Stockholm Arlanda',
+          pt: 'Aeroporto de Estocolmo Arlanda',
+          tr: 'Stockholm Arlanda Havaalanı',
+          ru: 'Аэропорт Стокгольм Арланда',
+          zh: '斯德哥尔摩阿兰达机场',
+          ar: 'مطار ستوكهولم أرلاندا',
+        },
+        SEGOT_AIR: {
+          en: 'Gothenburg Landvetter Airport',
+          fr: 'Aéroport de Göteborg Landvetter',
+          de: 'Flughafen Göteborg Landvetter',
+          es: 'Aeropuerto de Gotemburgo Landvetter',
+          it: 'Aeroporto di Göteborg Landvetter',
+          nl: 'Luchthaven Göteborg Landvetter',
+          pt: 'Aeroporto de Gotemburgo Landvetter',
+          tr: 'Göteborg Landvetter Havaalanı',
+          ru: 'Аэропорт Гётеборг Ландветтер',
+          zh: '哥德堡兰德维特机场',
+          ar: 'مطار غوتنبرغ لاندفيتر',
+        },
+        SESTO_RAIL: {
+          en: 'Stockholm Central Station',
+          fr: 'Gare centrale de Stockholm',
+          de: 'Hauptbahnhof Stockholm',
+          es: 'Estación Central de Estocolmo',
+          it: 'Stazione Centrale di Stoccolma',
+          nl: 'Centraal Station Stockholm',
+          pt: 'Estação Central de Estocolmo',
+          tr: 'Stockholm Merkez İstasyonu',
+          ru: 'Центральный вокзал Стокгольм',
+          zh: '斯德哥尔摩中央车站',
+          ar: 'محطة ستوكهولم المركزية',
+        },
+        SEGOT_RAIL: {
+          en: 'Gothenburg Central Station',
+          fr: 'Gare centrale de Göteborg',
+          de: 'Hauptbahnhof Göteborg',
+          es: 'Estación Central de Gotemburgo',
+          it: 'Stazione Centrale di Göteborg',
+          nl: 'Centraal Station Göteborg',
+          pt: 'Estação Central de Gotemburgo',
+          tr: 'Göteborg Merkez İstasyonu',
+          ru: 'Центральный вокзал Гётеборг',
+          zh: '哥德堡中央车站',
+          ar: 'محطة غوتنبرغ المركزية',
+        },
+
+        // 🇸🇦 Saudi Arabia (Arabie saoudite) - Royaume du pétrole (traductions améliorées)
+        SADAM: {
+          en: 'Port of Dammam',
+          fr: 'Port de Dammam',
+          de: 'Hafen Dammam',
+          es: 'Puerto de Dammam',
+          it: 'Porto di Dammam',
+          nl: 'Haven van Dammam',
+          pt: 'Porto de Dammam',
+          tr: 'Dammam Limanı',
+          ru: 'Порт Даммам',
+          zh: '达曼港',
+          ar: 'ميناء الدمام',
+        },
+        SAYAN: {
+          en: 'Port of Yanbu',
+          fr: 'Port de Yanbu',
+          de: 'Hafen Yanbu',
+          es: 'Puerto de Yanbu',
+          it: 'Porto di Yanbu',
+          nl: 'Haven van Yanbu',
+          pt: 'Porto de Yanbu',
+          tr: 'Yanbu Limanı',
+          ru: 'Порт Янбу',
+          zh: '延布港',
+          ar: 'ميناء ينبع',
+        },
+        SAJED_AIR: {
+          en: 'Jeddah King Abdulaziz International Airport',
+          fr: 'Aéroport international de Jeddah King Abdulaziz',
+          de: 'Internationaler Flughafen Dschidda King Abdulaziz',
+          es: 'Aeropuerto Internacional de Jeddah King Abdulaziz',
+          it: 'Aeroporto Internazionale di Jeddah King Abdulaziz',
+          nl: 'Internationale Luchthaven Jeddah King Abdulaziz',
+          pt: 'Aeroporto Internacional de Jeddah King Abdulaziz',
+          tr: 'Cidde Kral Abdülaziz Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Джидда имени короля Абдул-Азиза',
+          zh: '吉达阿卜杜勒-阿齐兹国王国际机场',
+          ar: 'مطار الملك عبد العزيز الدولي',
+        },
+        SADAM_AIR: {
+          en: 'Dammam King Fahd International Airport',
+          fr: 'Aéroport international de Dammam King Fahd',
+          de: 'Internationaler Flughafen Dammam King Fahd',
+          es: 'Aeropuerto Internacional de Dammam King Fahd',
+          it: 'Aeroporto Internazionale di Dammam King Fahd',
+          nl: 'Internationale Luchthaven Dammam King Fahd',
+          pt: 'Aeroporto Internacional de Dammam King Fahd',
+          tr: 'Dammam Kral Fahd Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Даммам имени короля Фахда',
+          zh: '达曼法赫德国王国际机场',
+          ar: 'مطار الملك فهد الدولي',
+        },
+
+        // 🇸🇰 Slovakia (Slovaquie) - Cœur de l'Europe centrale
+        SKBTS: {
+          en: 'Bratislava Milan Rastislav Štefánik Airport',
+          fr: 'Aéroport de Bratislava Milan Rastislav Štefánik',
+          de: 'Flughafen Bratislava Milan Rastislav Štefánik',
+          es: 'Aeropuerto de Bratislava Milan Rastislav Štefánik',
+          it: 'Aeroporto di Bratislava Milan Rastislav Štefánik',
+          nl: 'Luchthaven Bratislava Milan Rastislav Štefánik',
+          pt: 'Aeroporto de Bratislava Milan Rastislav Štefánik',
+          tr: 'Bratislava Milan Rastislav Štefánik Havaalanı',
+          ru: 'Аэропорт Братислава имени Милана Растислава Штефаника',
+          zh: '布拉迪斯拉发米兰·拉斯蒂斯拉夫·什捷法尼克机场',
+          ar: 'مطار براتيسلافا ميلان راستيسلاف شتيفانيك',
+        },
+        SKBTS_RAIL: {
+          en: 'Bratislava Central Station',
+          fr: 'Gare centrale de Bratislava',
+          de: 'Hauptbahnhof Bratislava',
+          es: 'Estación Central de Bratislava',
+          it: 'Stazione Centrale di Bratislava',
+          nl: 'Centraal Station Bratislava',
+          pt: 'Estação Central de Bratislava',
+          tr: 'Bratislava Merkez İstasyonu',
+          ru: 'Центральный вокзал Братислава',
+          zh: '布拉迪斯拉发中央车站',
+          ar: 'محطة براتيسلافا المركزية',
+        },
+
+        // 🇸🇮 Slovenia (Slovénie) - Perle des Alpes adriatiques
+        SIKOP: {
+          en: 'Port of Koper',
+          fr: 'Port de Koper',
+          de: 'Hafen Koper',
+          es: 'Puerto de Koper',
+          it: 'Porto di Koper',
+          nl: 'Haven van Koper',
+          pt: 'Porto de Koper',
+          tr: 'Koper Limanı',
+          ru: 'Порт Копер',
+          zh: '科佩尔港',
+          ar: 'ميناء كوبر',
+        },
+        SILJU: {
+          en: 'Ljubljana Jože Pučnik Airport',
+          fr: 'Aéroport de Ljubljana Jože Pučnik',
+          de: 'Flughafen Ljubljana Jože Pučnik',
+          es: 'Aeropuerto de Liubliana Jože Pučnik',
+          it: 'Aeroporto di Lubiana Jože Pučnik',
+          nl: 'Luchthaven Ljubljana Jože Pučnik',
+          pt: 'Aeroporto de Ljubljana Jože Pučnik',
+          tr: 'Ljubljana Jože Pučnik Havaalanı',
+          ru: 'Аэропорт Любляна имени Йоже Пучника',
+          zh: '卢布尔雅那约热·普奇尼克机场',
+          ar: 'مطار ليوبليانا يوجي بوتشنيك',
+        },
+        SILJU_RAIL: {
+          en: 'Ljubljana Railway Station',
+          fr: 'Gare de Ljubljana',
+          de: 'Bahnhof Ljubljana',
+          es: 'Estación de Liubliana',
+          it: 'Stazione di Lubiana',
+          nl: 'Station Ljubljana',
+          pt: 'Estação de Ljubljana',
+          tr: 'Ljubljana Tren İstasyonu',
+          ru: 'Железнодорожная станция Любляна',
+          zh: '卢布尔雅那火车站',
+          ar: 'محطة ليوبليانا للسكك الحديدية',
+        },
+
+        // 🇸🇳 Senegal (Sénégal) - Portail de l'Afrique de l'Ouest
+        SNDKR: {
+          en: 'Port of Dakar',
+          fr: 'Port de Dakar',
+          de: 'Hafen Dakar',
+          es: 'Puerto de Dakar',
+          it: 'Porto di Dakar',
+          nl: 'Haven van Dakar',
+          pt: 'Porto de Dakar',
+          tr: 'Dakar Limanı',
+          ru: 'Порт Дакар',
+          zh: '达喀尔港',
+          ar: 'ميناء داكار',
+        },
+        SNDSS: {
+          en: 'Dakar Blaise Diagne International Airport',
+          fr: 'Aéroport international de Dakar Blaise Diagne',
+          de: 'Internationaler Flughafen Dakar Blaise Diagne',
+          es: 'Aeropuerto Internacional de Dakar Blaise Diagne',
+          it: 'Aeroporto Internazionale di Dakar Blaise Diagne',
+          nl: 'Internationale Luchthaven Dakar Blaise Diagne',
+          pt: 'Aeroporto Internacional de Dakar Blaise Diagne',
+          tr: 'Dakar Blaise Diagne Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Дакар имени Блеза Диана',
+          zh: '达喀尔布莱兹·迪亚涅国际机场',
+          ar: 'مطار داكار بليز دياغني الدولي',
+        },
+        SNDKR_RAIL: {
+          en: 'Dakar Railway Station',
+          fr: 'Gare de Dakar',
+          de: 'Bahnhof Dakar',
+          es: 'Estación de Dakar',
+          it: 'Stazione di Dakar',
+          nl: 'Station Dakar',
+          pt: 'Estação de Dakar',
+          tr: 'Dakar Tren İstasyonu',
+          ru: 'Железнодорожная станция Дакар',
+          zh: '达喀尔火车站',
+          ar: 'محطة داكار للسكك الحديدية',
+        },
+
+        // 🇸🇨 Seychelles (Seychelles) - Perle de l'océan Indien (traductions améliorées)
+        SCPRS: {
+          en: 'Port of Praslin',
+          fr: 'Port de Praslin',
+          de: 'Hafen Praslin',
+          es: 'Puerto de Praslin',
+          it: 'Porto di Praslin',
+          nl: 'Haven van Praslin',
+          pt: 'Porto de Praslin',
+          tr: 'Praslin Limanı',
+          ru: 'Порт Праслин',
+          zh: '普拉兰港',
+          ar: 'ميناء براسلين',
+        },
+        SCVIC_AIR: {
+          en: 'Mahé Seychelles International Airport',
+          fr: 'Aéroport international de Mahé Seychelles',
+          de: 'Internationaler Flughafen Mahé Seychellen',
+          es: 'Aeropuerto Internacional de Mahé Seychelles',
+          it: 'Aeroporto Internazionale di Mahé Seychelles',
+          nl: 'Internationale Luchthaven Mahé Seychellen',
+          pt: 'Aeroporto Internacional de Mahé Seychelles',
+          tr: 'Mahé Seyşeller Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Маэ Сейшелы',
+          zh: '马埃塞舌尔国际机场',
+          ar: 'مطار ماهي سيشيل الدولي',
+        },
+        SCPRS_AIR: {
+          en: 'Praslin Airport',
+          fr: 'Aéroport de Praslin',
+          de: 'Flughafen Praslin',
+          es: 'Aeropuerto de Praslin',
+          it: 'Aeroporto di Praslin',
+          nl: 'Luchthaven Praslin',
+          pt: 'Aeroporto de Praslin',
+          tr: 'Praslin Havaalanı',
+          ru: 'Аэропорт Праслин',
+          zh: '普拉兰机场',
+          ar: 'مطار براسلين',
+        },
+
+        // === PAYS EN T - TRADUCTIONS COMPLÈTES ===
+
+        // 🇹🇭 Thailand (Thaïlande) - Royaume du sourire
+        THLCH: {
+          en: 'Port of Laem Chabang',
+          fr: 'Port de Laem Chabang',
+          de: 'Hafen Laem Chabang',
+          es: 'Puerto de Laem Chabang',
+          it: 'Porto di Laem Chabang',
+          nl: 'Haven van Laem Chabang',
+          pt: 'Porto de Laem Chabang',
+          tr: 'Laem Chabang Limanı',
+          ru: 'Порт Лаем Чабанг',
+          zh: '林查班港',
+          ar: 'ميناء ليم تشابانغ',
+        },
+        THBKK: {
+          en: 'Port of Bangkok',
+          fr: 'Port de Bangkok',
+          de: 'Hafen Bangkok',
+          es: 'Puerto de Bangkok',
+          it: 'Porto di Bangkok',
+          nl: 'Haven van Bangkok',
+          pt: 'Porto de Bangkok',
+          tr: 'Bangkok Limanı',
+          ru: 'Порт Бангкок',
+          zh: '曼谷港',
+          ar: 'ميناء بانكوك',
+        },
+        THBKK_AIR: {
+          en: 'Bangkok Suvarnabhumi Airport',
+          fr: 'Aéroport de Bangkok Suvarnabhumi',
+          de: 'Flughafen Bangkok Suvarnabhumi',
+          es: 'Aeropuerto de Bangkok Suvarnabhumi',
+          it: 'Aeroporto di Bangkok Suvarnabhumi',
+          nl: 'Luchthaven Bangkok Suvarnabhumi',
+          pt: 'Aeroporto de Bangkok Suvarnabhumi',
+          tr: 'Bangkok Suvarnabhumi Havaalanı',
+          ru: 'Аэропорт Бангкок Суварнабхуми',
+          zh: '曼谷素万那普机场',
+          ar: 'مطار بانكوك سوفارنابومي',
+        },
+
+        // 🇹🇷 Turkey (Turquie) - Pont entre l'Europe et l'Asie
+        TRAMB: {
+          en: 'Port of Ambarli',
+          fr: "Port d'Ambarli",
+          de: 'Hafen Ambarli',
+          es: 'Puerto de Ambarli',
+          it: 'Porto di Ambarli',
+          nl: 'Haven van Ambarli',
+          pt: 'Porto de Ambarli',
+          tr: 'Ambarlı Limanı',
+          ru: 'Порт Амбарлы',
+          zh: '安巴利港',
+          ar: 'ميناء أمبارلي',
+        },
+        TRIST: {
+          en: 'Port of Istanbul',
+          fr: "Port d'Istanbul",
+          de: 'Hafen Istanbul',
+          es: 'Puerto de Estambul',
+          it: 'Porto di Istanbul',
+          nl: 'Haven van Istanbul',
+          pt: 'Porto de Istambul',
+          tr: 'İstanbul Limanı',
+          ru: 'Порт Стамбул',
+          zh: '伊斯坦布尔港',
+          ar: 'ميناء اسطنبول',
+        },
+        TRIZM: {
+          en: 'Port of Izmir',
+          fr: "Port d'Izmir",
+          de: 'Hafen Izmir',
+          es: 'Puerto de Esmirna',
+          it: 'Porto di Smirne',
+          nl: 'Haven van Izmir',
+          pt: 'Porto de Esmirna',
+          tr: 'İzmir Limanı',
+          ru: 'Порт Измир',
+          zh: '伊兹密尔港',
+          ar: 'ميناء إزمير',
+        },
+        TRIST_AIR: {
+          en: 'Istanbul Airport',
+          fr: "Aéroport d'Istanbul",
+          de: 'Flughafen Istanbul',
+          es: 'Aeropuerto de Estambul',
+          it: 'Aeroporto di Istanbul',
+          nl: 'Luchthaven Istanbul',
+          pt: 'Aeroporto de Istambul',
+          tr: 'İstanbul Havaalanı',
+          ru: 'Аэропорт Стамбул',
+          zh: '伊斯坦布尔机场',
+          ar: 'مطار اسطنبول',
+        },
+        TRSAW: {
+          en: 'Sabiha Gökçen Airport',
+          fr: 'Aéroport de Sabiha Gökçen',
+          de: 'Flughafen Sabiha Gökçen',
+          es: 'Aeropuerto de Sabiha Gökçen',
+          it: 'Aeroporto di Sabiha Gökçen',
+          nl: 'Luchthaven Sabiha Gökçen',
+          pt: 'Aeroporto de Sabiha Gökçen',
+          tr: 'Sabiha Gökçen Havaalanı',
+          ru: 'Аэропорт Сабиха Гёкчен',
+          zh: '萨比哈·格克琴机场',
+          ar: 'مطار صبيحة غوكتشين',
+        },
+        TRIZM_AIR: {
+          en: 'Izmir Adnan Menderes Airport',
+          fr: "Aéroport d'Izmir Adnan Menderes",
+          de: 'Flughafen Izmir Adnan Menderes',
+          es: 'Aeropuerto de Esmirna Adnan Menderes',
+          it: 'Aeroporto di Smirne Adnan Menderes',
+          nl: 'Luchthaven Izmir Adnan Menderes',
+          pt: 'Aeroporto de Esmirna Adnan Menderes',
+          tr: 'İzmir Adnan Menderes Havaalanı',
+          ru: 'Аэропорт Измир имени Аднана Мендереса',
+          zh: '伊兹密尔阿德南·门德雷斯机场',
+          ar: 'مطار إزمير عدنان مندريس',
+        },
+
+        // 🇹🇼 Taiwan (Taïwan) - Formose asiatique (traductions améliorées)
+        TWTPE: {
+          en: 'Port of Taipei',
+          fr: 'Port de Taipei',
+          de: 'Hafen Taipei',
+          es: 'Puerto de Taipéi',
+          it: 'Porto di Taipei',
+          nl: 'Haven van Taipei',
+          pt: 'Porto de Taipei',
+          tr: 'Taipei Limanı',
+          ru: 'Порт Тайбэй',
+          zh: '台北港',
+          ar: 'ميناء تايبيه',
+        },
+        TWTCG: {
+          en: 'Port of Taichung',
+          fr: 'Port de Taichung',
+          de: 'Hafen Taichung',
+          es: 'Puerto de Taichung',
+          it: 'Porto di Taichung',
+          nl: 'Haven van Taichung',
+          pt: 'Porto de Taichung',
+          tr: 'Taichung Limanı',
+          ru: 'Порт Тайчжун',
+          zh: '台中港',
+          ar: 'ميناء تايتشونغ',
+        },
+        TWKHH_AIR: {
+          en: 'Kaohsiung International Airport',
+          fr: 'Aéroport international de Kaohsiung',
+          de: 'Internationaler Flughafen Kaohsiung',
+          es: 'Aeropuerto Internacional de Kaohsiung',
+          it: 'Aeroporto Internazionale di Kaohsiung',
+          nl: 'Internationale Luchthaven Kaohsiung',
+          pt: 'Aeroporto Internacional de Kaohsiung',
+          tr: 'Kaohsiung Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Гаосюн',
+          zh: '高雄国际机场',
+          ar: 'مطار كاوهسيونغ الدولي',
+        },
+        TWTPE_RAIL: {
+          en: 'Taipei Main Station',
+          fr: 'Gare principale de Taipei',
+          de: 'Hauptbahnhof Taipei',
+          es: 'Estación Principal de Taipéi',
+          it: 'Stazione Principale di Taipei',
+          nl: 'Hoofdstation Taipei',
+          pt: 'Estação Principal de Taipei',
+          tr: 'Taipei Ana İstasyonu',
+          ru: 'Главный вокзал Тайбэй',
+          zh: '台北车站',
+          ar: 'محطة تايبيه الرئيسية',
+        },
+        TWKHH_RAIL: {
+          en: 'Kaohsiung Railway Station',
+          fr: 'Gare de Kaohsiung',
+          de: 'Bahnhof Kaohsiung',
+          es: 'Estación de Kaohsiung',
+          it: 'Stazione di Kaohsiung',
+          nl: 'Station Kaohsiung',
+          pt: 'Estação de Kaohsiung',
+          tr: 'Kaohsiung Tren İstasyonu',
+          ru: 'Железнодорожная станция Гаосюн',
+          zh: '高雄车站',
+          ar: 'محطة كاوهسيونغ للسكك الحديدية',
+        },
+
+        // 🇹🇳 Tunisia (Tunisie) - Perle du Maghreb
+        TNTU1: {
+          en: 'Port of Tunis',
+          fr: 'Port de Tunis',
+          de: 'Hafen Tunis',
+          es: 'Puerto de Túnez',
+          it: 'Porto di Tunisi',
+          nl: 'Haven van Tunis',
+          pt: 'Porto de Tunes',
+          tr: 'Tunus Limanı',
+          ru: 'Порт Тунис',
+          zh: '突尼斯港',
+          ar: 'ميناء تونس',
+        },
+        TNSFA: {
+          en: 'Port of Sfax',
+          fr: 'Port de Sfax',
+          de: 'Hafen Sfax',
+          es: 'Puerto de Sfax',
+          it: 'Porto di Sfax',
+          nl: 'Haven van Sfax',
+          pt: 'Porto de Sfax',
+          tr: 'Sfaks Limanı',
+          ru: 'Порт Сфакс',
+          zh: '斯法克斯港',
+          ar: 'ميناء صفاقس',
+        },
+        TNRAD: {
+          en: 'Port of Radès',
+          fr: 'Port de Radès',
+          de: 'Hafen Radès',
+          es: 'Puerto de Radès',
+          it: 'Porto di Radès',
+          nl: 'Haven van Radès',
+          pt: 'Porto de Radès',
+          tr: 'Radès Limanı',
+          ru: 'Порт Радес',
+          zh: '拉代斯港',
+          ar: 'ميناء رادس',
+        },
+        TNTU1_AIR: {
+          en: 'Tunis-Carthage Airport',
+          fr: 'Aéroport de Tunis-Carthage',
+          de: 'Flughafen Tunis-Karthago',
+          es: 'Aeropuerto de Túnez-Cartago',
+          it: 'Aeroporto di Tunisi-Cartagine',
+          nl: 'Luchthaven Tunis-Carthago',
+          pt: 'Aeroporto de Tunes-Cartago',
+          tr: 'Tunus-Kartaca Havaalanı',
+          ru: 'Аэропорт Тунис-Карфаген',
+          zh: '突尼斯-迦太基机场',
+          ar: 'مطار تونس قرطاج',
+        },
+        TNTU1_RAIL: {
+          en: 'Tunis Central Station',
+          fr: 'Gare centrale de Tunis',
+          de: 'Hauptbahnhof Tunis',
+          es: 'Estación Central de Túnez',
+          it: 'Stazione Centrale di Tunisi',
+          nl: 'Centraal Station Tunis',
+          pt: 'Estação Central de Tunes',
+          tr: 'Tunus Merkez İstasyonu',
+          ru: 'Центральный вокзал Тунис',
+          zh: '突尼斯中央车站',
+          ar: 'محطة تونس المركزية',
+        },
+
+        // 🇹🇹 Trinidad and Tobago (Trinité-et-Tobago) - Perles des Caraïbes
+        TTPOS: {
+          en: 'Port of Port of Spain',
+          fr: 'Port de Port of Spain',
+          de: 'Hafen Port of Spain',
+          es: 'Puerto de Puerto España',
+          it: 'Porto di Port of Spain',
+          nl: 'Haven van Port of Spain',
+          pt: 'Porto de Port of Spain',
+          tr: 'Port of Spain Limanı',
+          ru: 'Порт Порт-оф-Спейн',
+          zh: '西班牙港港口',
+          ar: 'ميناء بورت أوف سبين',
+        },
+        TTCOU: {
+          en: 'Port of Point Lisas',
+          fr: 'Port de Point Lisas',
+          de: 'Hafen Point Lisas',
+          es: 'Puerto de Point Lisas',
+          it: 'Porto di Point Lisas',
+          nl: 'Haven van Point Lisas',
+          pt: 'Porto de Point Lisas',
+          tr: 'Point Lisas Limanı',
+          ru: 'Порт Пойнт Лисас',
+          zh: '利萨斯角港',
+          ar: 'ميناء بوينت ليساس',
+        },
+        TTPOS_AIR: {
+          en: 'Port of Spain Piarco International Airport',
+          fr: 'Aéroport international de Port of Spain Piarco',
+          de: 'Internationaler Flughafen Port of Spain Piarco',
+          es: 'Aeropuerto Internacional de Puerto España Piarco',
+          it: 'Aeroporto Internazionale di Port of Spain Piarco',
+          nl: 'Internationale Luchthaven Port of Spain Piarco',
+          pt: 'Aeroporto Internacional de Port of Spain Piarco',
+          tr: 'Port of Spain Piarco Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Порт-оф-Спейн Пиарко',
+          zh: '西班牙港皮亚尔科国际机场',
+          ar: 'مطار بورت أوف سبين بيارko الدولي',
+        },
+
+        // 🇹🇿 Tanzania (Tanzanie) - Berceau de l'humanité (traductions améliorées)
+        TZMTW: {
+          en: 'Port of Mtwara',
+          fr: 'Port de Mtwara',
+          de: 'Hafen Mtwara',
+          es: 'Puerto de Mtwara',
+          it: 'Porto di Mtwara',
+          nl: 'Haven van Mtwara',
+          pt: 'Porto de Mtwara',
+          tr: 'Mtwara Limanı',
+          ru: 'Порт Мтвара',
+          zh: '姆特瓦拉港',
+          ar: 'ميناء متوارا',
+        },
+        TZMZA: {
+          en: 'Port of Mwanza',
+          fr: 'Port de Mwanza',
+          de: 'Hafen Mwanza',
+          es: 'Puerto de Mwanza',
+          it: 'Porto di Mwanza',
+          nl: 'Haven van Mwanza',
+          pt: 'Porto de Mwanza',
+          tr: 'Mwanza Limanı',
+          ru: 'Порт Мванза',
+          zh: '姆万扎港',
+          ar: 'ميناء موانزا',
+        },
+        TZDAR_AIR: {
+          en: 'Dar es Salaam Julius Nyerere International Airport',
+          fr: 'Aéroport international de Dar es Salaam Julius Nyerere',
+          de: 'Internationaler Flughafen Dar es Salaam Julius Nyerere',
+          es: 'Aeropuerto Internacional de Dar es Salaam Julius Nyerere',
+          it: 'Aeroporto Internazionale di Dar es Salaam Julius Nyerere',
+          nl: 'Internationale Luchthaven Dar es Salaam Julius Nyerere',
+          pt: 'Aeroporto Internacional de Dar es Salaam Julius Nyerere',
+          tr: 'Dar es Salaam Julius Nyerere Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Дар-эс-Салам имени Джулиуса Ньерере',
+          zh: '达累斯萨拉姆朱利叶斯·尼雷尔国际机场',
+          ar: 'مطار دار السلام جوليوس نيريري الدولي',
+        },
+        TZKIL: {
+          en: 'Kilimanjaro International Airport',
+          fr: 'Aéroport international du Kilimandjaro',
+          de: 'Internationaler Flughafen Kilimandscharo',
+          es: 'Aeropuerto Internacional del Kilimanjaro',
+          it: 'Aeroporto Internazionale del Kilimanjaro',
+          nl: 'Internationale Luchthaven Kilimanjaro',
+          pt: 'Aeroporto Internacional do Kilimanjaro',
+          tr: 'Kilimanjaro Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Килиманджаро',
+          zh: '乞力马扎罗国际机场',
+          ar: 'مطار كليمنجارو الدولي',
+        },
+        TZDAR_RAIL: {
+          en: 'Dar es Salaam Railway Station',
+          fr: 'Gare de Dar es Salaam',
+          de: 'Bahnhof Dar es Salaam',
+          es: 'Estación de Dar es Salaam',
+          it: 'Stazione di Dar es Salaam',
+          nl: 'Station Dar es Salaam',
+          pt: 'Estação de Dar es Salaam',
+          tr: 'Dar es Salaam Tren İstasyonu',
+          ru: 'Железнодорожная станция Дар-эс-Салам',
+          zh: '达累斯萨拉姆火车站',
+          ar: 'محطة دار السلام للسكك الحديدية',
+        },
+        TZMZA_RAIL: {
+          en: 'Mwanza Railway Station',
+          fr: 'Gare de Mwanza',
+          de: 'Bahnhof Mwanza',
+          es: 'Estación de Mwanza',
+          it: 'Stazione di Mwanza',
+          nl: 'Station Mwanza',
+          pt: 'Estação de Mwanza',
+          tr: 'Mwanza Tren İstasyonu',
+          ru: 'Железнодорожная станция Мванза',
+          zh: '姆万扎火车站',
+          ar: 'محطة موانزا للسكك الحديدية',
+        },
+
+        // === PAYS EN U - TRADUCTIONS COMPLÈTES ===
+
+        // 🇺🇸 United States (États-Unis) - Superpuissance mondiale (traductions améliorées)
+        USLAX: {
+          en: 'Port of Los Angeles',
+          fr: 'Port de Los Angeles',
+          de: 'Hafen Los Angeles',
+          es: 'Puerto de Los Ángeles',
+          it: 'Porto di Los Angeles',
+          nl: 'Haven van Los Angeles',
+          pt: 'Porto de Los Angeles',
+          tr: 'Los Angeles Limanı',
+          ru: 'Порт Лос-Анджелес',
+          zh: '洛杉矶港',
+          ar: 'ميناء لوس أنجلوس',
+        },
+        USLGB: {
+          en: 'Port of Long Beach',
+          fr: 'Port de Long Beach',
+          de: 'Hafen Long Beach',
+          es: 'Puerto de Long Beach',
+          it: 'Porto di Long Beach',
+          nl: 'Haven van Long Beach',
+          pt: 'Porto de Long Beach',
+          tr: 'Long Beach Limanı',
+          ru: 'Порт Лонг-Бич',
+          zh: '长滩港',
+          ar: 'ميناء لونغ بيتش',
+        },
+        USNYC: {
+          en: 'Port of New York/New Jersey',
+          fr: 'Port de New York/New Jersey',
+          de: 'Hafen New York/New Jersey',
+          es: 'Puerto de Nueva York/Nueva Jersey',
+          it: 'Porto di New York/New Jersey',
+          nl: 'Haven van New York/New Jersey',
+          pt: 'Porto de Nova York/Nova Jersey',
+          tr: 'New York/New Jersey Limanı',
+          ru: 'Порт Нью-Йорк/Нью-Джерси',
+          zh: '纽约/新泽西港',
+          ar: 'ميناء نيويورك/نيو جيرسي',
+        },
+        USSAV: {
+          en: 'Port of Savannah',
+          fr: 'Port de Savannah',
+          de: 'Hafen Savannah',
+          es: 'Puerto de Savannah',
+          it: 'Porto di Savannah',
+          nl: 'Haven van Savannah',
+          pt: 'Porto de Savannah',
+          tr: 'Savannah Limanı',
+          ru: 'Порт Саванна',
+          zh: '萨凡纳港',
+          ar: 'ميناء سافانا',
+        },
+        USSEA: {
+          en: 'Port of Seattle',
+          fr: 'Port de Seattle',
+          de: 'Hafen Seattle',
+          es: 'Puerto de Seattle',
+          it: 'Porto di Seattle',
+          nl: 'Haven van Seattle',
+          pt: 'Porto de Seattle',
+          tr: 'Seattle Limanı',
+          ru: 'Порт Сиэтл',
+          zh: '西雅图港',
+          ar: 'ميناء سياتل',
+        },
+        USTAC: {
+          en: 'Port of Tacoma',
+          fr: 'Port de Tacoma',
+          de: 'Hafen Tacoma',
+          es: 'Puerto de Tacoma',
+          it: 'Porto di Tacoma',
+          nl: 'Haven van Tacoma',
+          pt: 'Porto de Tacoma',
+          tr: 'Tacoma Limanı',
+          ru: 'Порт Такома',
+          zh: '塔科马港',
+          ar: 'ميناء تاكوما',
+        },
+        USHOU: {
+          en: 'Port of Houston',
+          fr: 'Port de Houston',
+          de: 'Hafen Houston',
+          es: 'Puerto de Houston',
+          it: 'Porto di Houston',
+          nl: 'Haven van Houston',
+          pt: 'Porto de Houston',
+          tr: 'Houston Limanı',
+          ru: 'Порт Хьюстон',
+          zh: '休斯顿港',
+          ar: 'ميناء هيوستن',
+        },
+        USMIA: {
+          en: 'Port of Miami',
+          fr: 'Port de Miami',
+          de: 'Hafen Miami',
+          es: 'Puerto de Miami',
+          it: 'Porto di Miami',
+          nl: 'Haven van Miami',
+          pt: 'Porto de Miami',
+          tr: 'Miami Limanı',
+          ru: 'Порт Майами',
+          zh: '迈阿密港',
+          ar: 'ميناء ميامي',
+        },
+        USMEM: {
+          en: 'Memphis International Airport',
+          fr: 'Aéroport international de Memphis',
+          de: 'Internationaler Flughafen Memphis',
+          es: 'Aeropuerto Internacional de Memphis',
+          it: 'Aeroporto Internazionale di Memphis',
+          nl: 'Internationale Luchthaven Memphis',
+          pt: 'Aeroporto Internacional de Memphis',
+          tr: 'Memphis Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Мемфис',
+          zh: '孟菲斯国际机场',
+          ar: 'مطار ممفيس الدولي',
+        },
+        USANC: {
+          en: 'Anchorage Ted Stevens Airport',
+          fr: "Aéroport Ted Stevens d'Anchorage",
+          de: 'Flughafen Anchorage Ted Stevens',
+          es: 'Aeropuerto Ted Stevens de Anchorage',
+          it: 'Aeroporto Ted Stevens di Anchorage',
+          nl: 'Luchthaven Anchorage Ted Stevens',
+          pt: 'Aeroporto Ted Stevens de Anchorage',
+          tr: 'Anchorage Ted Stevens Havaalanı',
+          ru: 'Аэропорт Анкоридж имени Теда Стивенса',
+          zh: '安克雷奇泰德·史蒂文斯机场',
+          ar: 'مطار أنكوريج تيد ستيفنز',
+        },
+        USMIA_AIR: {
+          en: 'Miami International Airport',
+          fr: 'Aéroport international de Miami',
+          de: 'Internationaler Flughafen Miami',
+          es: 'Aeropuerto Internacional de Miami',
+          it: 'Aeroporto Internazionale di Miami',
+          nl: 'Internationale Luchthaven Miami',
+          pt: 'Aeroporto Internacional de Miami',
+          tr: 'Miami Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Майами',
+          zh: '迈阿密国际机场',
+          ar: 'مطار ميامي الدولي',
+        },
+        USNYC_RAIL: {
+          en: 'New York Penn Station',
+          fr: 'Gare Pennsylvania de New York',
+          de: 'Bahnhof New York Penn Station',
+          es: 'Estación Pennsylvania de Nueva York',
+          it: 'Stazione Pennsylvania di New York',
+          nl: 'Penn Station New York',
+          pt: 'Estação Pennsylvania de Nova York',
+          tr: 'New York Penn İstasyonu',
+          ru: 'Пенсильванский вокзал Нью-Йорк',
+          zh: '纽约宾夕法尼亚车站',
+          ar: 'محطة نيويورك بنسلفانيا',
+        },
+        USCHI_RAIL: {
+          en: 'Chicago Union Station',
+          fr: 'Gare Union de Chicago',
+          de: 'Union Station Chicago',
+          es: 'Estación Union de Chicago',
+          it: 'Stazione Union di Chicago',
+          nl: 'Union Station Chicago',
+          pt: 'Estação Union de Chicago',
+          tr: 'Chicago Union İstasyonu',
+          ru: 'Юнион-стейшн Чикаго',
+          zh: '芝加哥联合车站',
+          ar: 'محطة شيكاغو يونيون',
+        },
+        USLAX_RAIL: {
+          en: 'Los Angeles Union Station',
+          fr: 'Gare Union de Los Angeles',
+          de: 'Union Station Los Angeles',
+          es: 'Estación Union de Los Ángeles',
+          it: 'Stazione Union di Los Angeles',
+          nl: 'Union Station Los Angeles',
+          pt: 'Estação Union de Los Angeles',
+          tr: 'Los Angeles Union İstasyonu',
+          ru: 'Юнион-стейшн Лос-Анджелес',
+          zh: '洛杉矶联合车站',
+          ar: 'محطة لوس أنجلوس يونيون',
+        },
+
+        // 🇺🇦 Ukraine (Ukraine) - Grenier de l'Europe
+        UAODE: {
+          en: 'Port of Odesa',
+          fr: "Port d'Odessa",
+          de: 'Hafen Odessa',
+          es: 'Puerto de Odesa',
+          it: 'Porto di Odessa',
+          nl: 'Haven van Odessa',
+          pt: 'Porto de Odessa',
+          tr: 'Odessa Limanı',
+          ru: 'Порт Одесса',
+          zh: '敖德萨港',
+          ar: 'ميناء أوديسا',
+        },
+        UAIEV: {
+          en: 'Port of Chornomorsk',
+          fr: 'Port de Chornomorsk',
+          de: 'Hafen Tschornomorsk',
+          es: 'Puerto de Chornomorsk',
+          it: 'Porto di Chornomorsk',
+          nl: 'Haven van Chornomorsk',
+          pt: 'Porto de Chornomorsk',
+          tr: 'Çornomorsk Limanı',
+          ru: 'Порт Черноморск',
+          zh: '切尔诺莫尔斯克港',
+          ar: 'ميناء تشورنومورسك',
+        },
+        UAMYK: {
+          en: 'Port of Mykolaiv',
+          fr: 'Port de Mykolaiv',
+          de: 'Hafen Mykolajiw',
+          es: 'Puerto de Mykolaiv',
+          it: 'Porto di Mykolaiv',
+          nl: 'Haven van Mykolaiv',
+          pt: 'Porto de Mykolaiv',
+          tr: 'Mikolayiv Limanı',
+          ru: 'Порт Николаев',
+          zh: '尼古拉耶夫港',
+          ar: 'ميناء ميكولايف',
+        },
+        UAKBP: {
+          en: 'Kyiv Boryspil International Airport',
+          fr: 'Aéroport international de Kiev Boryspil',
+          de: 'Internationaler Flughafen Kiew Boryspil',
+          es: 'Aeropuerto Internacional de Kiev Boryspil',
+          it: 'Aeroporto Internazionale di Kiev Boryspil',
+          nl: 'Internationale Luchthaven Kiev Boryspil',
+          pt: 'Aeroporto Internacional de Kiev Boryspil',
+          tr: 'Kiev Boryspil Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Киев Борисполь',
+          zh: '基辅鲍里斯波尔国际机场',
+          ar: 'مطار كييف بوريسبيل الدولي',
+        },
+        UAODS: {
+          en: 'Odesa International Airport',
+          fr: "Aéroport international d'Odessa",
+          de: 'Internationaler Flughafen Odessa',
+          es: 'Aeropuerto Internacional de Odesa',
+          it: 'Aeroporto Internazionale di Odessa',
+          nl: 'Internationale Luchthaven Odessa',
+          pt: 'Aeroporto Internacional de Odessa',
+          tr: 'Odessa Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Одесса',
+          zh: '敖德萨国际机场',
+          ar: 'مطار أوديسا الدولي',
+        },
+        UAKIV_RAIL: {
+          en: 'Kyiv Central Railway Station',
+          fr: 'Gare centrale de Kiev',
+          de: 'Hauptbahnhof Kiew',
+          es: 'Estación Central de Kiev',
+          it: 'Stazione Centrale di Kiev',
+          nl: 'Centraal Station Kiev',
+          pt: 'Estação Central de Kiev',
+          tr: 'Kiev Merkez Tren İstasyonu',
+          ru: 'Центральный железнодорожный вокзал Киев',
+          zh: '基辅中央火车站',
+          ar: 'محطة كييف المركزية للسكك الحديدية',
+        },
+        UAODE_RAIL: {
+          en: 'Odesa Railway Station',
+          fr: "Gare d'Odessa",
+          de: 'Bahnhof Odessa',
+          es: 'Estación de Odesa',
+          it: 'Stazione di Odessa',
+          nl: 'Station Odessa',
+          pt: 'Estação de Odessa',
+          tr: 'Odessa Tren İstasyonu',
+          ru: 'Железнодорожная станция Одесса',
+          zh: '敖德萨火车站',
+          ar: 'محطة أوديسا للسكك الحديدية',
+        },
+
+        // 🇺🇾 Uruguay (Uruguay) - Suisse de l'Amérique du Sud
+        UYMVD: {
+          en: 'Port of Montevideo',
+          fr: 'Port de Montevideo',
+          de: 'Hafen Montevideo',
+          es: 'Puerto de Montevideo',
+          it: 'Porto di Montevideo',
+          nl: 'Haven van Montevideo',
+          pt: 'Porto de Montevidéu',
+          tr: 'Montevideo Limanı',
+          ru: 'Порт Монтевидео',
+          zh: '蒙得维的亚港',
+          ar: 'ميناء مونتيفيديو',
+        },
+        UYMVD_AIR: {
+          en: 'Montevideo Carrasco International Airport',
+          fr: 'Aéroport international de Montevideo Carrasco',
+          de: 'Internationaler Flughafen Montevideo Carrasco',
+          es: 'Aeropuerto Internacional de Montevideo Carrasco',
+          it: 'Aeroporto Internazionale di Montevideo Carrasco',
+          nl: 'Internationale Luchthaven Montevideo Carrasco',
+          pt: 'Aeroporto Internacional de Montevidéu Carrasco',
+          tr: 'Montevideo Carrasco Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Монтевидео Карраско',
+          zh: '蒙得维的亚卡拉斯科国际机场',
+          ar: 'مطار مونتيفيديو كاراسكو الدولي',
+        },
+        UYMVD_RAIL: {
+          en: 'Montevideo Central Station',
+          fr: 'Gare centrale de Montevideo',
+          de: 'Hauptbahnhof Montevideo',
+          es: 'Estación Central de Montevideo',
+          it: 'Stazione Centrale di Montevideo',
+          nl: 'Centraal Station Montevideo',
+          pt: 'Estação Central de Montevidéu',
+          tr: 'Montevideo Merkez İstasyonu',
+          ru: 'Центральный вокзал Монтевидео',
+          zh: '蒙得维的亚中央车站',
+          ar: 'محطة مونتيفيديو المركزية',
+        },
+
+        // 🇺🇬 Uganda (Ouganda) - Perle de l'Afrique (traductions améliorées)
+        UGKMP: {
+          en: 'Port of Kampala',
+          fr: 'Port de Kampala',
+          de: 'Hafen Kampala',
+          es: 'Puerto de Kampala',
+          it: 'Porto di Kampala',
+          nl: 'Haven van Kampala',
+          pt: 'Porto de Kampala',
+          tr: 'Kampala Limanı',
+          ru: 'Порт Кампала',
+          zh: '坎帕拉港',
+          ar: 'ميناء كامبالا',
+        },
+        UGENT: {
+          en: 'Port of Entebbe',
+          fr: "Port d'Entebbe",
+          de: 'Hafen Entebbe',
+          es: 'Puerto de Entebbe',
+          it: 'Porto di Entebbe',
+          nl: 'Haven van Entebbe',
+          pt: 'Porto de Entebbe',
+          tr: 'Entebbe Limanı',
+          ru: 'Порт Энтеббе',
+          zh: '恩德培港',
+          ar: 'ميناء عنتيبي',
+        },
+        UGKMP_RAIL: {
+          en: 'Kampala Railway Station',
+          fr: 'Gare de Kampala',
+          de: 'Bahnhof Kampala',
+          es: 'Estación de Kampala',
+          it: 'Stazione di Kampala',
+          nl: 'Station Kampala',
+          pt: 'Estação de Kampala',
+          tr: 'Kampala Tren İstasyonu',
+          ru: 'Железнодорожная станция Кампала',
+          zh: '坎帕拉火车站',
+          ar: 'محطة كامبالا للسكك الحديدية',
+        },
+
+        // === PAYS EN V - TRADUCTIONS COMPLÈTES ===
+
+        // 🇻🇳 Vietnam (Vietnam) - Dragon d'Asie du Sud-Est (traductions excellentes)
+        VNSGN: {
+          en: 'Port of Ho Chi Minh City',
+          fr: "Port d'Hô Chi Minh-Ville",
+          de: 'Hafen Ho-Chi-Minh-Stadt',
+          es: 'Puerto de Ciudad Ho Chi Minh',
+          it: 'Porto di Ho Chi Minh',
+          nl: 'Haven van Ho Chi Minh Stad',
+          pt: 'Porto de Ho Chi Minh',
+          tr: 'Ho Chi Minh Şehri Limanı',
+          ru: 'Порт Хошимин',
+          zh: '胡志明市港',
+          ar: 'ميناء هو تشي مين',
+        },
+        VNHAN: {
+          en: 'Port of Haiphong',
+          fr: 'Port de Haïphong',
+          de: 'Hafen Haiphong',
+          es: 'Puerto de Haiphong',
+          it: 'Porto di Haiphong',
+          nl: 'Haven van Haiphong',
+          pt: 'Porto de Haiphong',
+          tr: 'Haiphong Limanı',
+          ru: 'Порт Хайфон',
+          zh: '海防港',
+          ar: 'ميناء هايفونغ',
+        },
+        VNDAN: {
+          en: 'Port of Da Nang',
+          fr: 'Port de Da Nang',
+          de: 'Hafen Da Nang',
+          es: 'Puerto de Da Nang',
+          it: 'Porto di Da Nang',
+          nl: 'Haven van Da Nang',
+          pt: 'Porto de Da Nang',
+          tr: 'Da Nang Limanı',
+          ru: 'Порт Дананг',
+          zh: '岘港',
+          ar: 'ميناء دا نانغ',
+        },
+        VNSGN_AIR: {
+          en: 'Ho Chi Minh City Tan Son Nhat International Airport',
+          fr: "Aéroport international Tan Son Nhat d'Hô Chi Minh-Ville",
+          de: 'Internationaler Flughafen Tan Son Nhat Ho-Chi-Minh-Stadt',
+          es: 'Aeropuerto Internacional Tan Son Nhat de Ciudad Ho Chi Minh',
+          it: 'Aeroporto Internazionale Tan Son Nhat di Ho Chi Minh',
+          nl: 'Internationale Luchthaven Tan Son Nhat Ho Chi Minh Stad',
+          pt: 'Aeroporto Internacional Tan Son Nhat de Ho Chi Minh',
+          tr: 'Ho Chi Minh Şehri Tan Son Nhat Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Таншоннят Хошимин',
+          zh: '胡志明市新山一国际机场',
+          ar: 'مطار هو تشي مين تان سون نهات الدولي',
+        },
+        VNHAN_AIR: {
+          en: 'Hanoi Noi Bai International Airport',
+          fr: 'Aéroport international Noi Bai de Hanoï',
+          de: 'Internationaler Flughafen Noi Bai Hanoi',
+          es: 'Aeropuerto Internacional Noi Bai de Hanoi',
+          it: 'Aeroporto Internazionale Noi Bai di Hanoi',
+          nl: 'Internationale Luchthaven Noi Bai Hanoi',
+          pt: 'Aeroporto Internacional Noi Bai de Hanói',
+          tr: 'Hanoi Noi Bai Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Нойбай Ханой',
+          zh: '河内内排国际机场',
+          ar: 'مطار هانوي نوي باي الدولي',
+        },
+        VNDAN_AIR: {
+          en: 'Da Nang International Airport',
+          fr: 'Aéroport international de Da Nang',
+          de: 'Internationaler Flughafen Da Nang',
+          es: 'Aeropuerto Internacional de Da Nang',
+          it: 'Aeroporto Internazionale di Da Nang',
+          nl: 'Internationale Luchthaven Da Nang',
+          pt: 'Aeroporto Internacional de Da Nang',
+          tr: 'Da Nang Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Дананг',
+          zh: '岘港国际机场',
+          ar: 'مطار دا نانغ الدولي',
+        },
+        VNHAN_RAIL: {
+          en: 'Hanoi Railway Station',
+          fr: 'Gare de Hanoï',
+          de: 'Bahnhof Hanoi',
+          es: 'Estación de Hanoi',
+          it: 'Stazione di Hanoi',
+          nl: 'Station Hanoi',
+          pt: 'Estação de Hanói',
+          tr: 'Hanoi Tren İstasyonu',
+          ru: 'Железнодорожная станция Ханой',
+          zh: '河内火车站',
+          ar: 'محطة هانوي للسكك الحديدية',
+        },
+        VNSGN_RAIL: {
+          en: 'Ho Chi Minh City Railway Station',
+          fr: "Gare d'Hô Chi Minh-Ville",
+          de: 'Bahnhof Ho-Chi-Minh-Stadt',
+          es: 'Estación de Ciudad Ho Chi Minh',
+          it: 'Stazione di Ho Chi Minh',
+          nl: 'Station Ho Chi Minh Stad',
+          pt: 'Estação de Ho Chi Minh',
+          tr: 'Ho Chi Minh Şehri Tren İstasyonu',
+          ru: 'Железнодорожная станция Хошимин',
+          zh: '胡志明市火车站',
+          ar: 'محطة هو تشي مين للسكك الحديدية',
+        },
+
+        // 🇻🇪 Venezuela (Venezuela) - Pays du pétrole (traductions solides)
+        VELAS: {
+          en: 'Port of La Guaira',
+          fr: 'Port de La Guaira',
+          de: 'Hafen La Guaira',
+          es: 'Puerto de La Guaira',
+          it: 'Porto di La Guaira',
+          nl: 'Haven van La Guaira',
+          pt: 'Porto de La Guaira',
+          tr: 'La Guaira Limanı',
+          ru: 'Порт Ла-Гуайра',
+          zh: '拉瓜伊拉港',
+          ar: 'ميناء لا غوايرا',
+        },
+        VEPZO: {
+          en: 'Port of Puerto Cabello',
+          fr: 'Port de Puerto Cabello',
+          de: 'Hafen Puerto Cabello',
+          es: 'Puerto de Puerto Cabello',
+          it: 'Porto di Puerto Cabello',
+          nl: 'Haven van Puerto Cabello',
+          pt: 'Porto de Puerto Cabello',
+          tr: 'Puerto Cabello Limanı',
+          ru: 'Порт Пуэрто-Кабельо',
+          zh: '卡贝略港',
+          ar: 'ميناء بويرتو كابيلو',
+        },
+        VEMCB: {
+          en: 'Port of Maracaibo',
+          fr: 'Port de Maracaibo',
+          de: 'Hafen Maracaibo',
+          es: 'Puerto de Maracaibo',
+          it: 'Porto di Maracaibo',
+          nl: 'Haven van Maracaibo',
+          pt: 'Porto de Maracaibo',
+          tr: 'Maracaibo Limanı',
+          ru: 'Порт Маракайбо',
+          zh: '马拉开波港',
+          ar: 'ميناء ماراكايبو',
+        },
+        VECCS: {
+          en: 'Caracas Simón Bolívar International Airport',
+          fr: 'Aéroport international Simón Bolívar de Caracas',
+          de: 'Internationaler Flughafen Simón Bolívar Caracas',
+          es: 'Aeropuerto Internacional Simón Bolívar de Caracas',
+          it: 'Aeroporto Internazionale Simón Bolívar di Caracas',
+          nl: 'Internationale Luchthaven Simón Bolívar Caracas',
+          pt: 'Aeroporto Internacional Simón Bolívar de Caracas',
+          tr: 'Caracas Simón Bolívar Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Симон Боливар Каракас',
+          zh: '加拉加斯西蒙·玻利瓦尔国际机场',
+          ar: 'مطار كاراكاس سيمون بوليفار الدولي',
+        },
+        VECCS_RAIL: {
+          en: 'Caracas Railway Station',
+          fr: 'Gare de Caracas',
+          de: 'Bahnhof Caracas',
+          es: 'Estación de Caracas',
+          it: 'Stazione di Caracas',
+          nl: 'Station Caracas',
+          pt: 'Estação de Caracas',
+          tr: 'Caracas Tren İstasyonu',
+          ru: 'Железнодорожная станция Каракас',
+          zh: '加拉加斯火车站',
+          ar: 'محطة كاراكاس للسكك الحديدية',
+        },
+
+        // === PAYS EN P - TRADUCTIONS COMPLÈTES (DEUXIÈME RATTRAPAGE!) ===
+
+        // 🇵🇪 Peru (Pérou) - Berceau des Incas (traductions parfaites)
+        PECLL: {
+          en: 'Port of Callao',
+          fr: 'Port de Callao',
+          de: 'Hafen Callao',
+          es: 'Puerto del Callao',
+          it: 'Porto di Callao',
+          nl: 'Haven van Callao',
+          pt: 'Porto de Callao',
+          tr: 'Callao Limanı',
+          ru: 'Порт Кальяо',
+          zh: '卡亚俄港',
+          ar: 'ميناء كالاو',
+        },
+        PELIM: {
+          en: 'Jorge Chávez International Airport',
+          fr: 'Aéroport international Jorge Chávez',
+          de: 'Internationaler Flughafen Jorge Chávez',
+          es: 'Aeropuerto Internacional Jorge Chávez',
+          it: 'Aeroporto Internazionale Jorge Chávez',
+          nl: 'Internationale Luchthaven Jorge Chávez',
+          pt: 'Aeroporto Internacional Jorge Chávez',
+          tr: 'Jorge Chávez Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Хорхе Чавес',
+          zh: '豪尔赫·查韦斯国际机场',
+          ar: 'مطار خورخي تشافيز الدولي',
+        },
+
+        // 🇵🇱 Poland (Pologne) - Cœur de l'Europe (traductions complètes)
+        PLGDY: {
+          en: 'Port of Gdynia',
+          fr: 'Port de Gdynia',
+          de: 'Hafen Gdingen',
+          es: 'Puerto de Gdynia',
+          it: 'Porto di Gdynia',
+          nl: 'Haven van Gdynia',
+          pt: 'Porto de Gdynia',
+          tr: 'Gdynia Limanı',
+          ru: 'Порт Гдыня',
+          zh: '格丁尼亚港',
+          ar: 'ميناء غدينيا',
+        },
+        PLSZZ: {
+          en: 'Port of Szczecin',
+          fr: 'Port de Szczecin',
+          de: 'Hafen Stettin',
+          es: 'Puerto de Szczecin',
+          it: 'Porto di Stettino',
+          nl: 'Haven van Szczecin',
+          pt: 'Porto de Szczecin',
+          tr: 'Szczecin Limanı',
+          ru: 'Порт Щецин',
+          zh: '什切青港',
+          ar: 'ميناء شتشيتشين',
+        },
+        PLWAW: {
+          en: 'Warsaw Chopin Airport',
+          fr: 'Aéroport Chopin de Varsovie',
+          de: 'Flughafen Warschau-Chopin',
+          es: 'Aeropuerto Chopin de Varsovia',
+          it: 'Aeroporto Chopin di Varsavia',
+          nl: 'Luchthaven Warschau Chopin',
+          pt: 'Aeroporto Chopin de Varsóvia',
+          tr: 'Varşova Chopin Havaalanı',
+          ru: 'Аэропорт Варшава-Шопен',
+          zh: '华沙肖邦机场',
+          ar: 'مطار وارسو شوبان',
+        },
+        PLKRK: {
+          en: 'Kraków John Paul II International Airport',
+          fr: 'Aéroport international Jean-Paul II de Cracovie',
+          de: 'Internationaler Flughafen Johannes Paul II. Krakau',
+          es: 'Aeropuerto Internacional Juan Pablo II de Cracovia',
+          it: 'Aeroporto Internazionale Giovanni Paolo II di Cracovia',
+          nl: 'Internationale Luchthaven Johannes Paulus II Krakau',
+          pt: 'Aeroporto Internacional João Paulo II de Cracóvia',
+          tr: 'Krakow II. John Paul Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Краков-Балице',
+          zh: '克拉科夫约翰·保罗二世国际机场',
+          ar: 'مطار كراكوف يوحنا بولس الثاني الدولي',
+        },
+        PLWAR_RAIL: {
+          en: 'Warsaw Central Station',
+          fr: 'Gare centrale de Varsovie',
+          de: 'Warschau Hauptbahnhof',
+          es: 'Estación Central de Varsovia',
+          it: 'Stazione Centrale di Varsavia',
+          nl: 'Centraal Station Warschau',
+          pt: 'Estação Central de Varsóvia',
+          tr: 'Varşova Merkez İstasyonu',
+          ru: 'Центральная станция Варшава',
+          zh: '华沙中央车站',
+          ar: 'محطة وارسو المركزية',
+        },
+        PLKRK_RAIL: {
+          en: 'Kraków Main Station',
+          fr: 'Gare principale de Cracovie',
+          de: 'Krakau Hauptbahnhof',
+          es: 'Estación Principal de Cracovia',
+          it: 'Stazione Principale di Cracovia',
+          nl: 'Hoofdstation Krakau',
+          pt: 'Estação Principal de Cracóvia',
+          tr: 'Krakow Ana İstasyonu',
+          ru: 'Главная станция Краков',
+          zh: '克拉科夫主火车站',
+          ar: 'محطة كراكوف الرئيسية',
+        },
+
+        // 🇵🇹 Portugal (Portugal) - Navigation des découvertes (traductions excellentes)
+        PTLIS: {
+          en: 'Port of Lisbon',
+          fr: 'Port de Lisbonne',
+          de: 'Hafen Lissabon',
+          es: 'Puerto de Lisboa',
+          it: 'Porto di Lisbona',
+          nl: 'Haven van Lissabon',
+          pt: 'Porto de Lisboa',
+          tr: 'Lizbon Limanı',
+          ru: 'Порт Лиссабон',
+          zh: '里斯本港',
+          ar: 'ميناء لشبونة',
+        },
+        PTLEI: {
+          en: 'Port of Leixões',
+          fr: 'Port de Leixões',
+          de: 'Hafen Leixões',
+          es: 'Puerto de Leixões',
+          it: 'Porto di Leixões',
+          nl: 'Haven van Leixões',
+          pt: 'Porto de Leixões',
+          tr: 'Leixões Limanı',
+          ru: 'Порт Лейшойнш',
+          zh: '莱绍英斯港',
+          ar: 'ميناء ليشويس',
+        },
+        PTLIS_AIR: {
+          en: 'Lisbon Portela Airport',
+          fr: 'Aéroport de Lisbonne Portela',
+          de: 'Flughafen Lissabon-Portela',
+          es: 'Aeropuerto de Lisboa Portela',
+          it: 'Aeroporto di Lisbona Portela',
+          nl: 'Luchthaven Lissabon Portela',
+          pt: 'Aeroporto de Lisboa Portela',
+          tr: 'Lizbon Portela Havaalanı',
+          ru: 'Аэропорт Лиссабон-Портела',
+          zh: '里斯本波尔特拉机场',
+          ar: 'مطار لشبونة بورتيلا',
+        },
+        PTOPO: {
+          en: 'Porto Francisco Sá Carneiro Airport',
+          fr: 'Aéroport Francisco Sá Carneiro de Porto',
+          de: 'Flughafen Porto Francisco Sá Carneiro',
+          es: 'Aeropuerto Francisco Sá Carneiro de Oporto',
+          it: 'Aeroporto Francisco Sá Carneiro di Porto',
+          nl: 'Luchthaven Porto Francisco Sá Carneiro',
+          pt: 'Aeroporto Francisco Sá Carneiro do Porto',
+          tr: 'Porto Francisco Sá Carneiro Havaalanı',
+          ru: 'Аэропорт Порту Франсишку Са Карнейру',
+          zh: '波尔图弗朗西斯科·萨·卡内罗机场',
+          ar: 'مطار بورتو فرانسيسكو سا كارنيرو',
+        },
+        PTLIS_RAIL: {
+          en: 'Lisbon Santa Apolónia Station',
+          fr: 'Gare de Lisbonne Santa Apolónia',
+          de: 'Bahnhof Lissabon Santa Apolónia',
+          es: 'Estación de Lisboa Santa Apolónia',
+          it: 'Stazione di Lisbona Santa Apolónia',
+          nl: 'Station Lissabon Santa Apolónia',
+          pt: 'Estação de Lisboa Santa Apolónia',
+          tr: 'Lizbon Santa Apolónia İstasyonu',
+          ru: 'Станция Лиссабон Санта-Аполония',
+          zh: '里斯本圣阿波洛尼亚车站',
+          ar: 'محطة لشبونة سانتا أبولونيا',
+        },
+        PTOPO_RAIL: {
+          en: 'Porto Campanhã Station',
+          fr: 'Gare de Porto Campanhã',
+          de: 'Bahnhof Porto Campanhã',
+          es: 'Estación de Oporto Campanhã',
+          it: 'Stazione di Porto Campanhã',
+          nl: 'Station Porto Campanhã',
+          pt: 'Estação de Porto Campanhã',
+          tr: 'Porto Campanhã İstasyonu',
+          ru: 'Станция Порту Кампанья',
+          zh: '波尔图坎帕尼亚车站',
+          ar: 'محطة بورتو كامبانها',
+        },
+
+        // 🇵🇭 Philippines (Philippines) - Archipel des 7000 îles (traductions superbes)
+        PHMNL: {
+          en: 'Port of Manila',
+          fr: 'Port de Manille',
+          de: 'Hafen Manila',
+          es: 'Puerto de Manila',
+          it: 'Porto di Manila',
+          nl: 'Haven van Manila',
+          pt: 'Porto de Manila',
+          tr: 'Manila Limanı',
+          ru: 'Порт Манила',
+          zh: '马尼拉港',
+          ar: 'ميناء مانيلا',
+        },
+        PHCEB: {
+          en: 'Port of Cebu',
+          fr: 'Port de Cebu',
+          de: 'Hafen Cebu',
+          es: 'Puerto de Cebú',
+          it: 'Porto di Cebu',
+          nl: 'Haven van Cebu',
+          pt: 'Porto de Cebu',
+          tr: 'Cebu Limanı',
+          ru: 'Порт Себу',
+          zh: '宿务港',
+          ar: 'ميناء سيبو',
+        },
+        PHBAT: {
+          en: 'Port of Batangas',
+          fr: 'Port de Batangas',
+          de: 'Hafen Batangas',
+          es: 'Puerto de Batangas',
+          it: 'Porto di Batangas',
+          nl: 'Haven van Batangas',
+          pt: 'Porto de Batangas',
+          tr: 'Batangas Limanı',
+          ru: 'Порт Батангас',
+          zh: '八打雁港',
+          ar: 'ميناء باتانغاس',
+        },
+        PHMNL_AIR: {
+          en: 'Ninoy Aquino International Airport',
+          fr: 'Aéroport international Ninoy Aquino',
+          de: 'Internationaler Flughafen Ninoy Aquino',
+          es: 'Aeropuerto Internacional Ninoy Aquino',
+          it: 'Aeroporto Internazionale Ninoy Aquino',
+          nl: 'Internationale Luchthaven Ninoy Aquino',
+          pt: 'Aeroporto Internacional Ninoy Aquino',
+          tr: 'Ninoy Aquino Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Ниной Акино',
+          zh: '尼诺·阿基诺国际机场',
+          ar: 'مطار نينوي أكينو الدولي',
+        },
+        PHCEB_AIR: {
+          en: 'Mactan-Cebu International Airport',
+          fr: 'Aéroport international Mactan-Cebu',
+          de: 'Internationaler Flughafen Mactan-Cebu',
+          es: 'Aeropuerto Internacional Mactan-Cebú',
+          it: 'Aeroporto Internazionale Mactan-Cebu',
+          nl: 'Internationale Luchthaven Mactan-Cebu',
+          pt: 'Aeroporto Internacional Mactan-Cebu',
+          tr: 'Mactan-Cebu Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Мактан-Себу',
+          zh: '马克坦-宿务国际机场',
+          ar: 'مطار ماكتان-سيبو الدولي',
+        },
+        PHCRK: {
+          en: 'Clark International Airport',
+          fr: 'Aéroport international de Clark',
+          de: 'Internationaler Flughafen Clark',
+          es: 'Aeropuerto Internacional de Clark',
+          it: 'Aeroporto Internazionale di Clark',
+          nl: 'Internationale Luchthaven Clark',
+          pt: 'Aeroporto Internacional de Clark',
+          tr: 'Clark Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Кларк',
+          zh: '克拉克国际机场',
+          ar: 'مطار كلارك الدولي',
+        },
+
+        // 🇵🇰 Pakistan (Pakistan) - Terre des purs (traductions excellentes)
+        PKKAR: {
+          en: 'Port of Karachi',
+          fr: 'Port de Karachi',
+          de: 'Hafen Karatschi',
+          es: 'Puerto de Karachi',
+          it: 'Porto di Karachi',
+          nl: 'Haven van Karachi',
+          pt: 'Porto de Karachi',
+          tr: 'Karaçi Limanı',
+          ru: 'Порт Карачи',
+          zh: '卡拉奇港',
+          ar: 'ميناء كراتشي',
+        },
+        PKQAS: {
+          en: 'Port Qasim',
+          fr: 'Port Qasim',
+          de: 'Hafen Qasim',
+          es: 'Puerto Qasim',
+          it: 'Porto Qasim',
+          nl: 'Haven Qasim',
+          pt: 'Porto Qasim',
+          tr: 'Qasim Limanı',
+          ru: 'Порт Касим',
+          zh: '卡西姆港',
+          ar: 'ميناء قاسم',
+        },
+        PKGWA: {
+          en: 'Port of Gwadar',
+          fr: 'Port de Gwadar',
+          de: 'Hafen Gwadar',
+          es: 'Puerto de Gwadar',
+          it: 'Porto di Gwadar',
+          nl: 'Haven van Gwadar',
+          pt: 'Porto de Gwadar',
+          tr: 'Gwadar Limanı',
+          ru: 'Порт Гвадар',
+          zh: '瓜达尔港',
+          ar: 'ميناء جوادر',
+        },
+        PKKAR_AIR: {
+          en: 'Jinnah International Airport',
+          fr: 'Aéroport international Jinnah',
+          de: 'Internationaler Flughafen Jinnah',
+          es: 'Aeropuerto Internacional Jinnah',
+          it: 'Aeroporto Internazionale Jinnah',
+          nl: 'Internationale Luchthaven Jinnah',
+          pt: 'Aeroporto Internacional Jinnah',
+          tr: 'Jinnah Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Джинна',
+          zh: '真纳国际机场',
+          ar: 'مطار جناح الدولي',
+        },
+        PKLHE: {
+          en: 'Allama Iqbal International Airport',
+          fr: 'Aéroport international Allama Iqbal',
+          de: 'Internationaler Flughafen Allama Iqbal',
+          es: 'Aeropuerto Internacional Allama Iqbal',
+          it: 'Aeroporto Internazionale Allama Iqbal',
+          nl: 'Internationale Luchthaven Allama Iqbal',
+          pt: 'Aeroporto Internacional Allama Iqbal',
+          tr: 'Allama Iqbal Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Аллама Икбал',
+          zh: '阿拉马·伊克巴尔国际机场',
+          ar: 'مطار علامة إقبال الدولي',
+        },
+        PKISB: {
+          en: 'Islamabad International Airport',
+          fr: "Aéroport international d'Islamabad",
+          de: 'Internationaler Flughafen Islamabad',
+          es: 'Aeropuerto Internacional de Islamabad',
+          it: 'Aeroporto Internazionale di Islamabad',
+          nl: 'Internationale Luchthaven Islamabad',
+          pt: 'Aeroporto Internacional de Islamabad',
+          tr: 'İslamabad Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Исламабад',
+          zh: '伊斯兰堡国际机场',
+          ar: 'مطار إسلام أباد الدولي',
+        },
+        PKKAR_RAIL: {
+          en: 'Karachi City Railway Station',
+          fr: 'Gare de Karachi',
+          de: 'Bahnhof Karatschi',
+          es: 'Estación de Karachi',
+          it: 'Stazione di Karachi',
+          nl: 'Station Karachi',
+          pt: 'Estação de Karachi',
+          tr: 'Karaçi Tren İstasyonu',
+          ru: 'Железнодорожная станция Карачи',
+          zh: '卡拉奇火车站',
+          ar: 'محطة كراتشي للسكك الحديدية',
+        },
+        PKLHE_RAIL: {
+          en: 'Lahore Railway Station',
+          fr: 'Gare de Lahore',
+          de: 'Bahnhof Lahore',
+          es: 'Estación de Lahore',
+          it: 'Stazione di Lahore',
+          nl: 'Station Lahore',
+          pt: 'Estação de Lahore',
+          tr: 'Lahore Tren İstasyonu',
+          ru: 'Железнодорожная станция Лахор',
+          zh: '拉合尔火车站',
+          ar: 'محطة لاهور للسكك الحديدية',
+        },
+
+        // 🇵🇾 Paraguay (Paraguay) - Cœur de l'Amérique du Sud (traductions solides)
+        PYASU: {
+          en: 'Port of Asunción',
+          fr: "Port d'Asunción",
+          de: 'Hafen Asunción',
+          es: 'Puerto de Asunción',
+          it: 'Porto di Asunción',
+          nl: 'Haven van Asunción',
+          pt: 'Porto de Assunção',
+          tr: 'Asunción Limanı',
+          ru: 'Порт Асунсьон',
+          zh: '亚松森港',
+          ar: 'ميناء أسونسيون',
+        },
+        PYASU_AIR: {
+          en: 'Silvio Pettirossi International Airport',
+          fr: 'Aéroport international Silvio Pettirossi',
+          de: 'Internationaler Flughafen Silvio Pettirossi',
+          es: 'Aeropuerto Internacional Silvio Pettirossi',
+          it: 'Aeroporto Internazionale Silvio Pettirossi',
+          nl: 'Internationale Luchthaven Silvio Pettirossi',
+          pt: 'Aeroporto Internacional Silvio Pettirossi',
+          tr: 'Silvio Pettirossi Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Сильвио Петтиросси',
+          zh: '西尔维奥·佩蒂罗西国际机场',
+          ar: 'مطار سيلفيو بيتيروسي الدولي',
+        },
+        PYASU_RAIL: {
+          en: 'Asunción Railway Station',
+          fr: "Gare d'Asunción",
+          de: 'Bahnhof Asunción',
+          es: 'Estación de Asunción',
+          it: 'Stazione di Asunción',
+          nl: 'Station Asunción',
+          pt: 'Estação de Assunção',
+          tr: 'Asunción Tren İstasyonu',
+          ru: 'Железнодорожная станция Асунсьон',
+          zh: '亚松森火车站',
+          ar: 'محطة أسونسيون للسكك الحديدية',
+        },
+
+        // 🇵🇦 Panama (Panama) - Canal entre les océans (traductions magistrales)
+        PABAL: {
+          en: 'Port of Balboa',
+          fr: 'Port de Balboa',
+          de: 'Hafen Balboa',
+          es: 'Puerto de Balboa',
+          it: 'Porto di Balboa',
+          nl: 'Haven van Balboa',
+          pt: 'Porto de Balboa',
+          tr: 'Balboa Limanı',
+          ru: 'Порт Бальбоа',
+          zh: '巴尔博亚港',
+          ar: 'ميناء بالبوا',
+        },
+        PACOL: {
+          en: 'Port of Colón',
+          fr: 'Port de Colón',
+          de: 'Hafen Colón',
+          es: 'Puerto de Colón',
+          it: 'Porto di Colón',
+          nl: 'Haven van Colón',
+          pt: 'Porto de Colón',
+          tr: 'Colón Limanı',
+          ru: 'Порт Колон',
+          zh: '科隆港',
+          ar: 'ميناء كولون',
+        },
+        PACRZ: {
+          en: 'Port of Cristóbal',
+          fr: 'Port de Cristóbal',
+          de: 'Hafen Cristóbal',
+          es: 'Puerto de Cristóbal',
+          it: 'Porto di Cristóbal',
+          nl: 'Haven van Cristóbal',
+          pt: 'Porto de Cristóbal',
+          tr: 'Cristóbal Limanı',
+          ru: 'Порт Кристобаль',
+          zh: '克里斯托瓦尔港',
+          ar: 'ميناء كريستوبال',
+        },
+        PAPTY: {
+          en: 'Tocumen International Airport',
+          fr: 'Aéroport international de Tocumen',
+          de: 'Internationaler Flughafen Tocumen',
+          es: 'Aeropuerto Internacional de Tocumen',
+          it: 'Aeroporto Internazionale di Tocumen',
+          nl: 'Internationale Luchthaven Tocumen',
+          pt: 'Aeroporto Internacional de Tocumen',
+          tr: 'Tocumen Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Токумен',
+          zh: '托库门国际机场',
+          ar: 'مطار توكومين الدولي',
+        },
+
+        // === PAYS EN D - TRADUCTIONS COMPLÈTES (RATTRAPAGE!) ===
+
+        // 🇩🇪 Germany (Allemagne) - Puissance industrielle européenne (traductions complètes)
+        DEWVN: {
+          en: 'Port of Wilhelmshaven',
+          fr: 'Port de Wilhelmshaven',
+          de: 'Hafen Wilhelmshaven',
+          es: 'Puerto de Wilhelmshaven',
+          it: 'Porto di Wilhelmshaven',
+          nl: 'Haven van Wilhelmshaven',
+          pt: 'Porto de Wilhelmshaven',
+          tr: 'Wilhelmshaven Limanı',
+          ru: 'Порт Вильгельмсхафен',
+          zh: '威廉港',
+          ar: 'ميناء فيلهلمسهافن',
+        },
+        DELUB: {
+          en: 'Port of Lübeck',
+          fr: 'Port de Lübeck',
+          de: 'Hafen Lübeck',
+          es: 'Puerto de Lübeck',
+          it: 'Porto di Lubecca',
+          nl: 'Haven van Lübeck',
+          pt: 'Porto de Lübeck',
+          tr: 'Lübeck Limanı',
+          ru: 'Порт Любек',
+          zh: '吕贝克港',
+          ar: 'ميناء لوبيك',
+        },
+        DEROS: {
+          en: 'Port of Rostock',
+          fr: 'Port de Rostock',
+          de: 'Hafen Rostock',
+          es: 'Puerto de Rostock',
+          it: 'Porto di Rostock',
+          nl: 'Haven van Rostock',
+          pt: 'Porto de Rostock',
+          tr: 'Rostock Limanı',
+          ru: 'Порт Росток',
+          zh: '罗斯托克港',
+          ar: 'ميناء روستوك',
+        },
+        DEBER: {
+          en: 'Berlin Brandenburg Airport',
+          fr: 'Aéroport de Berlin-Brandebourg',
+          de: 'Flughafen Berlin Brandenburg',
+          es: 'Aeropuerto de Berlín-Brandeburgo',
+          it: 'Aeroporto di Berlino-Brandeburgo',
+          nl: 'Luchthaven Berlijn Brandenburg',
+          pt: 'Aeroporto de Berlim-Brandemburgo',
+          tr: 'Berlin Brandenburg Havaalanı',
+          ru: 'Аэропорт Берлин-Бранденбург',
+          zh: '柏林勃兰登堡机场',
+          ar: 'مطار برلين براندنبورغ',
+        },
+        DEDUS: {
+          en: 'Düsseldorf Airport',
+          fr: 'Aéroport de Düsseldorf',
+          de: 'Flughafen Düsseldorf',
+          es: 'Aeropuerto de Düsseldorf',
+          it: 'Aeroporto di Düsseldorf',
+          nl: 'Luchthaven Düsseldorf',
+          pt: 'Aeroporto de Düsseldorf',
+          tr: 'Düsseldorf Havaalanı',
+          ru: 'Аэропорт Дюссельдорф',
+          zh: '杜塞尔多夫机场',
+          ar: 'مطار دوسلدورف',
+        },
+        DEHAM_AIR: {
+          en: 'Hamburg Airport',
+          fr: 'Aéroport de Hambourg',
+          de: 'Flughafen Hamburg',
+          es: 'Aeropuerto de Hamburgo',
+          it: 'Aeroporto di Amburgo',
+          nl: 'Luchthaven Hamburg',
+          pt: 'Aeroporto de Hamburgo',
+          tr: 'Hamburg Havaalanı',
+          ru: 'Аэропорт Гамбург',
+          zh: '汉堡机场',
+          ar: 'مطار هامبورغ',
+        },
+        DECGN: {
+          en: 'Cologne Bonn Airport',
+          fr: 'Aéroport de Cologne/Bonn',
+          de: 'Flughafen Köln/Bonn',
+          es: 'Aeropuerto de Colonia/Bonn',
+          it: 'Aeroporto di Colonia/Bonn',
+          nl: 'Luchthaven Keulen/Bonn',
+          pt: 'Aeroporto de Colônia/Bonn',
+          tr: 'Köln/Bonn Havaalanı',
+          ru: 'Аэропорт Кёльн/Бонн',
+          zh: '科隆/波恩机场',
+          ar: 'مطار كولونيا/بون',
+        },
+        DESTR: {
+          en: 'Stuttgart Airport',
+          fr: 'Aéroport de Stuttgart',
+          de: 'Flughafen Stuttgart',
+          es: 'Aeropuerto de Stuttgart',
+          it: 'Aeroporto di Stoccarda',
+          nl: 'Luchthaven Stuttgart',
+          pt: 'Aeroporto de Stuttgart',
+          tr: 'Stuttgart Havaalanı',
+          ru: 'Аэропорт Штутгарт',
+          zh: '斯图加特机场',
+          ar: 'مطار شتوتغارت',
+        },
+        DENUR: {
+          en: 'Nuremberg Airport',
+          fr: 'Aéroport de Nuremberg',
+          de: 'Flughafen Nürnberg',
+          es: 'Aeropuerto de Núremberg',
+          it: 'Aeroporto di Norimberga',
+          nl: 'Luchthaven Neurenberg',
+          pt: 'Aeroporto de Nuremberga',
+          tr: 'Nürnberg Havaalanı',
+          ru: 'Аэропорт Нюрнберг',
+          zh: '纽伦堡机场',
+          ar: 'مطار نورمبرغ',
+        },
+        DEBER_RAIL: {
+          en: 'Berlin Central Station',
+          fr: 'Gare centrale de Berlin',
+          de: 'Berlin Hauptbahnhof',
+          es: 'Estación Central de Berlín',
+          it: 'Stazione Centrale di Berlino',
+          nl: 'Centraal Station Berlijn',
+          pt: 'Estação Central de Berlim',
+          tr: 'Berlin Merkez İstasyonu',
+          ru: 'Центральная станция Берлин',
+          zh: '柏林中央车站',
+          ar: 'محطة برلين المركزية',
+        },
+        DEFRA_RAIL: {
+          en: 'Frankfurt Central Station',
+          fr: 'Gare centrale de Francfort',
+          de: 'Frankfurt Hauptbahnhof',
+          es: 'Estación Central de Fráncfort',
+          it: 'Stazione Centrale di Francoforte',
+          nl: 'Centraal Station Frankfurt',
+          pt: 'Estação Central de Frankfurt',
+          tr: 'Frankfurt Merkez İstasyonu',
+          ru: 'Центральная станция Франкфурт',
+          zh: '法兰克福中央车站',
+          ar: 'محطة فرانكفورت المركزية',
+        },
+        DEHAM_RAIL: {
+          en: 'Hamburg Central Station',
+          fr: 'Gare centrale de Hambourg',
+          de: 'Hamburg Hauptbahnhof',
+          es: 'Estación Central de Hamburgo',
+          it: 'Stazione Centrale di Amburgo',
+          nl: 'Centraal Station Hamburg',
+          pt: 'Estação Central de Hamburgo',
+          tr: 'Hamburg Merkez İstasyonu',
+          ru: 'Центральная станция Гамбург',
+          zh: '汉堡中央车站',
+          ar: 'محطة هامبورغ المركزية',
+        },
+        DEMUC_RAIL: {
+          en: 'Munich Central Station',
+          fr: 'Gare centrale de Munich',
+          de: 'München Hauptbahnhof',
+          es: 'Estación Central de Múnich',
+          it: 'Stazione Centrale di Monaco',
+          nl: 'Centraal Station München',
+          pt: 'Estação Central de Munique',
+          tr: 'Münih Merkez İstasyonu',
+          ru: 'Центральная станция Мюнхен',
+          zh: '慕尼黑中央车站',
+          ar: 'محطة ميونيخ المركزية',
+        },
+        DECGN_RAIL: {
+          en: 'Cologne Central Station',
+          fr: 'Gare centrale de Cologne',
+          de: 'Köln Hauptbahnhof',
+          es: 'Estación Central de Colonia',
+          it: 'Stazione Centrale di Colonia',
+          nl: 'Centraal Station Keulen',
+          pt: 'Estação Central de Colônia',
+          tr: 'Köln Merkez İstasyonu',
+          ru: 'Центральная станция Кёльн',
+          zh: '科隆中央车站',
+          ar: 'محطة كولونيا المركزية',
+        },
+
+        // 🇩🇰 Denmark (Danemark) - Royaume scandinave (traductions excellentes)
+        DKAAR: {
+          en: 'Port of Aarhus',
+          fr: "Port d'Aarhus",
+          de: 'Hafen Aarhus',
+          es: 'Puerto de Aarhus',
+          it: 'Porto di Aarhus',
+          nl: 'Haven van Aarhus',
+          pt: 'Porto de Aarhus',
+          tr: 'Aarhus Limanı',
+          ru: 'Порт Орхус',
+          zh: '奥胡斯港',
+          ar: 'ميناء آرهوس',
+        },
+        DKCPH: {
+          en: 'Port of Copenhagen',
+          fr: 'Port de Copenhague',
+          de: 'Hafen Kopenhagen',
+          es: 'Puerto de Copenhague',
+          it: 'Porto di Copenaghen',
+          nl: 'Haven van Kopenhagen',
+          pt: 'Porto de Copenhague',
+          tr: 'Kopenhag Limanı',
+          ru: 'Порт Копенгаген',
+          zh: '哥本哈根港',
+          ar: 'ميناء كوبنهاغن',
+        },
+        DKCPH_AIR: {
+          en: 'Copenhagen Airport',
+          fr: 'Aéroport de Copenhague',
+          de: 'Flughafen Kopenhagen',
+          es: 'Aeropuerto de Copenhague',
+          it: 'Aeroporto di Copenaghen',
+          nl: 'Luchthaven Kopenhagen',
+          pt: 'Aeroporto de Copenhague',
+          tr: 'Kopenhag Havaalanı',
+          ru: 'Аэропорт Копенгаген',
+          zh: '哥本哈根机场',
+          ar: 'مطار كوبنهاغن',
+        },
+        DKCPH_RAIL: {
+          en: 'Copenhagen Central Station',
+          fr: 'Gare centrale de Copenhague',
+          de: 'Kopenhagen Hauptbahnhof',
+          es: 'Estación Central de Copenhague',
+          it: 'Stazione Centrale di Copenaghen',
+          nl: 'Centraal Station Kopenhagen',
+          pt: 'Estação Central de Copenhague',
+          tr: 'Kopenhag Merkez İstasyonu',
+          ru: 'Центральная станция Копенгаген',
+          zh: '哥本哈根中央车站',
+          ar: 'محطة كوبنهاغن المركزية',
+        },
+
+        // 🇩🇴 Dominican Republic (République dominicaine) - Perle des Caraïbes (traductions parfaites)
+        DOSDQ: {
+          en: 'Port of Santo Domingo',
+          fr: 'Port de Saint-Domingue',
+          de: 'Hafen Santo Domingo',
+          es: 'Puerto de Santo Domingo',
+          it: 'Porto di Santo Domingo',
+          nl: 'Haven van Santo Domingo',
+          pt: 'Porto de Santo Domingo',
+          tr: 'Santo Domingo Limanı',
+          ru: 'Порт Санто-Доминго',
+          zh: '圣多明各港',
+          ar: 'ميناء سانتو دومينغو',
+        },
+        DOHIG: {
+          en: 'Port of Haina',
+          fr: 'Port de Haina',
+          de: 'Hafen Haina',
+          es: 'Puerto de Haina',
+          it: 'Porto di Haina',
+          nl: 'Haven van Haina',
+          pt: 'Porto de Haina',
+          tr: 'Haina Limanı',
+          ru: 'Порт Хайна',
+          zh: '海纳港',
+          ar: 'ميناء هاينا',
+        },
+        DOSDQ_AIR: {
+          en: 'Santo Domingo Las Américas International Airport',
+          fr: 'Aéroport international Las Américas de Saint-Domingue',
+          de: 'Internationaler Flughafen Las Américas Santo Domingo',
+          es: 'Aeropuerto Internacional Las Américas de Santo Domingo',
+          it: 'Aeroporto Internazionale Las Américas di Santo Domingo',
+          nl: 'Internationale Luchthaven Las Américas Santo Domingo',
+          pt: 'Aeroporto Internacional Las Américas de Santo Domingo',
+          tr: 'Santo Domingo Las Américas Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Лас-Америкас Санто-Доминго',
+          zh: '圣多明各拉斯美洲国际机场',
+          ar: 'مطار سانتو دومينغو لاس أمريكاس الدولي',
+        },
+        DOPOP: {
+          en: 'Puerto Plata Gregorio Luperón International Airport',
+          fr: 'Aéroport international Gregorio Luperón de Puerto Plata',
+          de: 'Internationaler Flughafen Gregorio Luperón Puerto Plata',
+          es: 'Aeropuerto Internacional Gregorio Luperón de Puerto Plata',
+          it: 'Aeroporto Internazionale Gregorio Luperón di Puerto Plata',
+          nl: 'Internationale Luchthaven Gregorio Luperón Puerto Plata',
+          pt: 'Aeroporto Internacional Gregorio Luperón de Puerto Plata',
+          tr: 'Puerto Plata Gregorio Luperón Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Грегорио Луперон Пуэрто-Плата',
+          zh: '普拉塔港格雷戈里奥·卢佩龙国际机场',
+          ar: 'مطار بويرتو بلاتا غريغوريو لوبيرون الدولي',
+        },
+
+        // === PAYS EN Z - TRADUCTIONS COMPLÈTES (DERNIÈRE LETTRE!) ===
+
+        // 🇿🇦 South Africa (Afrique du Sud) - Nation arc-en-ciel (traductions excellentes)
+        ZADUR: {
+          en: 'Port of Durban',
+          fr: 'Port de Durban',
+          de: 'Hafen Durban',
+          es: 'Puerto de Durban',
+          it: 'Porto di Durban',
+          nl: 'Haven van Durban',
+          pt: 'Porto de Durban',
+          tr: 'Durban Limanı',
+          ru: 'Порт Дурбан',
+          zh: '德班港',
+          ar: 'ميناء ديربان',
+        },
+        ZACPT: {
+          en: 'Port of Cape Town',
+          fr: 'Port du Cap',
+          de: 'Hafen Kapstadt',
+          es: 'Puerto de Ciudad del Cabo',
+          it: 'Porto di Città del Capo',
+          nl: 'Haven van Kaapstad',
+          pt: 'Porto da Cidade do Cabo',
+          tr: 'Cape Town Limanı',
+          ru: 'Порт Кейптаун',
+          zh: '开普敦港',
+          ar: 'ميناء كيب تاون',
+        },
+        ZAJNB: {
+          en: 'OR Tambo International Airport',
+          fr: 'Aéroport international OR Tambo',
+          de: 'Internationaler Flughafen OR Tambo',
+          es: 'Aeropuerto Internacional OR Tambo',
+          it: 'Aeroporto Internazionale OR Tambo',
+          nl: 'Internationale Luchthaven OR Tambo',
+          pt: 'Aeroporto Internacional OR Tambo',
+          tr: 'OR Tambo Uluslararası Havaalanı',
+          ru: 'Международный аэропорт О. Р. Тамбо',
+          zh: 'OR坦博国际机场',
+          ar: 'مطار أو آر تامبو الدولي',
+        },
+        ZACPT_AIR: {
+          en: 'Cape Town International Airport',
+          fr: 'Aéroport international du Cap',
+          de: 'Internationaler Flughafen Kapstadt',
+          es: 'Aeropuerto Internacional de Ciudad del Cabo',
+          it: 'Aeroporto Internazionale di Città del Capo',
+          nl: 'Internationale Luchthaven Kaapstad',
+          pt: 'Aeroporto Internacional da Cidade do Cabo',
+          tr: 'Cape Town Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Кейптаун',
+          zh: '开普敦国际机场',
+          ar: 'مطار كيب تاون الدولي',
+        },
+
+        // 🇿🇼 Zimbabwe (Zimbabwe) - Berceau des ruines du Grand Zimbabwe
+        ZWHRE: {
+          en: 'Port of Harare',
+          fr: 'Port de Harare',
+          de: 'Hafen Harare',
+          es: 'Puerto de Harare',
+          it: 'Porto di Harare',
+          nl: 'Haven van Harare',
+          pt: 'Porto de Harare',
+          tr: 'Harare Limanı',
+          ru: 'Порт Хараре',
+          zh: '哈拉雷港',
+          ar: 'ميناء هراري',
+        },
+        ZWBYO: {
+          en: 'Port of Bulawayo',
+          fr: 'Port de Bulawayo',
+          de: 'Hafen Bulawayo',
+          es: 'Puerto de Bulawayo',
+          it: 'Porto di Bulawayo',
+          nl: 'Haven van Bulawayo',
+          pt: 'Porto de Bulawayo',
+          tr: 'Bulawayo Limanı',
+          ru: 'Порт Булавайо',
+          zh: '布拉瓦约港',
+          ar: 'ميناء بولاوايو',
+        },
+        ZWHRE_AIR: {
+          en: 'Harare International Airport',
+          fr: 'Aéroport international de Harare',
+          de: 'Internationaler Flughafen Harare',
+          es: 'Aeropuerto Internacional de Harare',
+          it: 'Aeroporto Internazionale di Harare',
+          nl: 'Internationale Luchthaven Harare',
+          pt: 'Aeroporto Internacional de Harare',
+          tr: 'Harare Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Хараре',
+          zh: '哈拉雷国际机场',
+          ar: 'مطار هراري الدولي',
+        },
+        ZWBYO_AIR: {
+          en: 'Bulawayo Airport',
+          fr: 'Aéroport de Bulawayo',
+          de: 'Flughafen Bulawayo',
+          es: 'Aeropuerto de Bulawayo',
+          it: 'Aeroporto di Bulawayo',
+          nl: 'Luchthaven Bulawayo',
+          pt: 'Aeroporto de Bulawayo',
+          tr: 'Bulawayo Havaalanı',
+          ru: 'Аэропорт Булавайо',
+          zh: '布拉瓦约机场',
+          ar: 'مطار بولاوايو',
+        },
+        ZWHRE_RAIL: {
+          en: 'Harare Railway Station',
+          fr: 'Gare de Harare',
+          de: 'Bahnhof Harare',
+          es: 'Estación de Harare',
+          it: 'Stazione di Harare',
+          nl: 'Station Harare',
+          pt: 'Estação de Harare',
+          tr: 'Harare Tren İstasyonu',
+          ru: 'Железнодорожная станция Хараре',
+          zh: '哈拉雷火车站',
+          ar: 'محطة هراري للسكك الحديدية',
+        },
+        ZWBYO_RAIL: {
+          en: 'Bulawayo Railway Station',
+          fr: 'Gare de Bulawayo',
+          de: 'Bahnhof Bulawayo',
+          es: 'Estación de Bulawayo',
+          it: 'Stazione di Bulawayo',
+          nl: 'Station Bulawayo',
+          pt: 'Estação de Bulawayo',
+          tr: 'Bulawayo Tren İstasyonu',
+          ru: 'Железнодорожная станция Булавайо',
+          zh: '布拉瓦约火车站',
+          ar: 'محطة بولاوايو للسكك الحديدية',
+        },
+
+        // 🇿🇲 Zambia (Zambie) - Pays du cuivre et des chutes Victoria
+        ZMLUN: {
+          en: 'Port of Lusaka',
+          fr: 'Port de Lusaka',
+          de: 'Hafen Lusaka',
+          es: 'Puerto de Lusaka',
+          it: 'Porto di Lusaka',
+          nl: 'Haven van Lusaka',
+          pt: 'Porto de Lusaka',
+          tr: 'Lusaka Limanı',
+          ru: 'Порт Лусака',
+          zh: '卢萨卡港',
+          ar: 'ميناء لوساكا',
+        },
+        ZMKAP: {
+          en: 'Port of Kapiri Mposhi',
+          fr: 'Port de Kapiri Mposhi',
+          de: 'Hafen Kapiri Mposhi',
+          es: 'Puerto de Kapiri Mposhi',
+          it: 'Porto di Kapiri Mposhi',
+          nl: 'Haven van Kapiri Mposhi',
+          pt: 'Porto de Kapiri Mposhi',
+          tr: 'Kapiri Mposhi Limanı',
+          ru: 'Порт Капири-Мпоши',
+          zh: '卡皮里姆波希港',
+          ar: 'ميناء كابيري مبوشي',
+        },
+        ZMLUN_AIR: {
+          en: 'Kenneth Kaunda International Airport',
+          fr: 'Aéroport international Kenneth Kaunda',
+          de: 'Internationaler Flughafen Kenneth Kaunda',
+          es: 'Aeropuerto Internacional Kenneth Kaunda',
+          it: 'Aeroporto Internazionale Kenneth Kaunda',
+          nl: 'Internationale Luchthaven Kenneth Kaunda',
+          pt: 'Aeroporto Internacional Kenneth Kaunda',
+          tr: 'Kenneth Kaunda Uluslararası Havaalanı',
+          ru: 'Международный аэропорт Кеннет Каунда',
+          zh: '肯尼思·卡翁达国际机场',
+          ar: 'مطار كينيث كاوندا الدولي',
+        },
+        ZMNDO: {
+          en: 'Ndola Airport',
+          fr: 'Aéroport de Ndola',
+          de: 'Flughafen Ndola',
+          es: 'Aeropuerto de Ndola',
+          it: 'Aeroporto di Ndola',
+          nl: 'Luchthaven Ndola',
+          pt: 'Aeroporto de Ndola',
+          tr: 'Ndola Havaalanı',
+          ru: 'Аэропорт Ндола',
+          zh: '恩多拉机场',
+          ar: 'مطار ندولا',
+        },
+        ZMLUN_RAIL: {
+          en: 'Lusaka Railway Station',
+          fr: 'Gare de Lusaka',
+          de: 'Bahnhof Lusaka',
+          es: 'Estación de Lusaka',
+          it: 'Stazione di Lusaka',
+          nl: 'Station Lusaka',
+          pt: 'Estação de Lusaka',
+          tr: 'Lusaka Tren İstasyonu',
+          ru: 'Железнодорожная станция Лусака',
+          zh: '卢萨卡火车站',
+          ar: 'محطة لوساكا للسكك الحديدية',
+        },
+        ZMKAP_RAIL: {
+          en: 'Kapiri Mposhi Railway Station',
+          fr: 'Gare de Kapiri Mposhi',
+          de: 'Bahnhof Kapiri Mposhi',
+          es: 'Estación de Kapiri Mposhi',
+          it: 'Stazione di Kapiri Mposhi',
+          nl: 'Station Kapiri Mposhi',
+          pt: 'Estação de Kapiri Mposhi',
+          tr: 'Kapiri Mposhi Tren İstasyonu',
+          ru: 'Железнодорожная станция Капири-Мпоши',
+          zh: '卡皮里姆波希火车站',
+          ar: 'محطة كابيري مبوشي للسكك الحديدية',
+        },
+
+        // US major airports (fix the French source names)
+        USLAX_AIR: {
+          en: 'Los Angeles International Airport (LAX)',
+          fr: 'Aéroport international de Los Angeles (LAX)',
+          de: 'Internationaler Flughafen Los Angeles (LAX)',
+          es: 'Aeropuerto Internacional de Los Ángeles (LAX)',
+          it: 'Aeroporto Internazionale di Los Angeles (LAX)',
+          nl: 'Internationale Luchthaven Los Angeles (LAX)',
+          pt: 'Aeroporto Internacional de Los Angeles (LAX)',
+          tr: 'Los Angeles Uluslararası Havaalanı (LAX)',
+          ru: 'Международный аэропорт Лос-Анджелес (LAX)',
+          zh: '洛杉矶国际机场 (LAX)',
+          ar: 'مطار لوس أنجلوس الدولي (LAX)',
+        },
+        USJFK: {
+          en: 'John F. Kennedy International Airport (JFK)',
+          fr: 'Aéroport international John F. Kennedy (JFK)',
+          de: 'John F. Kennedy International Airport (JFK)',
+          es: 'Aeropuerto Internacional John F. Kennedy (JFK)',
+          it: 'Aeroporto Internazionale John F. Kennedy (JFK)',
+          nl: 'John F. Kennedy International Airport (JFK)',
+          pt: 'Aeroporto Internacional John F. Kennedy (JFK)',
+          tr: 'John F. Kennedy Uluslararası Havaalanı (JFK)',
+          ru: 'Международный аэропорт имени Джона Кеннеди (JFK)',
+          zh: '约翰·肯尼迪国际机场 (JFK)',
+          ar: 'مطار جون كينيدي الدولي (JFK)',
+        },
+        USORD: {
+          en: "O'Hare International Airport (ORD)",
+          fr: "Aéroport international O'Hare (ORD)",
+          de: "O'Hare International Airport (ORD)",
+          es: "Aeropuerto Internacional O'Hare (ORD)",
+          it: "Aeroporto Internazionale O'Hare (ORD)",
+          nl: "O'Hare International Airport (ORD)",
+          pt: "Aeroporto Internacional O'Hare (ORD)",
+          tr: "O'Hare Uluslararası Havaalanı (ORD)",
+          ru: "Международный аэропорт О'Хэйр (ORD)",
+          zh: '芝加哥奥黑尔国际机场 (ORD)',
+          ar: 'مطار أوهير الدولي (ORD)',
+        },
+        USDFW: {
+          en: 'Dallas/Fort Worth International Airport (DFW)',
+          fr: 'Aéroport international de Dallas/Fort Worth (DFW)',
+          de: 'Dallas/Fort Worth International Airport (DFW)',
+          es: 'Aeropuerto Internacional de Dallas/Fort Worth (DFW)',
+          it: 'Aeroporto Internazionale di Dallas/Fort Worth (DFW)',
+          nl: 'Dallas/Fort Worth International Airport (DFW)',
+          pt: 'Aeroporto Internacional de Dallas/Fort Worth (DFW)',
+          tr: 'Dallas/Fort Worth Uluslararası Havaalanı (DFW)',
+          ru: 'Международный аэропорт Даллас/Форт-Уэрт (DFW)',
+          zh: '达拉斯/沃斯堡国际机场 (DFW)',
+          ar: 'مطار دالاس/فورت وورث الدولي (DFW)',
+        },
+        USATL: {
+          en: 'Hartsfield-Jackson Atlanta International Airport (ATL)',
+          fr: "Aéroport international Hartsfield-Jackson d'Atlanta (ATL)",
+          de: 'Hartsfield-Jackson Atlanta International Airport (ATL)',
+          es: 'Aeropuerto Internacional Hartsfield-Jackson de Atlanta (ATL)',
+          it: 'Aeroporto Internazionale Hartsfield-Jackson di Atlanta (ATL)',
+          nl: 'Hartsfield-Jackson Atlanta International Airport (ATL)',
+          pt: 'Aeroporto Internacional Hartsfield-Jackson de Atlanta (ATL)',
+          tr: 'Hartsfield-Jackson Atlanta Uluslararası Havaalanı (ATL)',
+          ru: 'Международный аэропорт Хартсфилд-Джексон Атланта (ATL)',
+          zh: '亚特兰大哈茨菲尔德-杰克逊国际机场 (ATL)',
+          ar: 'مطار هارتسفيلد جاكسون أتلانتا الدولي (ATL)',
+        },
       };
-      
-      const langTerms = translations[lang] || translations.en;
-      return langTerms[term] || term;
-    };
-    
-    // Auto-translate based on patterns (ALWAYS NORMALIZE, including for English)
-    let translatedName = portName;
-    
-    // Always apply pattern-based translation, regardless of target language
-    
-    // Normalize French patterns to target language
-    translatedName = translatedName
-      .replace(/^Port de (.+)$/, `${translateTerm('Port of', userLang)} $1`)
-      .replace(/^Aéroport de (.+)$/, `${translateTerm('Airport', userLang)} $1`)
-      .replace(/^Aéroport d'(.+)$/, `${translateTerm('Airport', userLang)} $1`)
-      
-    // Normalize English patterns to target language  
-      .replace(/^Port of (.+)$/, `${translateTerm('Port of', userLang)} $1`)
-      .replace(/(.+) Airport$/, `$1 ${translateTerm('Airport', userLang)}`)
-      .replace(/(.+) International Airport$/, `$1 ${translateTerm('International Airport', userLang)}`)
-      .replace(/(.+) Central Station$/, `$1 ${translateTerm('Central Station', userLang)}`)
-      .replace(/(.+) Railway Station$/, `$1 ${translateTerm('Railway Station', userLang)}`)
-      .replace(/(.+) Railway Connection$/, `$1 ${translateTerm('Railway Connection', userLang)}`)
-      
-    // Normalize Spanish patterns
-      .replace(/^Puerto de (.+)$/, `${translateTerm('Port of', userLang)} $1`)
-      .replace(/^Aeropuerto de (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
-      .replace(/^Aeropuerto Internacional de (.+)$/, `$1 ${translateTerm('International Airport', userLang)}`)
-      
-    // Normalize Italian patterns
-      .replace(/^Porto di (.+)$/, `${translateTerm('Port of', userLang)} $1`)
-      .replace(/^Aeroporto di (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
-      .replace(/^Aeroporto Internazionale di (.+)$/, `$1 ${translateTerm('International Airport', userLang)}`)
-      
-    // Normalize Dutch patterns
-      .replace(/^Haven van (.+)$/, `${translateTerm('Port of', userLang)} $1`)
-      .replace(/^Luchthaven (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
-      .replace(/^Internationale Luchthaven (.+)$/, `$1 ${translateTerm('International Airport', userLang)}`)
-      
-    // Normalize German patterns
-      .replace(/^Hafen (.+)$/, `${translateTerm('Port of', userLang)} $1`)
-      .replace(/^Flughafen (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
-      .replace(/^Internationaler Flughafen (.+)$/, `$1 ${translateTerm('International Airport', userLang)}`)
-      .replace(/(.+) Hauptbahnhof$/, `$1 ${translateTerm('Central Station', userLang)}`)
-      .replace(/(.+) Bahnhof$/, `$1 ${translateTerm('Railway Station', userLang)}`)
-      
-    // Handle Turkish patterns
-      .replace(/(.+) Limanı$/, `${translateTerm('Port of', userLang)} $1`)
-      .replace(/(.+) Havaalanı$/, `$1 ${translateTerm('Airport', userLang)}`)
-      .replace(/(.+) İstasyonu$/, `$1 ${translateTerm('Railway Station', userLang)}`)
-      
-    // Handle Chinese patterns  
-      .replace(/(.+)港$/, `${translateTerm('Port of', userLang)} $1`)
-      .replace(/(.+)机场$/, `$1 ${translateTerm('Airport', userLang)}`)
-      .replace(/(.+)车站$/, `$1 ${translateTerm('Railway Station', userLang)}`)
-      
-    // Handle Arabic patterns
-      .replace(/^ميناء (.+)$/, `${translateTerm('Port of', userLang)} $1`)
-      .replace(/^مطار (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
-      .replace(/^محطة (.+)$/, `$1 ${translateTerm('Railway Station', userLang)}`);
-      
-    // Fix specific problematic cases
-    translatedName = translatedName
-      .replace(/Port of Port of Spain/g, 'Port of Spain')  // Fix double "Port"
-      .replace(/Port of Londres/g, translateTerm('Port of', userLang) + ' London')
-      .replace(/Port d'Immingham/g, translateTerm('Port of', userLang) + ' Immingham')
-      .replace(/Port de Douvres/g, translateTerm('Port of', userLang) + ' Dover');
-    
-    // Apply city name translations to the final result
-    translatedName = applyCityTranslations(translatedName);
-    
-    // Clean up double spaces and trim
-    translatedName = translatedName.replace(/\s+/g, ' ').trim();
-    
-    return translatedName;
-  }, []);
-  
+
+      // Check manual translations first
+      const manualTranslation = manualTranslations[portCode];
+      if (manualTranslation && manualTranslation[userLang]) {
+        return manualTranslation[userLang];
+      }
+
+      // City name translations for common toponyms
+      const cityTranslations: Record<string, Record<string, string>> = {
+        London: {
+          en: 'London',
+          fr: 'Londres',
+          de: 'London',
+          es: 'Londres',
+          it: 'Londra',
+          nl: 'Londen',
+          pt: 'Londres',
+          tr: 'Londra',
+          ru: 'Лондон',
+          zh: '伦敦',
+          ar: 'لندن',
+        },
+        Londres: {
+          en: 'London',
+          fr: 'Londres',
+          de: 'London',
+          es: 'Londres',
+          it: 'Londra',
+          nl: 'Londen',
+          pt: 'Londres',
+          tr: 'Londra',
+          ru: 'Лондон',
+          zh: '伦敦',
+          ar: 'لندن',
+        },
+        Munich: {
+          en: 'Munich',
+          fr: 'Munich',
+          de: 'München',
+          es: 'Múnich',
+          it: 'Monaco',
+          nl: 'München',
+          pt: 'Munique',
+          tr: 'Münih',
+          ru: 'Мюнхен',
+          zh: '慕尼黑',
+          ar: 'ميونيخ',
+        },
+        München: {
+          en: 'Munich',
+          fr: 'Munich',
+          de: 'München',
+          es: 'Múnich',
+          it: 'Monaco',
+          nl: 'München',
+          pt: 'Munique',
+          tr: 'Münih',
+          ru: 'Мюнхен',
+          zh: '慕尼黑',
+          ar: 'ميونيخ',
+        },
+        Cologne: {
+          en: 'Cologne',
+          fr: 'Cologne',
+          de: 'Köln',
+          es: 'Colonia',
+          it: 'Colonia',
+          nl: 'Keulen',
+          pt: 'Colônia',
+          tr: 'Köln',
+          ru: 'Кёльн',
+          zh: '科隆',
+          ar: 'كولونيا',
+        },
+        Köln: {
+          en: 'Cologne',
+          fr: 'Cologne',
+          de: 'Köln',
+          es: 'Colonia',
+          it: 'Colonia',
+          nl: 'Keulen',
+          pt: 'Colônia',
+          tr: 'Köln',
+          ru: 'Кёльн',
+          zh: '科隆',
+          ar: 'كولونيا',
+        },
+        Dover: {
+          en: 'Dover',
+          fr: 'Douvres',
+          de: 'Dover',
+          es: 'Dover',
+          it: 'Dover',
+          nl: 'Dover',
+          pt: 'Dover',
+          tr: 'Dover',
+          ru: 'Дувр',
+          zh: '多佛',
+          ar: 'دوفر',
+        },
+        Douvres: {
+          en: 'Dover',
+          fr: 'Douvres',
+          de: 'Dover',
+          es: 'Dover',
+          it: 'Dover',
+          nl: 'Dover',
+          pt: 'Dover',
+          tr: 'Dover',
+          ru: 'Дувр',
+          zh: '多佛',
+          ar: 'دوفر',
+        },
+        Edinburgh: {
+          en: 'Edinburgh',
+          fr: 'Édimbourg',
+          de: 'Edinburgh',
+          es: 'Edimburgo',
+          it: 'Edimburgo',
+          nl: 'Edinburgh',
+          pt: 'Edimburgo',
+          tr: 'Edinburgh',
+          ru: 'Эдинбург',
+          zh: '爱丁堡',
+          ar: 'إدنبرة',
+        },
+        Édimbourg: {
+          en: 'Edinburgh',
+          fr: 'Édimbourg',
+          de: 'Edinburgh',
+          es: 'Edimburgo',
+          it: 'Edimburgo',
+          nl: 'Edinburgh',
+          pt: 'Edimburgo',
+          tr: 'Edinburgh',
+          ru: 'Эдинбург',
+          zh: '爱丁堡',
+          ar: 'إدنبرة',
+        },
+        Genoa: {
+          en: 'Genoa',
+          fr: 'Gênes',
+          de: 'Genua',
+          es: 'Génova',
+          it: 'Genova',
+          nl: 'Genua',
+          pt: 'Gênova',
+          tr: 'Cenova',
+          ru: 'Генуя',
+          zh: '热那亚',
+          ar: 'جنوة',
+        },
+        Gênes: {
+          en: 'Genoa',
+          fr: 'Gênes',
+          de: 'Genua',
+          es: 'Génova',
+          it: 'Genova',
+          nl: 'Genua',
+          pt: 'Gênova',
+          tr: 'Cenova',
+          ru: 'Генуя',
+          zh: '热那亚',
+          ar: 'جنوة',
+        },
+        Genova: {
+          en: 'Genoa',
+          fr: 'Gênes',
+          de: 'Genua',
+          es: 'Génova',
+          it: 'Genova',
+          nl: 'Genua',
+          pt: 'Gênova',
+          tr: 'Cenova',
+          ru: 'Генуя',
+          zh: '热那亚',
+          ar: 'جنوة',
+        },
+        Valletta: {
+          en: 'Valletta',
+          fr: 'La Valette',
+          de: 'Valletta',
+          es: 'La Valeta',
+          it: 'La Valletta',
+          nl: 'Valletta',
+          pt: 'Valletta',
+          tr: 'Valletta',
+          ru: 'Валлетта',
+          zh: '瓦莱塔',
+          ar: 'فاليتا',
+        },
+        'La Valette': {
+          en: 'Valletta',
+          fr: 'La Valette',
+          de: 'Valletta',
+          es: 'La Valeta',
+          it: 'La Valletta',
+          nl: 'Valletta',
+          pt: 'Valletta',
+          tr: 'Valletta',
+          ru: 'Валлетта',
+          zh: '瓦莱塔',
+          ar: 'فاليتا',
+        },
+        Warsaw: {
+          en: 'Warsaw',
+          fr: 'Varsovie',
+          de: 'Warschau',
+          es: 'Varsovia',
+          it: 'Varsavia',
+          nl: 'Warschau',
+          pt: 'Varsóvia',
+          tr: 'Varşova',
+          ru: 'Варшава',
+          zh: '华沙',
+          ar: 'وارسو',
+        },
+        Varsovie: {
+          en: 'Warsaw',
+          fr: 'Varsovie',
+          de: 'Warschau',
+          es: 'Varsovia',
+          it: 'Varsavia',
+          nl: 'Warschau',
+          pt: 'Varsóvia',
+          tr: 'Varşova',
+          ru: 'Варшава',
+          zh: '华沙',
+          ar: 'وارسو',
+        },
+        Immingham: {
+          en: 'Immingham',
+          fr: 'Immingham',
+          de: 'Immingham',
+          es: 'Immingham',
+          it: 'Immingham',
+          nl: 'Immingham',
+          pt: 'Immingham',
+          tr: 'Immingham',
+          ru: 'Иммингхэм',
+          zh: '伊明厄姆',
+          ar: 'إمنجهام',
+        },
+      };
+
+      // Apply city translations
+      const applyCityTranslations = (text: string): string => {
+        let result = text;
+        for (const [sourceCity, translations] of Object.entries(cityTranslations)) {
+          if (translations[userLang]) {
+            const regex = new RegExp(`\\b${sourceCity}\\b`, 'giu');
+            result = result.replace(regex, translations[userLang]);
+          }
+        }
+        return result;
+      };
+
+      // Smart pattern-based translation for common terms
+      const translateTerm = (term: string, lang: string): string => {
+        const translations: Record<string, Record<string, string>> = {
+          en: {
+            'Port of': 'Port of',
+            Airport: 'Airport',
+            Station: 'Station',
+            'Central Station': 'Central Station',
+            'Railway Station': 'Railway Station',
+            'International Airport': 'International Airport',
+          },
+          fr: {
+            'Port of': 'Port de',
+            Airport: 'Aéroport',
+            Station: 'Gare',
+            'Central Station': 'Gare centrale',
+            'Railway Station': 'Gare',
+            'International Airport': 'Aéroport international',
+            'Railway Connection': 'Connexion ferroviaire',
+          },
+          de: {
+            'Port of': 'Hafen',
+            Airport: 'Flughafen',
+            Station: 'Bahnhof',
+            'Central Station': 'Hauptbahnhof',
+            'Railway Station': 'Bahnhof',
+            'International Airport': 'Internationaler Flughafen',
+            'Railway Connection': 'Bahnanschluss',
+          },
+          es: {
+            'Port of': 'Puerto de',
+            Airport: 'Aeropuerto',
+            Station: 'Estación',
+            'Central Station': 'Estación Central',
+            'Railway Station': 'Estación',
+            'International Airport': 'Aeropuerto Internacional',
+            'Railway Connection': 'Conexión ferroviaria',
+          },
+          it: {
+            'Port of': 'Porto di',
+            Airport: 'Aeroporto',
+            Station: 'Stazione',
+            'Central Station': 'Stazione Centrale',
+            'Railway Station': 'Stazione',
+            'International Airport': 'Aeroporto Internazionale',
+            'Railway Connection': 'Collegamento ferroviario',
+          },
+          nl: {
+            'Port of': 'Haven van',
+            Airport: 'Luchthaven',
+            Station: 'Station',
+            'Central Station': 'Centraal Station',
+            'Railway Station': 'Station',
+            'International Airport': 'Internationale Luchthaven',
+            'Railway Connection': 'Spoorverbinding',
+          },
+          pt: {
+            'Port of': 'Porto de',
+            Airport: 'Aeroporto',
+            Station: 'Estação',
+            'Central Station': 'Estação Central',
+            'Railway Station': 'Estação',
+            'International Airport': 'Aeroporto Internacional',
+            'Railway Connection': 'Conexão ferroviária',
+          },
+          tr: {
+            'Port of': '',
+            Airport: 'Havaalanı',
+            Station: 'İstasyonu',
+            'Central Station': 'Merkez İstasyonu',
+            'Railway Station': 'Tren İstasyonu',
+            'International Airport': 'Uluslararası Havaalanı',
+            'Railway Connection': 'Demiryolu bağlantısı',
+          },
+          ru: {
+            'Port of': 'Порт',
+            Airport: 'Аэропорт',
+            Station: 'Вокзал',
+            'Central Station': 'Центральный вокзал',
+            'Railway Station': 'Железнодорожный вокзал',
+            'International Airport': 'Международный аэропорт',
+            'Railway Connection': 'Железнодорожное соединение',
+          },
+          zh: {
+            'Port of': '',
+            Airport: '机场',
+            Station: '车站',
+            'Central Station': '中央车站',
+            'Railway Station': '火车站',
+            'International Airport': '国际机场',
+            'Railway Connection': '铁路连接',
+          },
+          ar: {
+            'Port of': 'ميناء',
+            Airport: 'مطار',
+            Station: 'محطة',
+            'Central Station': 'المحطة المركزية',
+            'Railway Station': 'محطة القطار',
+            'International Airport': 'مطار دولي',
+            'Railway Connection': 'الاتصال بالسكك الحديدية',
+          },
+        };
+
+        const langTerms = translations[lang] || translations.en;
+        return langTerms[term] || term;
+      };
+
+      // Auto-translate based on patterns (ALWAYS NORMALIZE, including for English)
+      let translatedName = portName;
+
+      // Always apply pattern-based translation, regardless of target language
+
+      // Normalize French patterns to target language
+      translatedName = translatedName
+        .replace(/^Port de (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+        .replace(/^Aéroport de (.+)$/, `${translateTerm('Airport', userLang)} $1`)
+        .replace(/^Aéroport d'(.+)$/, `${translateTerm('Airport', userLang)} $1`)
+
+        // Normalize English patterns to target language
+        .replace(/^Port of (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+        .replace(/(.+) Airport$/, `$1 ${translateTerm('Airport', userLang)}`)
+        .replace(
+          /(.+) International Airport$/,
+          `$1 ${translateTerm('International Airport', userLang)}`
+        )
+        .replace(/(.+) Central Station$/, `$1 ${translateTerm('Central Station', userLang)}`)
+        .replace(/(.+) Railway Station$/, `$1 ${translateTerm('Railway Station', userLang)}`)
+        .replace(/(.+) Railway Connection$/, `$1 ${translateTerm('Railway Connection', userLang)}`)
+
+        // Normalize Spanish patterns
+        .replace(/^Puerto de (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+        .replace(/^Aeropuerto de (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
+        .replace(
+          /^Aeropuerto Internacional de (.+)$/,
+          `$1 ${translateTerm('International Airport', userLang)}`
+        )
+
+        // Normalize Italian patterns
+        .replace(/^Porto di (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+        .replace(/^Aeroporto di (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
+        .replace(
+          /^Aeroporto Internazionale di (.+)$/,
+          `$1 ${translateTerm('International Airport', userLang)}`
+        )
+
+        // Normalize Dutch patterns
+        .replace(/^Haven van (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+        .replace(/^Luchthaven (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
+        .replace(
+          /^Internationale Luchthaven (.+)$/,
+          `$1 ${translateTerm('International Airport', userLang)}`
+        )
+
+        // Normalize German patterns
+        .replace(/^Hafen (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+        .replace(/^Flughafen (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
+        .replace(
+          /^Internationaler Flughafen (.+)$/,
+          `$1 ${translateTerm('International Airport', userLang)}`
+        )
+        .replace(/(.+) Hauptbahnhof$/, `$1 ${translateTerm('Central Station', userLang)}`)
+        .replace(/(.+) Bahnhof$/, `$1 ${translateTerm('Railway Station', userLang)}`)
+
+        // Handle Turkish patterns
+        .replace(/(.+) Limanı$/, `${translateTerm('Port of', userLang)} $1`)
+        .replace(/(.+) Havaalanı$/, `$1 ${translateTerm('Airport', userLang)}`)
+        .replace(/(.+) İstasyonu$/, `$1 ${translateTerm('Railway Station', userLang)}`)
+
+        // Handle Chinese patterns
+        .replace(/(.+)港$/, `${translateTerm('Port of', userLang)} $1`)
+        .replace(/(.+)机场$/, `$1 ${translateTerm('Airport', userLang)}`)
+        .replace(/(.+)车站$/, `$1 ${translateTerm('Railway Station', userLang)}`)
+
+        // Handle Arabic patterns
+        .replace(/^ميناء (.+)$/, `${translateTerm('Port of', userLang)} $1`)
+        .replace(/^مطار (.+)$/, `$1 ${translateTerm('Airport', userLang)}`)
+        .replace(/^محطة (.+)$/, `$1 ${translateTerm('Railway Station', userLang)}`);
+
+      // Fix specific problematic cases
+      translatedName = translatedName
+        .replace(/Port of Port of Spain/g, 'Port of Spain') // Fix double "Port"
+        .replace(/Port of Londres/g, translateTerm('Port of', userLang) + ' London')
+        .replace(/Port d'Immingham/g, translateTerm('Port of', userLang) + ' Immingham')
+        .replace(/Port de Douvres/g, translateTerm('Port of', userLang) + ' Dover');
+
+      // Apply city name translations to the final result
+      translatedName = applyCityTranslations(translatedName);
+
+      // Clean up double spaces and trim
+      translatedName = translatedName.replace(/\s+/g, ' ').trim();
+
+      return translatedName;
+    },
+    []
+  );
+
   const getTranslatedPortType = useCallback((portType: string, userLang: string) => {
     const translations = {
       en: { sea: 'Sea Port', air: 'Airport', rail: 'Rail Terminal' },
@@ -4453,55 +11351,134 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ar: { sea: 'ميناء بحري', air: 'مطار', rail: 'محطة سكة حديد' },
       pt: { sea: 'Porto marítimo', air: 'Aeroporto', rail: 'Terminal ferroviário' },
       tr: { sea: 'Deniz limanı', air: 'Havaalanı', rail: 'Demiryolu terminali' },
-      ru: { sea: 'Морской порт', air: 'Аэропорт', rail: 'Железнодорожный терминал' }
+      ru: { sea: 'Морской порт', air: 'Аэропорт', rail: 'Железнодорожный терминал' },
     };
     const langTypes = translations[userLang as keyof typeof translations] || translations.en;
     return langTypes[portType as keyof typeof langTypes] || portType;
   }, []);
-  
+
   const getSearchPortsText = useCallback((countryCode: string, userLang: string) => {
-    const baseText = (I18N_TEXT as any)[userLang]?.searchPortsIn || 'Search ports in';
-    
+    const baseText =
+      (I18N_TEXT as Record<string, Record<string, string>>)[userLang]?.searchPortsIn ||
+      'Search ports in';
+
     // French preposition rules (comprehensive)
     if (userLang === 'fr') {
       // Pays avec "à" (micro-États, îles, villes-États)
-      const countriesWithA = ['MC', 'AD', 'LI', 'VA', 'SM', 'MT', 'CY', 'SG', 'MU', 'SC', 'MV', 'FJ'];
+      const countriesWithA = [
+        'MC',
+        'AD',
+        'LI',
+        'VA',
+        'SM',
+        'MT',
+        'CY',
+        'SG',
+        'MU',
+        'SC',
+        'MV',
+        'FJ',
+      ];
       if (countriesWithA.includes(countryCode)) {
         return baseText.replace('en', 'à');
       }
-      
+
       // Pays avec "aux" (pluriels)
       const countriesWithAux = ['US', 'AE', 'NL', 'PH', 'MV'];
       if (countriesWithAux.includes(countryCode)) {
         return baseText.replace('en', 'aux');
       }
-      
+
       // Pays avec "au" (masculin singulier)
       const countriesWithAu = [
-        'CA', 'BR', 'MX', 'PE', 'CL', 'AR', 'UY', 'PY', 'EC', 'PA', 'VE', 'GT', 'CR', 'DO', 'JM', 'TT',  // Amériques
-        'JP', 'KR', 'VN', 'KH', 'LA', 'BD', 'PK', 'LK', 'KZ', 'KG', 'UZ', 'TJ', 'TM', 'AF', 'IQ', 'YE', 'OM', 'QA', 'KW', 'BH', 'JO', 'LB', 'IL', // Asie/Moyen-Orient (RETIRÉ: 'IR')
-        'MA', 'TN', 'EG', 'SD', 'ET', 'KE', 'UG', 'TZ', 'RW', 'NG', 'GH', 'CI', 'SN', 'ML', 'BF', 'NE', 'TD', 'CM', 'GA', 'CG', 'CD', 'AO', 'ZM', 'ZW', 'MZ', 'MG', // Afrique
-        'DK', 'LU', 'PT'  // Europe
+        'CA',
+        'BR',
+        'MX',
+        'PE',
+        'CL',
+        'AR',
+        'UY',
+        'PY',
+        'EC',
+        'PA',
+        'VE',
+        'GT',
+        'CR',
+        'DO',
+        'JM',
+        'TT', // Amériques
+        'JP',
+        'KR',
+        'VN',
+        'KH',
+        'LA',
+        'BD',
+        'PK',
+        'LK',
+        'KZ',
+        'KG',
+        'UZ',
+        'TJ',
+        'TM',
+        'AF',
+        'IQ',
+        'YE',
+        'OM',
+        'QA',
+        'KW',
+        'BH',
+        'JO',
+        'LB',
+        'IL', // Asie/Moyen-Orient (RETIRÉ: 'IR')
+        'MA',
+        'TN',
+        'EG',
+        'SD',
+        'ET',
+        'KE',
+        'UG',
+        'TZ',
+        'RW',
+        'NG',
+        'GH',
+        'CI',
+        'SN',
+        'ML',
+        'BF',
+        'NE',
+        'TD',
+        'CM',
+        'GA',
+        'CG',
+        'CD',
+        'AO',
+        'ZM',
+        'ZW',
+        'MZ',
+        'MG', // Afrique
+        'DK',
+        'LU',
+        'PT', // Europe
       ];
       if (countriesWithAu.includes(countryCode)) {
         return baseText.replace('en', 'au');
       }
     }
-    
-    // German preposition rules  
+
+    // German preposition rules
     if (userLang === 'de') {
       // Most countries use "in" + dative, but some exceptions:
       const countriesWithDen = ['US', 'AE', 'NL', 'PH']; // die USA, die VAE, die Niederlande, die Philippinen
       if (countriesWithDen.includes(countryCode)) {
         return baseText.replace('in', 'in den');
       }
-      
-      const countriesWithDer = ['CH', 'TR', 'UA']; // die Schweiz, die Türkei, die Ukraine  
+
+      const countriesWithDer = ['CH', 'TR', 'UA']; // die Schweiz, die Türkei, die Ukraine
       if (countriesWithDer.includes(countryCode)) {
         return baseText.replace('in', 'in der');
       }
     }
-    
+
     // Spanish preposition rules
     if (userLang === 'es') {
       // Countries with "en la" (feminine)
@@ -4509,20 +11486,20 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (countriesWithLa.includes(countryCode)) {
         return baseText.replace('en', 'en la');
       }
-      
+
       // Countries with "en los" (masculine plural)
       const countriesWithLos = ['AE']; // los Emiratos Árabes Unidos
       if (countriesWithLos.includes(countryCode)) {
         return baseText.replace('en', 'en los');
       }
-      
-      // Countries with "en las" (feminine plural) 
+
+      // Countries with "en las" (feminine plural)
       const countriesWithLas = ['PH', 'MV']; // las Filipinas, las Maldivas
       if (countriesWithLas.includes(countryCode)) {
         return baseText.replace('en', 'en las');
       }
     }
-    
+
     // Italian preposition rules
     if (userLang === 'it') {
       // Countries with "negli" (masculine plural)
@@ -4530,57 +11507,107 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (countriesWithNegli.includes(countryCode)) {
         return baseText.replace('in', 'negli');
       }
-      
+
       // Countries with "nelle" (feminine plural)
       const countriesWithNelle = ['PH', 'MV']; // nelle Filippine, nelle Maldive
       if (countriesWithNelle.includes(countryCode)) {
         return baseText.replace('in', 'nelle');
       }
-      
+
       // Countries with "nei" (masculine plural with consonant)
       const countriesWithNei = ['NL']; // nei Paesi Bassi
       if (countriesWithNei.includes(countryCode)) {
         return baseText.replace('in', 'nei');
       }
     }
-    
+
     // Dutch preposition rules
     if (userLang === 'nl') {
       // Countries with "de" (definite article)
-      const countriesWithDe = ['US', 'NL', 'PH', 'AE', 'GB', 'TR', 'CH', 'UA']; 
+      const countriesWithDe = ['US', 'NL', 'PH', 'AE', 'GB', 'TR', 'CH', 'UA'];
       // de Verenigde Staten, de Nederland, de Filipijnen, de VAE, het Verenigd Koninkrijk, de Turkije, de Zwitserland, de Oekraïne
       if (countriesWithDe.includes(countryCode)) {
         return baseText.replace('in', 'in de');
       }
     }
-    
-    // Portuguese preposition rules  
+
+    // Portuguese preposition rules
     if (userLang === 'pt') {
       // Countries with "no" (masculine singular)
-      const countriesWithNo = ['BR', 'CA', 'JP', 'MX', 'PE', 'CL', 'AR', 'UY', 'PY', 'EC', 'PA', 'VE', 'GT', 'CR', 'MA', 'EG', 'IR', 'IQ', 'PK', 'BD', 'KW', 'QA', 'OM', 'JO', 'LB'];
+      const countriesWithNo = [
+        'BR',
+        'CA',
+        'JP',
+        'MX',
+        'PE',
+        'CL',
+        'AR',
+        'UY',
+        'PY',
+        'EC',
+        'PA',
+        'VE',
+        'GT',
+        'CR',
+        'MA',
+        'EG',
+        'IR',
+        'IQ',
+        'PK',
+        'BD',
+        'KW',
+        'QA',
+        'OM',
+        'JO',
+        'LB',
+      ];
       if (countriesWithNo.includes(countryCode)) {
         return baseText.replace('em', 'no');
       }
-      
-      // Countries with "na" (feminine singular)  
-      const countriesWithNa = ['FR', 'DE', 'ES', 'IT', 'RU', 'CN', 'IN', 'AU', 'ZA', 'TR', 'UA', 'PL', 'RO', 'GR', 'HR', 'BG', 'HU', 'CZ', 'SK', 'SI', 'LT', 'LV', 'EE'];
+
+      // Countries with "na" (feminine singular)
+      const countriesWithNa = [
+        'FR',
+        'DE',
+        'ES',
+        'IT',
+        'RU',
+        'CN',
+        'IN',
+        'AU',
+        'ZA',
+        'TR',
+        'UA',
+        'PL',
+        'RO',
+        'GR',
+        'HR',
+        'BG',
+        'HU',
+        'CZ',
+        'SK',
+        'SI',
+        'LT',
+        'LV',
+        'EE',
+      ];
       if (countriesWithNa.includes(countryCode)) {
         return baseText.replace('em', 'na');
       }
-      
+
       // Countries with "nos" (masculine plural)
       const countriesWithNos = ['US', 'AE']; // nos Estados Unidos, nos Emiratos Árabes Unidos
       if (countriesWithNos.includes(countryCode)) {
         return baseText.replace('em', 'nos');
       }
-      
+
       // Countries with "nas" (feminine plural)
-      const countriesWithNas = ['PH', 'MV']; // nas Filipinas, nas Maldivas  
+      const countriesWithNas = ['PH', 'MV']; // nas Filipinas, nas Maldivas
       if (countriesWithNas.includes(countryCode)) {
         return baseText.replace('em', 'nas');
       }
     }
-    
+
     // Turkish preposition rules
     if (userLang === 'tr') {
       // Turkish uses locative case suffix (-de/-da/-te/-ta)
@@ -4588,43 +11615,63 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // The base text "Limanları ara" + country name with locative suffix works
       // Example: "Türkiye'de limanları ara", "Fransa'da limanları ara"
     }
-    
+
     // Russian preposition rules
     if (userLang === 'ru') {
       // Russian uses "в" + prepositional case for most countries
       // Countries requiring "на" (island countries, some specific regions)
-      const countriesWithNa = ['CY', 'MT', 'IS', 'IE', 'GB', 'PH', 'JP', 'TW', 'NZ', 'AU', 'MV', 'FJ', 'SC', 'MU', 'UA']; 
+      const countriesWithNa = [
+        'CY',
+        'MT',
+        'IS',
+        'IE',
+        'GB',
+        'PH',
+        'JP',
+        'TW',
+        'NZ',
+        'AU',
+        'MV',
+        'FJ',
+        'SC',
+        'MU',
+        'UA',
+      ];
       // на Кипре, на Мальте, на Исландии, на Филиппинах, на Украине, etc.
       if (countriesWithNa.includes(countryCode)) {
         return baseText.replace('в', 'на');
       }
     }
-    
+
     // Arabic preposition rules
     if (userLang === 'ar') {
       // Arabic uses "في" (fi) for most countries, but some variations exist
       // The base text should handle most cases correctly
       // Arabic is written RTL, so word order is generally correct in the base text
     }
-    
+
     // Chinese preposition rules
     if (userLang === 'zh') {
-      // Chinese uses "在" (zai) + country name 
+      // Chinese uses "在" (zai) + country name
       // The base text should handle this correctly: "搜索港口在" + country name
       // Chinese grammar is relatively simple for this case
     }
-    
+
     return baseText;
   }, []);
 
   // Helper to sanitize search
-  const sanitizeSearch = (input: string) => input.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '').trim().toLowerCase();
+  const sanitizeSearch = (input: string) =>
+    input
+      .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')
+      .trim()
+      .toLowerCase();
   const sanitizedCountrySearch = sanitizeSearch(debouncedCountrySearch || '');
 
   // Filtered countries with priority logic
   const filteredCountries = (() => {
     const priorityCountryCodes = PRIORITY_COUNTRIES_BY_LANG[userLang] || [];
-    const searchFiltered = COUNTRIES.filter(country => {
+    const searchFiltered = COUNTRIES.filter((country) => {
       if (!sanitizedCountrySearch) return true;
       const translatedName = getTranslatedCountryName(country.code, userLang);
       return (
@@ -4642,100 +11689,134 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
     }
 
-    const priorityCountries = searchFiltered.filter(country => 
-      priorityCountryCodes.includes(country.code)
-    ).sort((a, b) => {
-      const aName = getTranslatedCountryName(a.code, userLang);
-      const bName = getTranslatedCountryName(b.code, userLang);
-      return aName.localeCompare(bName);
-    });
+    const priorityCountries = searchFiltered
+      .filter((country) => priorityCountryCodes.includes(country.code))
+      .sort((a, b) => {
+        const aName = getTranslatedCountryName(a.code, userLang);
+        const bName = getTranslatedCountryName(b.code, userLang);
+        return aName.localeCompare(bName);
+      });
 
-    const otherCountries = searchFiltered.filter(country => 
-      !priorityCountryCodes.includes(country.code)
-    ).sort((a, b) => {
-      const aName = getTranslatedCountryName(a.code, userLang);
-      const bName = getTranslatedCountryName(b.code, userLang);
-      return aName.localeCompare(bName);
-    });
+    const otherCountries = searchFiltered
+      .filter((country) => !priorityCountryCodes.includes(country.code))
+      .sort((a, b) => {
+        const aName = getTranslatedCountryName(a.code, userLang);
+        const bName = getTranslatedCountryName(b.code, userLang);
+        return aName.localeCompare(bName);
+      });
 
     return [...priorityCountries, ...otherCountries];
   })();
 
   // Additional handlers (moved after filteredCountries)
-  const handleCountrySearchKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!isCountryListVisible && ['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
-      setIsCountryListVisible(true);
-      return;
-    }
-    
-    if (e.key === 'ArrowDown') {
-      if (!filteredCountries.length) return;
-      e.preventDefault();
-      setHighlightedCountryIndex(prev => (prev + 1) % filteredCountries.length);
-    } else if (e.key === 'ArrowUp') {
-      if (!filteredCountries.length) return;
-      e.preventDefault();
-      setHighlightedCountryIndex(prev => (prev - 1 + filteredCountries.length) % filteredCountries.length);
-    } else if (e.key === 'Enter') {
-      if (highlightedCountryIndex >= 0 && highlightedCountryIndex < filteredCountries.length) {
-        e.preventDefault();
-        handleCountrySelect(filteredCountries[highlightedCountryIndex].code);
+  const handleCountrySearchKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!isCountryListVisible && ['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
+        setIsCountryListVisible(true);
+        return;
       }
-    } else if (e.key === 'Escape') {
-      setIsCountryListVisible(false);
-      setHighlightedCountryIndex(-1);
-    }
-  }, [isCountryListVisible, highlightedCountryIndex, filteredCountries, handleCountrySelect, setIsCountryListVisible, setHighlightedCountryIndex]);
+
+      if (e.key === 'ArrowDown') {
+        if (!filteredCountries.length) return;
+        e.preventDefault();
+        setHighlightedCountryIndex((prev) => (prev + 1) % filteredCountries.length);
+      } else if (e.key === 'ArrowUp') {
+        if (!filteredCountries.length) return;
+        e.preventDefault();
+        setHighlightedCountryIndex(
+          (prev) => (prev - 1 + filteredCountries.length) % filteredCountries.length
+        );
+      } else if (e.key === 'Enter') {
+        if (highlightedCountryIndex >= 0 && highlightedCountryIndex < filteredCountries.length) {
+          e.preventDefault();
+          handleCountrySelect(filteredCountries[highlightedCountryIndex].code);
+        }
+      } else if (e.key === 'Escape') {
+        setIsCountryListVisible(false);
+        setHighlightedCountryIndex(-1);
+      }
+    },
+    [
+      isCountryListVisible,
+      highlightedCountryIndex,
+      filteredCountries,
+      handleCountrySelect,
+      setIsCountryListVisible,
+      setHighlightedCountryIndex,
+    ]
+  );
 
   const clearCountrySelection = useCallback(() => {
-    setFormData(prev => ({ ...prev, country: '' }));
+    setFormData((prev) => ({ ...prev, country: '' }));
     setCountrySearch('');
-    setFieldValid(prev => ({ ...prev, country: null }));
+    setFieldValid((prev) => ({ ...prev, country: null }));
   }, [setFormData, setCountrySearch, setFieldValid]);
 
-  const handleDestLocationTypeSelect = useCallback((typeId: string) => {
-    setFormData(prev => ({ ...prev, destLocationType: typeId }));
-    setFieldValid(prev => ({ ...prev, destLocationType: true }));
-  }, [setFormData, setFieldValid]);
+  const handleDestLocationTypeSelect = useCallback(
+    (typeId: string) => {
+      setFormData((prev) => ({ ...prev, destLocationType: typeId }));
+      setFieldValid((prev) => ({ ...prev, destLocationType: true }));
+    },
+    [setFormData, setFieldValid]
+  );
 
-  const handleDestPortSelect = useCallback((portCode: string) => {
-    // Find the selected port from the filtered ports
-    const allPorts = formData.country ? DESTINATION_PORTS_BY_COUNTRY[formData.country] || [] : [];
-    const selectedPort = allPorts.find(port => port.code === portCode);
-    
-    setFormData(prev => ({ ...prev, destPort: portCode }));
-    setFieldValid(prev => ({ ...prev, destPort: true }));
-    
-    // Set the display value to show the selected port name
-    if (selectedPort) {
-      setDestPortSearch(`${selectedPort.flag} ${getTranslatedPortNameLocal(selectedPort, userLang)}`);
-    }
-    
-    setIsDestPortListVisible(false);
-  }, [setFormData, setFieldValid, setDestPortSearch, setIsDestPortListVisible, formData.country, userLang]);
+  const handleDestPortSelect = useCallback(
+    (portCode: string) => {
+      // Find the selected port from the filtered ports
+      const allPorts = formData.country ? PORTS_BY_COUNTRY[formData.country] || [] : [];
+      const selectedPort = allPorts.find((port) => port.code === portCode);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setFieldValid(prev => ({ ...prev, [name]: value.trim() ? true : null }));
-  }, [setFormData, setFieldValid]);
+      setFormData((prev) => ({ ...prev, destPort: portCode }));
+      setFieldValid((prev) => ({ ...prev, destPort: true }));
 
-  const handleCurrencySelect = useCallback((currencyCode: string) => {
-    const currencies = [
-      { code: 'USD', flag: '💵', name: 'US Dollar' },
-      { code: 'EUR', flag: '💶', name: 'Euro' },
-      { code: 'GBP', flag: '💷', name: 'British Pound' },
-      { code: 'CNY', flag: '💴', name: 'Chinese Yuan' },
-      { code: 'JPY', flag: '💴', name: 'Japanese Yen' }
-    ];
-    
-    const selectedCurrency = currencies.find(c => c.code === currencyCode);
-    if (selectedCurrency) {
-      setFormData(prev => ({ ...prev, goodsCurrency: currencyCode }));
-      setCurrencySearch(`${currencyCode} ${selectedCurrency.flag}`);
-      setIsCurrencyListVisible(false);
-    }
-  }, [setFormData, setCurrencySearch, setIsCurrencyListVisible]);
+      // Set the display value to show the selected port name
+      if (selectedPort) {
+        setDestPortSearch(
+          `${selectedPort.flag} ${getTranslatedPortNameLocal(selectedPort, userLang)}`
+        );
+      }
+
+      setIsDestPortListVisible(false);
+    },
+    [
+      setFormData,
+      setFieldValid,
+      setDestPortSearch,
+      setIsDestPortListVisible,
+      formData.country,
+      userLang,
+      getTranslatedPortNameLocal,
+    ]
+  );
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      setFieldValid((prev) => ({ ...prev, [name]: value.trim() ? true : null }));
+    },
+    [setFormData, setFieldValid]
+  );
+
+  const handleCurrencySelect = useCallback(
+    (currencyCode: string) => {
+      const currencies = [
+        { code: 'USD', flag: '💵', name: 'US Dollar' },
+        { code: 'EUR', flag: '💶', name: 'Euro' },
+        { code: 'GBP', flag: '💷', name: 'British Pound' },
+        { code: 'CNY', flag: '💴', name: 'Chinese Yuan' },
+        { code: 'JPY', flag: '💴', name: 'Japanese Yen' },
+      ];
+
+      const selectedCurrency = currencies.find((c) => c.code === currencyCode);
+      if (selectedCurrency) {
+        setFormData((prev) => ({ ...prev, goodsCurrency: currencyCode }));
+        setCurrencySearch(`${currencyCode} ${selectedCurrency.flag}`);
+        setIsCurrencyListVisible(false);
+      }
+    },
+    [setFormData, setCurrencySearch, setIsCurrencyListVisible]
+  );
 
   const nextStep = useCallback(() => {
     setCurrentStep((s) => {
@@ -4787,9 +11868,14 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     isDestPortListVisible,
     setIsDestPortListVisible,
 
+    originPortSearch,
+    setOriginPortSearch,
+    isOriginPortListVisible,
+    setIsOriginPortListVisible,
+
     step5SubStep,
     setStep5SubStep,
-    activeLoadIndex, 
+    activeLoadIndex,
     setActiveLoadIndex,
     shippingType,
     setShippingType,
@@ -4797,7 +11883,7 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCurrencySearch,
     isCurrencyListVisible,
     setIsCurrencyListVisible,
-    
+
     handleCurrencySelect,
 
     handleCountrySelect,
@@ -4805,14 +11891,18 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     clearCountrySelection,
     handleDestLocationTypeSelect,
     handleDestPortSelect,
+    handleOriginLocationTypeSelect,
+    handleOriginPortSelect,
     handleInputChange,
 
     getDestinationLocationTypes,
     getFilteredDestinationPorts,
+    getFilteredOriginPorts,
     filteredCountries,
     sanitizedCountrySearch,
-    
+
     I18N_TEXT,
+    getText,
     getLocationTypeName,
     getLocationTypeDescription,
     getTranslatedPortNameLocal,
@@ -4827,4 +11917,4 @@ export function useQuoteForm() {
   const ctx = useContext(QuoteFormContext);
   if (!ctx) throw new Error('useQuoteForm must be used inside <QuoteFormProvider>');
   return ctx;
-} 
+}

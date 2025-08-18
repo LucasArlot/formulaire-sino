@@ -1,10 +1,10 @@
-import React, { useState, FormEvent, useEffect, useRef } from "react";
-import { Ship, Plane, TrainFront, Building2, Home, Warehouse, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, FormEvent, useEffect, useRef } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Timeline from './Timeline';
 import Toast from '@/shared/components/Toast';
 import CustomDropdown from '@/shared/components/CustomDropdown';
-import { useQuoteForm, initialLoadDetails } from "@/features/lead/QuoteFormContext";
-import { useToast } from "@/hooks";
+import { useQuoteForm, initialLoadDetails } from '@/features/lead/QuoteFormContext';
+import { useToast } from '@/hooks';
 import StepDestination from './steps/StepDestination';
 import StepMode from './steps/StepMode';
 import StepOrigin from './steps/StepOrigin';
@@ -14,31 +14,24 @@ import StepGoodsDetails from './steps/StepGoodsDetails';
 import StepConfirmation from './steps/StepConfirmation';
 
 import { COUNTRIES } from '@/data/countries';
-import { COUNTRY_TRANSLATIONS } from '@/data/countryTranslations';
+// import { COUNTRY_TRANSLATIONS } from '@/data/countryTranslations';
 // import { getTranslatedPortName } from '@/data/portTranslations';
-import { TEST_LEADS } from '@/data/testLeads';
+// import { TEST_LEADS } from '@/data/testLeads';
 
-const LOCATION_TYPES = [
-  { id: 'factory', name: 'Factory/Warehouse', icon: Warehouse },
-  { id: 'port', name: 'Port/Airport', icon: Ship }, // Used only for pickup locations (Step 3), not destinations
-  { id: 'business', name: 'Business address', icon: Building2 },
-  { id: 'residential', name: 'Residential address', icon: Home }
-];
+// LOCATION_TYPES moved to context; local copy removed
 
 // Helper function to get translated country name
-const getTranslatedCountryName = (countryCode: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'): string => {
-  const translations = COUNTRY_TRANSLATIONS[countryCode];
-  if (translations && translations[userLang]) {
-    return translations[userLang];
-  }
-  // Fallback to English if translation not found
-  if (translations && translations.en) {
-    return translations.en;
-  }
-  // Final fallback to original country name from COUNTRIES array
-  const country = COUNTRIES.find(c => c.code === countryCode);
-  return country ? country.name : countryCode;
-};
+// const getTranslatedCountryName = (countryCode: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'): string => {
+//   const translations = COUNTRY_TRANSLATIONS[countryCode];
+//   if (translations && translations[userLang]) {
+//     return translations[userLang];
+//   }
+//   if (translations && translations.en) {
+//     return translations.en;
+//   }
+//   const country = COUNTRIES.find(c => c.code === countryCode);
+//   return country ? country.name : countryCode;
+// };
 
 // Helper function to get the correct "search ports in/à/en" text with proper preposition
 /* const getSearchPortsText = (countryCode: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru'): string => {
@@ -137,7 +130,7 @@ const getTranslatedCountryName = (countryCode: string, userLang: 'en' | 'fr' | '
     const masculineCountries = [
       'CA', 'BR', 'MX', 'JP', 'VN', 'CN', 'KR', 'IN', 'PK', 'BD', 'KH', 'LA', 'MM', 'NP', 'LK', 'TH',
       'KW', 'OM', 'QA', 'SA', 'YE', 'BH', 'AZ', 'KZ', 'KG', 'TJ', 'TM', 'UZ', 'MN',
-      'CL', 'PE', 'PY', 'VE', 'CO', 'BO', 'SR', 'GY',
+      'CL', 'PE', 'EC', 'PY', 'UY', 'VE', 'CO', 'BO', 'SR', 'GY',
       'MA', 'TN', 'DZ', 'LY', 'SD', 'TD', 'NE', 'ML', 'BF', 'SN', 'GH', 'TG', 'BJ', 'NG', 'CM',
       'CF', 'GA', 'CG', 'CD', 'AO', 'ZM', 'ZW', 'MW', 'MZ', 'LS', 'SZ', 'BW', 'NA', 'ZA',
       'KE', 'UG', 'TZ', 'RW', 'BI', 'DJ', 'SO', 'ET', 'ER', 'SS',
@@ -281,17 +274,7 @@ const getTranslatedCountryName = (countryCode: string, userLang: 'en' | 'fr' | '
 }; */
 
 // Helper function to get translated region name
-const getTranslatedRegionName = (region: string, userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
-  const translations = I18N_TEXT[userLang] as any;
-  
-  // Check if we have a translation for this region
-  if (translations.regions && translations.regions[region]) {
-    return translations.regions[region];
-  }
-  
-  // Fallback to original region name
-  return region;
-};
+// getTranslatedRegionName is not used; removed to satisfy ESLint
 
 // Helper function to get dynamic search placeholder text based on shipping mode
 /* const getDynamicSearchText = (userLang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru', mode: string) => {
@@ -328,41 +311,215 @@ const getTranslatedRegionName = (region: string, userLang: 'en' | 'fr' | 'zh' | 
 }; */
 
 const SEA_PORTS = [
-  { code: 'SHA', name: 'Shanghai', region: 'East China', type: 'sea', volume: '47M TEU', flag: '🚢' },
-  { code: 'SZX', name: 'Shenzhen', region: 'South China', type: 'sea', volume: '28M TEU', flag: '🚢' },
-  { code: 'NGB', name: 'Ningbo-Zhoushan', region: 'East China', type: 'sea', volume: '31M TEU', flag: '🚢' },
-  { code: 'GZH', name: 'Guangzhou', region: 'South China', type: 'sea', volume: '24M TEU', flag: '🚢' },
-  { code: 'QIN', name: 'Qingdao', region: 'North China', type: 'sea', volume: '23M TEU', flag: '🚢' },
-  { code: 'TJN', name: 'Tianjin', region: 'North China', type: 'sea', volume: '20M TEU', flag: '🚢' },
-  { code: 'XMN', name: 'Xiamen', region: 'South China', type: 'sea', volume: '12M TEU', flag: '🚢' },
-  { code: 'DLN', name: 'Dalian', region: 'North China', type: 'sea', volume: '10M TEU', flag: '🚢' },
-  { code: 'YTN', name: 'Yantian', region: 'South China', type: 'sea', volume: '14M TEU', flag: '🚢' },
-  { code: 'LYG', name: 'Lianyungang', region: 'East China', type: 'sea', volume: '8M TEU', flag: '🚢' }
+  {
+    code: 'SHA',
+    name: 'Shanghai',
+    region: 'East China',
+    type: 'sea',
+    volume: '47M TEU',
+    flag: '🚢',
+  },
+  {
+    code: 'SZX',
+    name: 'Shenzhen',
+    region: 'South China',
+    type: 'sea',
+    volume: '28M TEU',
+    flag: '🚢',
+  },
+  {
+    code: 'NGB',
+    name: 'Ningbo-Zhoushan',
+    region: 'East China',
+    type: 'sea',
+    volume: '31M TEU',
+    flag: '🚢',
+  },
+  {
+    code: 'GZH',
+    name: 'Guangzhou',
+    region: 'South China',
+    type: 'sea',
+    volume: '24M TEU',
+    flag: '🚢',
+  },
+  {
+    code: 'QIN',
+    name: 'Qingdao',
+    region: 'North China',
+    type: 'sea',
+    volume: '23M TEU',
+    flag: '🚢',
+  },
+  {
+    code: 'TJN',
+    name: 'Tianjin',
+    region: 'North China',
+    type: 'sea',
+    volume: '20M TEU',
+    flag: '🚢',
+  },
+  {
+    code: 'XMN',
+    name: 'Xiamen',
+    region: 'South China',
+    type: 'sea',
+    volume: '12M TEU',
+    flag: '🚢',
+  },
+  {
+    code: 'DLN',
+    name: 'Dalian',
+    region: 'North China',
+    type: 'sea',
+    volume: '10M TEU',
+    flag: '🚢',
+  },
+  {
+    code: 'YTN',
+    name: 'Yantian',
+    region: 'South China',
+    type: 'sea',
+    volume: '14M TEU',
+    flag: '🚢',
+  },
+  {
+    code: 'LYG',
+    name: 'Lianyungang',
+    region: 'East China',
+    type: 'sea',
+    volume: '8M TEU',
+    flag: '🚢',
+  },
 ].sort((a, b) => a.name.localeCompare(b.name));
 const AIRPORTS = [
-  { code: 'PEK', name: 'Beijing Capital', region: 'North China', type: 'air', volume: '2M tons', flag: '✈️' },
-  { code: 'PVG', name: 'Shanghai Pudong', region: 'East China', type: 'air', volume: '3.6M tons', flag: '✈️' },
-  { code: 'CAN', name: 'Guangzhou Baiyun', region: 'South China', type: 'air', volume: '1.9M tons', flag: '✈️' },
-  { code: 'SZX', name: 'Shenzhen Bao\'an', region: 'South China', type: 'air', volume: '1.4M tons', flag: '✈️' },
-  { code: 'CTU', name: 'Chengdu Shuangliu', region: 'West China', type: 'air', volume: '1M tons', flag: '✈️' },
-  { code: 'SHA', name: 'Shanghai Hongqiao', region: 'East China', type: 'air', volume: '0.8M tons', flag: '✈️' },
-  { code: 'KMG', name: 'Kunming Changshui', region: 'Southwest China', type: 'air', volume: '0.7M tons', flag: '✈️' },
-  { code: 'XIY', name: "Xi'an Xianyang", region: 'Northwest China', type: 'air', volume: '0.6M tons', flag: '✈️' },
-  { code: 'HGH', name: 'Hangzhou Xiaoshan', region: 'East China', type: 'air', volume: '0.5M tons', flag: '✈️' },
-  { code: 'NKG', name: 'Nanjing Lukou', region: 'East China', type: 'air', volume: '0.4M tons', flag: '✈️' }
+  {
+    code: 'PEK',
+    name: 'Beijing Capital',
+    region: 'North China',
+    type: 'air',
+    volume: '2M tons',
+    flag: '✈️',
+  },
+  {
+    code: 'PVG',
+    name: 'Shanghai Pudong',
+    region: 'East China',
+    type: 'air',
+    volume: '3.6M tons',
+    flag: '✈️',
+  },
+  {
+    code: 'CAN',
+    name: 'Guangzhou Baiyun',
+    region: 'South China',
+    type: 'air',
+    volume: '1.9M tons',
+    flag: '✈️',
+  },
+  {
+    code: 'SZX',
+    name: "Shenzhen Bao'an",
+    region: 'South China',
+    type: 'air',
+    volume: '1.4M tons',
+    flag: '✈️',
+  },
+  {
+    code: 'CTU',
+    name: 'Chengdu Shuangliu',
+    region: 'West China',
+    type: 'air',
+    volume: '1M tons',
+    flag: '✈️',
+  },
+  {
+    code: 'SHA',
+    name: 'Shanghai Hongqiao',
+    region: 'East China',
+    type: 'air',
+    volume: '0.8M tons',
+    flag: '✈️',
+  },
+  {
+    code: 'KMG',
+    name: 'Kunming Changshui',
+    region: 'Southwest China',
+    type: 'air',
+    volume: '0.7M tons',
+    flag: '✈️',
+  },
+  {
+    code: 'XIY',
+    name: "Xi'an Xianyang",
+    region: 'Northwest China',
+    type: 'air',
+    volume: '0.6M tons',
+    flag: '✈️',
+  },
+  {
+    code: 'HGH',
+    name: 'Hangzhou Xiaoshan',
+    region: 'East China',
+    type: 'air',
+    volume: '0.5M tons',
+    flag: '✈️',
+  },
+  {
+    code: 'NKG',
+    name: 'Nanjing Lukou',
+    region: 'East China',
+    type: 'air',
+    volume: '0.4M tons',
+    flag: '✈️',
+  },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
 // Rail terminals (for rail freight shipments)
 const RAIL_TERMINALS = [
-  { code: 'ZIH', name: 'Zhengzhou Rail Terminal', region: 'Central China', type: 'rail', volume: '250 000+ TEU', flag: '🚂' },
-  { code: 'CQN', name: 'Chongqing Rail Terminal', region: 'Southwest China', type: 'rail', volume: '450 000+ TEU', flag: '🚂' },
-  { code: 'XIY', name: "Xi'an Rail Terminal", region: 'Northwest China', type: 'rail', volume: '570 000+ TEU', flag: '🚂' },
-  { code: 'WUH', name: 'Wuhan Rail Terminal', region: 'Central China', type: 'rail', volume: '200 000 TEU', flag: '🚂' },
-  { code: 'CDU', name: 'Chengdu Rail Terminal', region: 'Southwest China', type: 'rail', volume: '500 000+ TEU', flag: '🚂' },
+  {
+    code: 'ZIH',
+    name: 'Zhengzhou Rail Terminal',
+    region: 'Central China',
+    type: 'rail',
+    volume: '250 000+ TEU',
+    flag: '🚂',
+  },
+  {
+    code: 'CQN',
+    name: 'Chongqing Rail Terminal',
+    region: 'Southwest China',
+    type: 'rail',
+    volume: '450 000+ TEU',
+    flag: '🚂',
+  },
+  {
+    code: 'XIY',
+    name: "Xi'an Rail Terminal",
+    region: 'Northwest China',
+    type: 'rail',
+    volume: '570 000+ TEU',
+    flag: '🚂',
+  },
+  {
+    code: 'WUH',
+    name: 'Wuhan Rail Terminal',
+    region: 'Central China',
+    type: 'rail',
+    volume: '200 000 TEU',
+    flag: '🚂',
+  },
+  {
+    code: 'CDU',
+    name: 'Chengdu Rail Terminal',
+    region: 'Southwest China',
+    type: 'rail',
+    volume: '500 000+ TEU',
+    flag: '🚂',
+  },
 ].sort((a, b) => a.name.localeCompare(b.name));
-
-// Destination ports by country (for when user selects port/airport as destination type)
-const DESTINATION_PORTS_BY_COUNTRY: Record<string, Array<{code: string, name: string, type: 'sea' | 'air' | 'rail', flag: string, volume?: string}>> = {
+// Destination ports by country moved to context (local copy removed)
+/* const DESTINATION_PORTS_BY_COUNTRY: Record<string, Array<{code: string, name: string, type: 'sea' | 'air' | 'rail', flag: string, volume?: string}>> = {
   // Europe
   'FR': [
     { code: 'FRMRS', name: 'Port de Marseille-Fos', type: 'sea', flag: '🚢', volume: '1.5M TEU' },
@@ -1078,17 +1235,12 @@ const DESTINATION_PORTS_BY_COUNTRY: Record<string, Array<{code: string, name: st
   'SB': [
     { code: 'SBHIR', name: 'Aéroport de Honiara', type: 'air', flag: '✈️', volume: '0.005M tons' }
   ]
-};
+}; */
 
-
-
-// Countries accessible via rail freight from China (ISO codes)
-const RAIL_FREIGHT_COUNTRIES = [
-  'AT','BE','BG','CH','CZ','DE','DK','EE','ES','FI','FR','GB','HU','IT','LT','LV','NL','NO','PL','PT','RO','SE','SI','SK','UA','RU','BY','KZ','MN'
-];
+// NOTE: RAIL_FREIGHT_COUNTRIES removed (logic handled in StepMode and context)
 
 // Prioritized countries by language - countries that are most relevant to speakers of each language
-const PRIORITY_COUNTRIES_BY_LANG: Record<string, string[]> = {
+/* const PRIORITY_COUNTRIES_BY_LANG: Record<string, string[]> = {
   'fr': ['FR', 'BE', 'CH', 'CA', 'LU', 'MC'], // French-speaking countries and territories
   'en': ['US', 'GB', 'CA', 'AU', 'NZ', 'IE'], // English-speaking countries
   'de': ['DE', 'AT', 'CH', 'LI'], // German-speaking countries
@@ -1100,11 +1252,11 @@ const PRIORITY_COUNTRIES_BY_LANG: Record<string, string[]> = {
   'ar': ['SA', 'AE', 'EG', 'JO', 'LB', 'MA'], // Arabic-speaking countries
   'tr': ['TR', 'CY'], // Turkish-speaking countries
   'ru': ['RU', 'BY', 'KZ', 'KG', 'UA'] // Russian-speaking countries
-};
+}; */
 
 // ===== TRANSIT TIMES BY COUNTRY =====
 // Structure to define transit times for each country and shipping mode
-const TRANSIT_TIMES_BY_COUNTRY: Record<string, {
+/* const TRANSIT_TIMES_BY_COUNTRY: Record<string, {
   sea: { min: number; max: number };
   air: { min: number; max: number };
   rail: { min: number; max: number };
@@ -1166,10 +1318,10 @@ const TRANSIT_TIMES_BY_COUNTRY: Record<string, {
 
   // Default/fallback times for countries not specifically listed
   'DEFAULT': { sea: { min: 30, max: 45 }, air: { min: 7, max: 10 }, rail: { min: 15, max: 25 }, express: { min: 3, max: 5 } }
-};
+}; */
 
-// Function to get transit times for a specific country and mode
-const getTransitTimes = (countryCode: string, mode: string): { min: number; max: number } => {
+// Function to get transit times for a specific country and mode (kept for future use)
+/* const getTransitTimes = (countryCode: string, mode: string): { min: number; max: number } => {
   const countryTimes = TRANSIT_TIMES_BY_COUNTRY[countryCode] || TRANSIT_TIMES_BY_COUNTRY['DEFAULT'];
   
   switch (mode.toLowerCase()) {
@@ -1184,7 +1336,7 @@ const getTransitTimes = (countryCode: string, mode: string): { min: number; max:
     default:
       return { min: 0, max: 0 };
   }
-};
+}; */
 
 // Function to generate dynamic shipping mode descriptions with country-specific transit times
 /* const getDynamicModeDescription = (mode: string, countryCode: string, userLang: string): string => {
@@ -1256,7 +1408,17 @@ const getTransitTimes = (countryCode: string, mode: string): { min: number; max:
 
 // Simple text dictionary for i18n (extend as needed)
 // Casting to any to allow flexible dynamic keys without TypeScript errors
-const I18N_TEXT: any = {
+import { I18N_TEXT } from '@/features/lead/context/i18n';
+// i18n helper with fallback to English
+const getText = (key: string, lang: keyof typeof I18N_TEXT): string => {
+  const dict =
+    (I18N_TEXT as Record<string, Record<string, string>>)[lang] ||
+    (I18N_TEXT as Record<string, Record<string, string>>).en ||
+    {};
+  return dict?.[key] ?? key;
+};
+// I18N moved fully to context; removing legacy commented block
+/*
   en: {
     // Header
     mainTitle: 'Shipping Quote from China',
@@ -4699,7 +4861,7 @@ const I18N_TEXT: any = {
       'CAN': 'Guangzhou Baiyun Luchthaven',
       'CTU': 'Chengdu Shuangliu Luchthaven',
       'KMG': 'Kunming Changshui Luchthaven',
-      'XIY': 'Xi\'an Xianyang Luchthaven',
+      'XIY': 'X\'an Xianyang Luchthaven',
       'HGH': 'Hangzhou Xiaoshan Luchthaven',
       'NKG': 'Nanjing Lukou Luchthaven',
       'ZIH': 'Zhengzhou Spoorwegstation',
@@ -6214,313 +6376,307 @@ const I18N_TEXT: any = {
     validationFirstName: 'Пожалуйста, введите ваше имя',
     validationLastName: 'Пожалуйста, введите вашу фамилию',
     validationCompanyName: 'Пожалуйста, введите название вашей компании',
-    validationShipperRole: 'Пожалуйста, выберите ваш тип отправителя',
-    validationEmail: 'Пожалуйста, предоставьте действительный адрес электронной почты',
-    noCommitmentRequired: 'Никаких обязательств не требуется - только экспертное руководство!',
-    cityPostalDescription: 'Укажите город и почтовый индекс для точной доставки',
-    popular: 'Популярный',
-    otherCountries: 'Другие страны',
+    validationShipperRole: getText('validationShipperRole', userLang),
+    validationEmail: getText('validationEmail', userLang),
+    noCommitmentRequired: getText('noCommitmentRequired', userLang),
+    cityPostalDescription: getText('cityPostalDescription', userLang),
+    popular: getText('popular', userLang),
+    otherCountries: getText('otherCountries', userLang),
     // Step 3 translations
-    step3Title: 'Выберите место забора в Китае',
-    selectPickupLocationType: 'Выберите тип места забора',
-    pickupLocationDescription: 'Выберите, где мы должны забрать ваши товары в Китае',
-    enterPickupDetails: 'Введите детали забора',
-    pickupCityPostalDescription: 'Укажите город и почтовый индекс забора в Китае',
-    searchPortTerminal: 'Поиск порта/терминала/аэропорта...',
-    selectPortTerminal: 'Выберите порт/терминал/аэропорт забора',
-    portTerminalDescription: 'Выберите конкретный порт, терминал или аэропорт для забора',
-    pickupCity: 'Город забора',
-    pickupZipCode: 'Почтовый индекс забора',
-    dontKnowPort: 'Не знаю',
-    dontKnowPortDescription: 'Не уверен, какой порт/терминал выбрать',
-    dontKnowPortFeedback: 'Не проблема! Мы поможем вам выбрать лучший порт/терминал для вашего груза.',
-    perfectPortFeedback: 'Отлично! Мы заберём из',
-    cityPickupFeedback: 'Отлично! Мы организуем забор из {city}, Китай',
-    annualVolume: 'Годовой объём',
+    step3Title: getText('step3Title', userLang),
+    selectPickupLocationType: getText('selectPickupLocationType', userLang),
+    pickupLocationDescription: getText('pickupLocationDescription', userLang),
+    enterPickupDetails: getText('enterPickupDetails', userLang),
+    pickupCityPostalDescription: getText('pickupCityPostalDescription', userLang),
+    searchPortTerminal: getText('searchPortTerminal', userLang),
+    selectPortTerminal: getText('selectPortTerminal', userLang),
+    portTerminalDescription: getText('portTerminalDescription', userLang),
+    pickupCity: getText('pickupCity', userLang),
+    pickupZipCode: getText('pickupZipCode', userLang),
+    dontKnowPort: getText('dontKnowPort', userLang),
+    dontKnowPortDescription: getText('dontKnowPortDescription', userLang),
+    dontKnowPortFeedback: getText('dontKnowPortFeedback', userLang),
+    perfectPortFeedback: getText('perfectPortFeedback', userLang),
+    cityPickupFeedback: getText('cityPickupFeedback', userLang),
+    annualVolume: getText('annualVolume', userLang),
     // Port translations
     ports: {
-      'SHA': 'Шанхай',
-      'SZX': 'Шэньчжэнь',
-      'NGB': 'Нинбо-Чжоушань',
-      'GZH': 'Гуанчжоу',
-      'QIN': 'Циндао',
-      'TJN': 'Тяньцзинь',
-      'XMN': 'Сямэнь',
-      'DLN': 'Далянь',
-      'YTN': 'Яньтянь',
-      'LYG': 'Ляньюньган',
-      'PEK': 'Аэропорт Пекин Столичный',
-      'PVG': 'Аэропорт Шанхай Пудун',
-      'CAN': 'Аэропорт Гуанчжоу Байюнь',
-      'CTU': 'Аэропорт Чэнду Шуанлю',
-      'KMG': 'Аэропорт Куньмин Чаншуй',
-      'XIY': 'Аэропорт Сиань Сяньян',
-      'HGH': 'Аэропорт Ханчжоу Сяошань',
-      'NKG': 'Аэропорт Нанкин Лукоу',
-      'ZIH': 'Железнодорожный терминал Чжэнчжоу',
-      'CQN': 'Железнодорожный терминал Чунцин',
-      'WUH': 'Железнодорожный терминал Ухань',
-      'CDU': 'Железнодорожный терминал Чэнду',
+      'SHA': getText('ports.SHA', userLang),
+      'SZX': getText('ports.SZX', userLang),
+      'NGB': getText('ports.NGB', userLang),
+      'GZH': getText('ports.GZH', userLang),
+      'QIN': getText('ports.QIN', userLang),
+      'TJN': getText('ports.TJN', userLang),
+      'XMN': getText('ports.XMN', userLang),
+      'DLN': getText('ports.DLN', userLang),
+      'YTN': getText('ports.YTN', userLang),
+      'LYG': getText('ports.LYG', userLang),
+      'PEK': getText('ports.PEK', userLang),
+      'PVG': getText('ports.PVG', userLang),
+      'CAN': getText('ports.CAN', userLang),
+      'CTU': getText('ports.CTU', userLang),
+      'KMG': getText('ports.KMG', userLang),
+      'XIY': getText('ports.XIY', userLang),
+      'HGH': getText('ports.HGH', userLang),
+      'NKG': getText('ports.NKG', userLang),
+      'ZIH': getText('ports.ZIH', userLang),
+      'CQN': getText('ports.CQN', userLang),
+      'WUH': getText('ports.WUH', userLang),
+      'CDU': getText('ports.CDU', userLang),
       // Cameroon ports
-      'CMDLA': 'Порт Дуала',
-      'CMDLA_AIR': 'Аэропорт Дуала',
-      'CMNSM': 'Аэропорт Яунде'
+      'CMDLA': getText('ports.CMDLA', userLang),
+      'CMDLA_AIR': getText('ports.CMDLA_AIR', userLang),
+      'CMNSM': getText('ports.CMNSM', userLang)
     },
     // Region translations
     regions: {
-      'East China': 'Восточный Китай',
-      'South China': 'Южный Китай',
-      'North China': 'Северный Китай',
-      'West China': 'Западный Китай',
-      'Southwest China': 'Юго-западный Китай',
-      'Northwest China': 'Северо-западный Китай',
-      'Central China': 'Центральный Китай'
+      'East China': getText('regions.East China', userLang),
+      'South China': getText('regions.South China', userLang),
+      'North China': getText('regions.North China', userLang),
+      'West China': getText('regions.West China', userLang),
+      'Southwest China': getText('regions.Southwest China', userLang),
+      'Northwest China': getText('regions.Northwest China', userLang),
+      'Central China': getText('regions.Central China', userLang)
     },
     // Dynamic translations by mode
-    searchPort: 'Поиск порта...',
-    searchAirport: 'Поиск аэропорта...',
-    searchRailTerminal: 'Поиск железнодорожного терминала...',
-    selectPort: 'Выберите порт забора',
-    selectAirport: 'Выберите аэропорт забора', 
-    selectRailTerminal: 'Выберите железнодорожный терминал забора',
-    portDescriptionDynamic: 'Выберите конкретный порт для забора',
-    airportDescriptionDynamic: 'Выберите конкретный аэропорт для забора',
-    railTerminalDescriptionDynamic: 'Выберите конкретный железнодорожный терминал для забора',
+    searchPort: getText('searchPort', userLang),
+    searchAirport: getText('searchAirport', userLang),
+    searchRailTerminal: getText('searchRailTerminal', userLang),
+    selectPort: getText('selectPort', userLang),
+    selectAirport: getText('selectAirport', userLang),
+    selectRailTerminal: getText('selectRailTerminal', userLang),
+    portDescriptionDynamic: getText('portDescriptionDynamic', userLang),
+    airportDescriptionDynamic: getText('airportDescriptionDynamic', userLang),
+    railTerminalDescriptionDynamic: getText('railTerminalDescriptionDynamic', userLang),
     // Step 5 translations
-    step5Title: 'Расскажите нам о ваших товарах',
-    goodsValueDeclaration: 'Стоимость Товаров и Декларация',
-    goodsValueDescription: 'Предоставьте коммерческую стоимость для таможенной декларации и целей страхования',
-    commercialValue: 'Коммерческая стоимость товаров',
-    goodsValueHelp: 'Эта стоимость используется для таможенной декларации и расчётов страхования',
-    personalOrHazardous: 'Личные вещи или содержит опасные/ограниченные материалы',
-    personalHazardousHelp: 'Отметьте это, если отправляете личные вещи или товары, требующие специального обращения',
-    shipmentReadiness: 'Готовность Отправления',
-    shipmentTimingDescription: 'Помогите нам спланировать график вашего отправления и предоставить точные тарифы',
-    goodsReadyQuestion: 'Когда ваши товары будут готовы к забору?',
-    readyNow: '✅ Готов сейчас - товары доступны для немедленного забора',
-    readyIn1Week: '📅 В течение 1 недели - сейчас готовим',
-    readyIn2Weeks: '📅 В течение 2 недель - производство в процессе',
-    readyIn1Month: '📅 В течение 1 месяца - планируем заранее',
-    dateNotSet: '❓ Дата ещё не определена',
-    timingHelp: 'Точное время помогает нам предоставить наиболее конкурентные тарифы',
-    additionalDetails: 'Дополнительные Детали (Необязательно)',
-    additionalDetailsDescription: 'Предоставьте любые специальные требования или дополнительную информацию',
-    goodsDescription: 'Краткое описание товаров (необязательно)',
-    goodsDescriptionPlaceholder: 'например, Электроника, Мебель, Одежда, Машинное оборудование...',
-    goodsDescriptionHelp: 'Помогает нам обеспечить правильное обращение и документооборот',
-    specialRequirements: 'Специальные требования к обращению (необязательно)',
-    noSpecialRequirements: 'Нет специальных требований',
-    fragileGoods: '🔸 Хрупкие товары - осторожное обращение',
-    temperatureControlled: '🌡️ Температурный контроль',
-    urgentTimeSensitive: '⚡ Срочно/чувствительно ко времени',
-    highValueInsurance: '🛡️ Необходимо страхование высокой стоимости',
-    otherSpecify: '📝 Другое (пожалуйста, укажите в примечаниях)',
-    rateValidityNotice: 'Уведомление о Действительности Тарифов:',
-    rateValidityText: 'Указанные тарифы действительны до даты истечения, указанной в каждом предложении. Если ваши товары не будут готовы к забору к этой дате, тарифы могут быть изменены в зависимости от текущих рыночных условий.',
-    unsureShipping: 'Я ещё не уверен',
-    unsureShippingDesc: 'Пусть эксперты помогут',
-    unsureShippingBenefits: 'Профессиональное руководство',
-    unsureShippingFeedback: 'Отличный выбор! Мы порекомендуем лучший вариант доставки для ваших конкретных потребностей',
-    beginnerSectionTitle: 'Для новичков',
-    beginnerSectionDesc: 'Получите бесплатные советы от наших экспертов',
-    separatorText: 'Или выберите сами',
-    unsureAboutChoice: 'Не уверены в своём выборе?',
-    selectOption: 'Выберите опцию',
+    step5Title: getText('step5Title', userLang),
+    goodsValueDeclaration: getText('goodsValueDeclaration', userLang),
+    goodsValueDescription: getText('goodsValueDescription', userLang),
+    commercialValue: getText('commercialValue', userLang),
+    goodsValueHelp: getText('goodsValueHelp', userLang),
+    personalOrHazardous: getText('personalOrHazardous', userLang),
+    personalHazardousHelp: getText('personalHazardousHelp', userLang),
+    shipmentReadiness: getText('shipmentReadiness', userLang),
+    shipmentTimingDescription: getText('shipmentTimingDescription', userLang),
+    goodsReadyQuestion: getText('goodsReadyQuestion', userLang),
+    readyNow: getText('readyNow', userLang),
+    readyIn1Week: getText('readyIn1Week', userLang),
+    readyIn2Weeks: getText('readyIn2Weeks', userLang),
+    readyIn1Month: getText('readyIn1Month', userLang),
+    dateNotSet: getText('dateNotSet', userLang),
+    timingHelp: getText('timingHelp', userLang),
+    additionalDetails: getText('additionalDetails', userLang),
+    additionalDetailsDescription: getText('additionalDetailsDescription', userLang),
+    goodsDescription: getText('goodsDescription', userLang),
+    goodsDescriptionPlaceholder: getText('goodsDescriptionPlaceholder', userLang),
+    goodsDescriptionHelp: getText('goodsDescriptionHelp', userLang),
+    specialRequirements: getText('specialRequirements', userLang),
+    noSpecialRequirements: getText('noSpecialRequirements', userLang),
+    fragileGoods: getText('fragileGoods', userLang),
+    temperatureControlled: getText('temperatureControlled', userLang),
+    urgentTimeSensitive: getText('urgentTimeSensitive', userLang),
+    highValueInsurance: getText('highValueInsurance', userLang),
+    otherSpecify: getText('otherSpecify', userLang),
+    rateValidityNotice: getText('rateValidityNotice', userLang),
+    rateValidityText: getText('rateValidityText', userLang),
+    unsureShipping: getText('unsureShipping', userLang),
+    unsureShippingDesc: getText('unsureShippingDesc', userLang),
+    unsureShippingBenefits: getText('unsureShippingBenefits', userLang),
+    unsureShippingFeedback: getText('unsureShippingFeedback', userLang),
+    beginnerSectionTitle: getText('beginnerSectionTitle', userLang),
+    beginnerSectionDesc: getText('beginnerSectionDesc', userLang),
+    separatorText: getText('separatorText', userLang),
+    unsureAboutChoice: getText('unsureAboutChoice', userLang),
+    selectOption: getText('selectOption', userLang),
     // New statistics section
-    impactInNumbers: 'Наше Влияние в Цифрах',
-    impactDescription: 'Обеспечиваем превосходство в Китае с проверенными результатами и надёжным сервисом',
-    satisfiedCustomers: 'Довольных Клиентов',
-    customerSatisfaction: 'Удовлетворённость Клиентов',
-    teamMembers: 'Члены Команды',
-    oceanVolume: 'Объём Морских Перевозок TEU',
-          officesInChina: 'Офисы в Китае',
-      cfsFacilities: 'М² Объекты CFS',
+    impactInNumbers: getText('impactInNumbers', userLang),
+    impactDescription: getText('impactDescription', userLang),
+    satisfiedCustomers: getText('satisfiedCustomers', userLang),
+    customerSatisfaction: getText('customerSatisfaction', userLang),
+    teamMembers: getText('teamMembers', userLang),
+    oceanVolume: getText('oceanVolume', userLang),
+    officesInChina: getText('officesInChina', userLang),
+    cfsFacilities: getText('cfsFacilities', userLang),
     // Additional system messages
-    errorSubmission: 'Произошла ошибка при отправке вашего предложения. Пожалуйста, попробуйте еще раз.',
-    noTestLeads: 'В настоящее время тестовые лиды не загружены.',
-    pleaseSpecifyInRemarks: 'пожалуйста, укажите в примечаниях',
+    errorSubmission: getText('errorSubmission', userLang),
+    noTestLeads: getText('noTestLeads', userLang),
+    pleaseSpecifyInRemarks: getText('pleaseSpecifyInRemarks', userLang),
     // Step 6 translations
-    step6Title: 'Контактные данные',
-    personalInformation: 'Личная Информация',
-    personalInfoDescription: 'Расскажите нам, кто вы',
-    firstName: 'Имя',
-    firstNamePlaceholder: 'Введите ваше имя',
-    lastName: 'Фамилия',
-    lastNamePlaceholder: 'Введите вашу фамилию',
-    businessInformation: 'Информация о Бизнесе',
-    businessInfoDescription: 'Расскажите нам о вашей компании',
-    companyName: 'Название Компании',
-    companyNamePlaceholder: 'Введите название вашей компании',
-    shippingExperience: 'Опыт Доставки',
-    shippingExperienceDescription: 'Укажите ваш уровень опыта, чтобы мы могли лучше вам помочь',
-    shippingFrequency: 'Как часто вы отправляете грузы?',
-    firstTime: 'Первый раз',
-    occasionally: 'Иногда',
-    regularly: 'Регулярно',
-    role: 'Роль',
-    roleDescription: 'В каком качестве вы отправляете грузы?',
-    businessOwner: 'Владелец бизнеса',
-    purchasingManager: 'Менеджер по закупкам',
-    logisticsManager: 'Менеджер по логистике',
-    salesRepresentative: 'Торговый представитель',
-    privateIndividual: 'Частное лицо',
-    selectExperience: 'Выберите ваш уровень опыта',
-    firstTimeShipper: 'Первая отправка',
-    upTo10Times: 'Случайные отправки',
-    moreThan10Times: 'Подтвержденный опыт',
-          regularShipper: 'Регулярные отправки',
-    contactInformation: 'Контактная Информация',
-    contactInfoDescription: 'Как мы можем с вами связаться?',
-    emailAddress: 'Адрес Электронной Почты',
-    emailPlaceholder: 'Введите ваш адрес электронной почты',
-    emailHelp: 'Мы отправим ваше предложение и обновления на этот email',
-    phoneNumber: 'Номер Телефона',
-    phoneNumberPlaceholder: 'Введите ваш номер телефона',
-    phoneHelp: 'Для срочных обновлений и уточнений',
-    additionalNotes: 'Дополнительные Примечания',
-    additionalNotesDescription: 'Есть ли что-то ещё, что нам следует знать?',
-    remarks: 'Специальные Замечания',
-    remarksPlaceholder: 'Специальные инструкции, требования или вопросы...',
-    remarksHelp: 'Помогите нам лучше обслуживать вас с дополнительным контекстом',
-    readyToSubmit: 'Готовы получить ваше предложение!',
-    submitDescription: 'Нажмите "Получить Моё Предложение" ниже, чтобы отправить ваш запрос. Мы ответим в течение 24 часов.',
-    getMyQuote: 'Получить Моё Предложение',
-    securityBadge: 'Безопасно и соответствует GDPR',
+    step6Title: getText('step6Title', userLang),
+    personalInformation: getText('personalInformation', userLang),
+    personalInfoDescription: getText('personalInfoDescription', userLang),
+    firstName: getText('firstName', userLang),
+    firstNamePlaceholder: getText('firstNamePlaceholder', userLang),
+    lastName: getText('lastName', userLang),
+    lastNamePlaceholder: getText('lastNamePlaceholder', userLang),
+    businessInformation: getText('businessInformation', userLang),
+    businessInfoDescription: getText('businessInfoDescription', userLang),
+    companyName: getText('companyName', userLang),
+    companyNamePlaceholder: getText('companyNamePlaceholder', userLang),
+    shippingExperience: getText('shippingExperience', userLang),
+    shippingExperienceDescription: getText('shippingExperienceDescription', userLang),
+    shippingFrequency: getText('shippingFrequency', userLang),
+    firstTime: getText('firstTime', userLang),
+    occasionally: getText('occasionally', userLang),
+    regularly: getText('regularly', userLang),
+    role: getText('role', userLang),
+    roleDescription: getText('roleDescription', userLang),
+    businessOwner: getText('businessOwner', userLang),
+    purchasingManager: getText('purchasingManager', userLang),
+    logisticsManager: getText('logisticsManager', userLang),
+    salesRepresentative: getText('salesRepresentative', userLang),
+    privateIndividual: getText('privateIndividual', userLang),
+    selectExperience: getText('selectExperience', userLang),
+    firstTimeShipper: getText('firstTimeShipper', userLang),
+    upTo10Times: getText('upTo10Times', userLang),
+    moreThan10Times: getText('moreThan10Times', userLang),
+    regularShipper: getText('regularShipper', userLang),
+    contactInformation: getText('contactInformation', userLang),
+    contactInfoDescription: getText('contactInfoDescription', userLang),
+    emailAddress: getText('emailAddress', userLang),
+    emailPlaceholder: getText('emailPlaceholder', userLang),
+    emailHelp: getText('emailHelp', userLang),
+    phoneNumber: getText('phoneNumber', userLang),
+    phoneNumberPlaceholder: getText('phoneNumberPlaceholder', userLang),
+    phoneHelp: getText('phoneHelp', userLang),
+    additionalNotes: getText('additionalNotes', userLang),
+    additionalNotesDescription: getText('additionalNotesDescription', userLang),
+    remarks: getText('remarks', userLang),
+    remarksPlaceholder: getText('remarksPlaceholder', userLang),
+    remarksHelp: getText('remarksHelp', userLang),
+    readyToSubmit: getText('readyToSubmit', userLang),
+    submitDescription: getText('submitDescription', userLang),
+    getMyQuote: getText('getMyQuote', userLang),
+    securityBadge: getText('securityBadge', userLang),
     // Customer type selection
-    customerTypeQuestion: 'Отправляете ли вы как частное лицо или для компании?',
-    customerTypeDescription: 'Это помогает нам предоставить наиболее релевантные информационные поля',
-    individualCustomer: 'Частное лицо',
-    individualDescription: 'Личная отправка или частный клиент',
-    companyCustomer: 'Компания',
-    companyDescription: 'Коммерческая отправка или бизнес-единица',
+    customerTypeQuestion: getText('customerTypeQuestion', userLang),
+    customerTypeDescription: getText('customerTypeDescription', userLang),
+    individualCustomer: getText('individualCustomer', userLang),
+    individualDescription: getText('individualDescription', userLang),
+    companyCustomer: getText('companyCustomer', userLang),
+    companyDescription: getText('companyDescription', userLang),
       // Additional confirmation page items
       // Confirmation page
-      confirmationMainTitle: 'Подтверждение Заявки',
-      confirmationTitle: 'Запрос на Расчёт Стоимости Подтверждён',
-      confirmationSubtitle: 'Ваш запрос был успешно отправлен',
-      referenceNumber: 'Номер Заявки',
-      yourRequest: 'Краткое Описание Вашего Запроса',
-      shipmentDetails: 'Детали Груза',
-      fromTo: 'Из {origin} в {destination}',
-      mode: 'Способ Доставки',
-      contactDetails: 'Контактные Данные',
-      nextSteps: 'Следующие Шаги',
-      step1: 'Запрос получен',
-      step1Time: 'Сейчас',
-      step2: 'Анализ и расчёт',
-      step2Time: 'В течение 4 рабочих часов',
-      step3: 'Коммерческое обращение',
-      step3Time: 'В течение 24 часов',
-      step4: 'Детальный расчёт',
-      step4Time: 'В течение 48 часов',
-      aboutSino: 'О SINO Shipping & FS International',
-      aboutSubtitle: 'Ваш запрос обрабатывается экспертами',
-      sinoDescription: 'SINO Shipping была основана в 2018 году французскими предпринимателями и стала частью FS International в 2021 году. Это сотрудничество объединяет западный клиентоориентированный подход с глубокой местной китайской экспертизой.',
-      fsDescription: 'FS International была основана в сентябре 1989 года в Гонконге и является одним из самых надёжных брендов глобальной логистики и транспорта в регионе.',
-      ourExpertise: 'Наша Экспертиза',
-      expertise1: 'Морские и авиаперевозки из всех крупных китайских портов',
-      expertise2: 'Железнодорожные перевозки в Европу и Россию',
-      expertise3: 'Мультимодальные перевозки и доставка последней мили',
-      expertise4: 'Таможенное оформление и консультации по соответствию',
-      keyNumbers: 'Наше Влияние в Цифрах',
-      keyNumbersSubtitle: 'Проверенные результаты и надёжный сервис в Китае',
-      number1: '15 000+ активных пользователей',
-      number2: '1 000+ расчётов в месяц',
-      number3: '98% удовлетворённость клиентов',
-      number4: '100+ членов команды',
-      globalNetwork: 'Глобальная Сеть',
-      networkDescription: 'Со стратегическими офисами в Китае и Гонконге мы идеально позиционированы для эффективной обработки ваших грузов.',
-      chinaOffices: 'Офисы в Китае: Шэньчжэнь, Шанхай, Циндао, Нинбо',
-      hkOffice: 'Головной офис в Гонконге: Цим Ша Цуй',
-      needHelp: 'Нужна Помощь?',
-      email: 'Электронная Почта',
-      available: 'Доступно',
-      actions: 'Быстрые Действия',
-      newRequest: 'Отправить Новый Запрос',
-      viewServices: 'Посмотреть Наши Услуги',
-      subscribeUpdates: 'Подписаться на Обновления',
-      websites: 'Наши Веб-сайты',
-      thankYouTitle: 'Спасибо за ваше доверие!',
-      thankYouMessage: 'Ваш запрос будет обработан с максимальной заботой нашими экспертами по международным перевозкам.',
-      shipment: 'отправление',
-      shipments: 'отправления',
+    confirmationMainTitle: getText('confirmationMainTitle', userLang),
+    confirmationTitle: getText('confirmationTitle', userLang),
+    confirmationSubtitle: getText('confirmationSubtitle', userLang),
+    referenceNumber: getText('referenceNumber', userLang),
+    yourRequest: getText('yourRequest', userLang),
+    shipmentDetails: getText('shipmentDetails', userLang),
+    fromTo: getText('fromTo', userLang),
+    mode: getText('mode', userLang),
+    contactDetails: getText('contactDetails', userLang),
+    nextSteps: getText('nextSteps', userLang),
+    step1: getText('step1', userLang),
+    step1Time: getText('step1Time', userLang),
+    step2: getText('step2', userLang),
+    step2Time: getText('step2Time', userLang),
+    step3: getText('step3', userLang),
+    step3Time: getText('step3Time', userLang),
+    step4: getText('step4', userLang),
+    step4Time: getText('step4Time', userLang),
+    aboutSino: getText('aboutSino', userLang),
+    aboutSubtitle: getText('aboutSubtitle', userLang),
+    sinoDescription: getText('sinoDescription', userLang),
+    fsDescription: getText('fsDescription', userLang),
+    ourExpertise: getText('ourExpertise', userLang),
+    expertise1: getText('expertise1', userLang),
+    expertise2: getText('expertise2', userLang),
+    expertise3: getText('expertise3', userLang),
+    expertise4: getText('expertise4', userLang),
+    keyNumbers: getText('keyNumbers', userLang),
+    keyNumbersSubtitle: getText('keyNumbersSubtitle', userLang),
+    number1: getText('number1', userLang),
+    number2: getText('number2', userLang),
+    number3: getText('number3', userLang),
+    number4: getText('number4', userLang),
+    globalNetwork: getText('globalNetwork', userLang),
+    networkDescription: getText('networkDescription', userLang),
+    chinaOffices: getText('chinaOffices', userLang),
+    hkOffice: getText('hkOffice', userLang),
+    needHelp: getText('needHelp', userLang),
+    email: getText('email', userLang),
+    available: getText('available', userLang),
+    actions: getText('actions', userLang),
+    newRequest: getText('newRequest', userLang),
+    viewServices: getText('viewServices', userLang),
+    subscribeUpdates: getText('subscribeUpdates', userLang),
+    websites: getText('websites', userLang),
+    thankYouTitle: getText('thankYouTitle', userLang),
+    thankYouMessage: getText('thankYouMessage', userLang),
+    shipment: getText('shipment', userLang),
+    shipments: getText('shipments', userLang),
       // Step 4 translations
-      step4Title: 'Что вы отправляете?',
-      managingShipments: 'Управление {count} Отправление{plural}',
-      configureShipments: 'Настройте каждое отправление отдельно или добавьте несколько отправлений для сложных заказов',
-      addShipment: 'Добавить Отправление',
-      validating: 'Проверка...',
-      active: 'Активный',
-      shipmentsCount: 'Отправления ({count})',
-      addNewShipment: 'Добавить новое отправление',
-      duplicateShipment: 'Дублировать это отправление',
-      removeShipment: 'Удалить это отправление',
-      consolidatedSummary: 'Сводная Информация',
-      totalVolume: 'Общий Объём',
-      totalWeight: 'Общий Вес',
-      totalShipments: 'Отправления',
-      totalContainers: 'Контейнеры',
-      chooseShippingType: 'Выберите тип доставки',
-      shipmentXofY: 'Отправление {current} из {total}',
-      selectPackagingMethod: 'Выберите способ упаковки ваших товаров для доставки',
-      forThisSpecificShipment: 'для этого конкретного отправления',
-      looseCargo: 'Сборный Груз',
-      looseCargoDesc: 'Паллеты, коробки или отдельные предметы',
-      fullContainer: 'Полный Контейнер',
-      fullContainerDesc: 'Полный контейнер (FCL)',
-      imNotSure: 'Я не уверен',
-      teamWillHelp: 'Наша команда поможет вам выбрать лучший вариант',
-      unsureFeedback: 'Не волнуйтесь! Наша опытная команда проведёт вас через процесс и порекомендует лучшее транспортное решение для ваших конкретных потребностей. Мы позаботимся о всех технических деталях.',
-      whatHappensNext: 'Что происходит дальше:',
-      expertsContact: 'Наши транспортные эксперты свяжутся с вами в течение 24 часов',
-      discussRequirements: 'Мы обсудим детали ваших товаров и требования',
-      personalizedRecommendations: 'Вы получите персонализированные рекомендации и цены',
-      describeLooseCargo: 'Опишите ваш сборный груз',
-      configureContainer: 'Настройте ваш контейнер',
-      provideDimensionsWeight: 'Предоставьте детали размеров и веса для точного ценообразования',
-      selectContainerType: 'Выберите тип и количество контейнеров для вашего груза',
-      calculateByUnit: 'Рассчитать по типу единицы',
-      calculateByTotal: 'Рассчитать по общему грузу',
-      packageType: 'Тип упаковки',
-      pallets: 'Паллеты',
-      boxesCrates: 'Коробки/Ящики',
-      numberOfUnits: 'Количество единиц',
-      palletType: 'Тип паллеты',
-      nonSpecified: 'Не указано',
-      euroPallet: 'Европаллета (120x80 см)',
-      standardPallet: 'Стандартная паллета (120x100 см)',
-      customSize: 'Пользовательский размер',
-      dimensionsPerUnit: 'Размеры (на единицу Д×Ш×В)',
-      weightPerUnit: 'Вес (на единицу)',
-      required: 'Обязательно',
-      containerInfoBanner: 'Выберите наиболее подходящий тип и количество контейнеров для объёма ваших товаров.',
-      unitInfoBanner: 'Предоставьте точные детали для каждого отдельного предмета или паллеты для точного расчёта.',
-      totalInfoBanner: 'Предоставление общих номеров отправлений может быть менее точным. Неточные или негабаритные размеры могут привести к дополнительным расходам.',
-      totalDescription: 'Введите общие размеры и вес вашего отправления.',
-      containerType: 'Тип контейнера',
-      numberOfContainers: 'Количество контейнеров',
-      overweightContainer: 'Перегруженный контейнер (>25 тонн)',
-      container20: "20' Стандартный (33 куб.м)",
-      container40: "40' Стандартный (67 куб.м)",
-      container40HC: "40' High Cube (76 куб.м)",
-      container45HC: "45' High Cube (86 куб.м)",
+    step4Title: getText('step4Title', userLang),
+    managingShipments: getText('managingShipments', userLang),
+    configureShipments: getText('configureShipments', userLang),
+    addShipment: getText('addShipment', userLang),
+    validating: getText('validating', userLang),
+    active: getText('active', userLang),
+    shipmentsCount: getText('shipmentsCount', userLang),
+    addNewShipment: getText('addNewShipment', userLang),
+    duplicateShipment: getText('duplicateShipment', userLang),
+    removeShipment: getText('removeShipment', userLang),
+    consolidatedSummary: getText('consolidatedSummary', userLang),
+    totalVolume: getText('totalVolume', userLang),
+    totalWeight: getText('totalWeight', userLang),
+    totalShipments: getText('totalShipments', userLang),
+    totalContainers: getText('totalContainers', userLang),
+    chooseShippingType: getText('chooseShippingType', userLang),
+    shipmentXofY: getText('shipmentXofY', userLang),
+    selectPackagingMethod: getText('selectPackagingMethod', userLang),
+    forThisSpecificShipment: getText('forThisSpecificShipment', userLang),
+    looseCargo: getText('looseCargo', userLang),
+    looseCargoDesc: getText('looseCargoDesc', userLang),
+    fullContainer: getText('fullContainer', userLang),
+    fullContainerDesc: getText('fullContainerDesc', userLang),
+    imNotSure: getText('imNotSure', userLang),
+    teamWillHelp: getText('teamWillHelp', userLang),
+    unsureFeedback: getText('unsureFeedback', userLang),
+    whatHappensNext: getText('whatHappensNext', userLang),
+    expertsContact: getText('expertsContact', userLang),
+    discussRequirements: getText('discussRequirements', userLang),
+    personalizedRecommendations: getText('personalizedRecommendations', userLang),
+    describeLooseCargo: getText('describeLooseCargo', userLang),
+    configureContainer: getText('configureContainer', userLang),
+    provideDimensionsWeight: getText('provideDimensionsWeight', userLang),
+    selectContainerType: getText('selectContainerType', userLang),
+    calculateByUnit: getText('calculateByUnit', userLang),
+    calculateByTotal: getText('calculateByTotal', userLang),
+    packageType: getText('packageType', userLang),
+    pallets: getText('pallets', userLang),
+    boxesCrates: getText('boxesCrates', userLang),
+    numberOfUnits: getText('numberOfUnits', userLang),
+    palletType: getText('palletType', userLang),
+    nonSpecified: getText('nonSpecified', userLang),
+    euroPallet: getText('euroPallet', userLang),
+    standardPallet: getText('standardPallet', userLang),
+    customSize: getText('customSize', userLang),
+    dimensionsPerUnit: getText('dimensionsPerUnit', userLang),
+    weightPerUnit: getText('weightPerUnit', userLang),
+    required: getText('required', userLang),
+    containerInfoBanner: getText('containerInfoBanner', userLang),
+    unitInfoBanner: getText('unitInfoBanner', userLang),
+    totalInfoBanner: getText('totalInfoBanner', userLang),
+    totalDescription: getText('totalDescription', userLang),
+    containerType: getText('containerType', userLang),
+    numberOfContainers: getText('numberOfContainers', userLang),
+    overweightContainer: getText('overweightContainer', userLang),
+    container20: getText('container20', userLang),
+    container40: getText('container40', userLang),
+    container40HC: getText('container40HC', userLang),
+    container45HC: getText('container45HC', userLang),
       // Additional shipment summary translations
-      shipmentTitle: 'Отправление',
-      setupPending: 'Настройка ожидается...',
-      addAnotherShipment: 'Добавить Другое Отправление',
-      items: 'Предметы',
-      each: 'каждый',
-      totalCalculation: 'Общий расчёт',
-      overweight: 'Перевес',
+    shipmentTitle: getText('shipmentTitle', userLang),
+    setupPending: getText('setupPending', userLang),
+    addAnotherShipment: getText('addAnotherShipment', userLang),
+    items: getText('items', userLang),
+    each: getText('each', userLang),
+    totalCalculation: getText('totalCalculation', userLang),
+    overweight: getText('overweight', userLang),
   },
 };
-
-// Helper function to get text with fallback to English
-const getText = (key: string, lang: 'en' | 'fr' | 'zh' | 'de' | 'es' | 'it' | 'nl' | 'ar' | 'pt' | 'tr' | 'ru') => {
-  return (I18N_TEXT[lang] as any)[key] || (I18N_TEXT.en as any)[key] || key;
-};
-// Experience options with improved translations
-const EXPERIENCE_OPTIONS = [
+/* const EXPERIENCE_OPTIONS = [
   { 
     code: 'first-time', 
     icon: '🌟',
@@ -6589,45 +6745,40 @@ const EXPERIENCE_OPTIONS = [
       ru: 'регулярные отправки'
     }
   }
-];
+]; */
 
 const QuoteForm: React.FC = () => {
   const [submissionId, setSubmissionId] = useState('');
   const { message: toastMessage, showToast } = useToast(3000);
-  const { 
-    currentStep, 
-    setCurrentStep, 
-    userLang, 
+  const {
+    currentStep,
+    setCurrentStep,
+    userLang,
     setUserLang,
     formData,
     setFormData,
-    fieldValid,
     setFieldValid,
     nextStep,
     prevStep,
     activeLoadIndex,
     setActiveLoadIndex,
-    destPortSearch: destPortSearchCtx,
-    setPhonePrefixSearch,
-    setDestPortSearch: setDestPortSearchCtx,
+    // destPortSearch: destPortSearchCtx,
+    // setPhonePrefixSearch,
+    // setDestPortSearch: setDestPortSearchCtx,
     setIsDestPortListVisible,
-    getTranslatedPortNameLocal,
-    handleCountrySelect
+    // getTranslatedPortNameLocal
   } = useQuoteForm();
-  // Legacy local UI states kept temporarily for compatibility with remaining inline logic.
-  const [countrySearch, setCountrySearch] = useState('');
-  const [debouncedCountrySearch, setDebouncedCountrySearch] = useState(''); // debounced value
-  const [portSearch, setPortSearch] = useState('');
-  const destPortSearch = destPortSearchCtx;
+  // Use context-provided UI states instead of local duplicates
+  // const destPortSearch = destPortSearchCtx; // not used locally
   // const [phonePrefixSearch, setPhonePrefixSearch] = useState('');
   // const [selectedLocationType, setSelectedLocationType] = useState('');
   const [isCountryListVisible, setIsCountryListVisible] = useState(false);
-  const [isPortListVisible, setIsPortListVisible] = useState(false);
+  // Local port list visibility removed; destination list visibility comes from context
   // const [isDestPortListVisible, setIsDestPortListVisible] = useState(false);
   // const [isPhonePrefixListVisible, setIsPhonePrefixListVisible] = useState(false);
-  
+
   // Step 5 custom dropdown states moved into StepGoodsDetails
-  
+
   // Step 6 custom dropdown states
   // const [experienceSearch, setExperienceSearch] = useState('');
   // const [isExperienceListVisible, setIsExperienceListVisible] = useState(false);
@@ -6636,19 +6787,15 @@ const QuoteForm: React.FC = () => {
 
   // Customer type state
   // const [customerType, setCustomerType] = useState<'individual' | 'company' | ''>('');
-  
+
   const countryListRef = useRef<HTMLDivElement>(null);
-  const portListRef = useRef<HTMLDivElement>(null);
   const destPortListRef = useRef<HTMLDivElement>(null); // For destination port list
-  // const phonePrefixListRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const portSearchInputRef = useRef<HTMLInputElement>(null);
-  // const phonePrefixSearchInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Refs for custom dropdowns
   // Step 5 refs moved into StepGoodsDetails
   // const experienceListRef = useRef<HTMLDivElement>(null);
-  
+
   interface LoadDetails {
     shippingType: 'loose' | 'container' | 'unsure' | '';
     calculationType: 'unit' | 'total';
@@ -6667,22 +6814,20 @@ const QuoteForm: React.FC = () => {
     isOverweight: boolean;
   }
 
-
-
   // Using formData and fieldValid from context - no local state needed
-  
+
   // removed: populateTestData (debug-only function)
 
   // Cargo Step States - these will now reflect the active load
   const [shippingType, setShippingType] = useState<LoadDetails['shippingType']>('');
-  
+
   // Dropdown states
   const [isPalletTypeOpen, setIsPalletTypeOpen] = useState(false);
   const [isDimensionUnitOpen, setIsDimensionUnitOpen] = useState(false);
   const [isWeightUnitOpen, setIsWeightUnitOpen] = useState(false);
   const [isTotalVolumeUnitOpen, setIsTotalVolumeUnitOpen] = useState(false);
   const [isTotalWeightUnitOpen, setIsTotalWeightUnitOpen] = useState(false);
-  
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = () => {
@@ -6692,35 +6837,70 @@ const QuoteForm: React.FC = () => {
       setIsTotalVolumeUnitOpen(false);
       setIsTotalWeightUnitOpen(false);
     };
-    
-    if (isPalletTypeOpen || isDimensionUnitOpen || isWeightUnitOpen || isTotalVolumeUnitOpen || isTotalWeightUnitOpen) {
+
+    if (
+      isPalletTypeOpen ||
+      isDimensionUnitOpen ||
+      isWeightUnitOpen ||
+      isTotalVolumeUnitOpen ||
+      isTotalWeightUnitOpen
+    ) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [isPalletTypeOpen, isDimensionUnitOpen, isWeightUnitOpen, isTotalVolumeUnitOpen, isTotalWeightUnitOpen]);
-  const [calculationType, setCalculationType] = useState<LoadDetails['calculationType']>(initialLoadDetails.calculationType);
-  const [packageType, setPackageType] = useState<LoadDetails['packageType']>(initialLoadDetails.packageType);
-  const [numberOfUnits, setNumberOfUnits] = useState<LoadDetails['numberOfUnits']>(initialLoadDetails.numberOfUnits);
-  const [palletType, setPalletType] = useState<LoadDetails['palletType']>(initialLoadDetails.palletType);
-  const [dimensions, setDimensions] = useState<LoadDetails['dimensions']>(initialLoadDetails.dimensions);
-  const [dimensionUnit, setDimensionUnit] = useState<LoadDetails['dimensionUnit']>(initialLoadDetails.dimensionUnit);
-  const [weightPerUnit, setWeightPerUnit] = useState<LoadDetails['weightPerUnit']>(initialLoadDetails.weightPerUnit);
-  const [weightUnit, setWeightUnit] = useState<LoadDetails['weightUnit']>(initialLoadDetails.weightUnit);
-  const [totalVolume, setTotalVolume] = useState<LoadDetails['totalVolume']>(initialLoadDetails.totalVolume);
-  const [totalVolumeUnit, setTotalVolumeUnit] = useState<LoadDetails['totalVolumeUnit']>(initialLoadDetails.totalVolumeUnit);
-  const [totalWeight, setTotalWeight] = useState<LoadDetails['totalWeight']>(initialLoadDetails.totalWeight);
-  const [totalWeightUnit, setTotalWeightUnit] = useState<LoadDetails['totalWeightUnit']>(initialLoadDetails.totalWeightUnit);
-  const [containerType, setContainerType] = useState<LoadDetails['containerType']>(initialLoadDetails.containerType);
-  const [isOverweight, setIsOverweight] = useState<LoadDetails['isOverweight']>(initialLoadDetails.isOverweight);
-
-
-
+  }, [
+    isPalletTypeOpen,
+    isDimensionUnitOpen,
+    isWeightUnitOpen,
+    isTotalVolumeUnitOpen,
+    isTotalWeightUnitOpen,
+  ]);
+  const [calculationType, setCalculationType] = useState<LoadDetails['calculationType']>(
+    initialLoadDetails.calculationType
+  );
+  const [packageType, setPackageType] = useState<LoadDetails['packageType']>(
+    initialLoadDetails.packageType
+  );
+  const [numberOfUnits, setNumberOfUnits] = useState<LoadDetails['numberOfUnits']>(
+    initialLoadDetails.numberOfUnits
+  );
+  const [palletType, setPalletType] = useState<LoadDetails['palletType']>(
+    initialLoadDetails.palletType
+  );
+  const [dimensions, setDimensions] = useState<LoadDetails['dimensions']>(
+    initialLoadDetails.dimensions
+  );
+  const [dimensionUnit, setDimensionUnit] = useState<LoadDetails['dimensionUnit']>(
+    initialLoadDetails.dimensionUnit
+  );
+  const [weightPerUnit, setWeightPerUnit] = useState<LoadDetails['weightPerUnit']>(
+    initialLoadDetails.weightPerUnit
+  );
+  const [weightUnit, setWeightUnit] = useState<LoadDetails['weightUnit']>(
+    initialLoadDetails.weightUnit
+  );
+  const [totalVolume, setTotalVolume] = useState<LoadDetails['totalVolume']>(
+    initialLoadDetails.totalVolume
+  );
+  const [totalVolumeUnit, setTotalVolumeUnit] = useState<LoadDetails['totalVolumeUnit']>(
+    initialLoadDetails.totalVolumeUnit
+  );
+  const [totalWeight, setTotalWeight] = useState<LoadDetails['totalWeight']>(
+    initialLoadDetails.totalWeight
+  );
+  const [totalWeightUnit, setTotalWeightUnit] = useState<LoadDetails['totalWeightUnit']>(
+    initialLoadDetails.totalWeightUnit
+  );
+  const [containerType, setContainerType] = useState<LoadDetails['containerType']>(
+    initialLoadDetails.containerType
+  );
+  const [isOverweight, setIsOverweight] = useState<LoadDetails['isOverweight']>(
+    initialLoadDetails.isOverweight
+  );
 
   // Language state is now managed in QuoteFormContext.tsx
 
   const standardPalletTypes = ['EUR1', 'EUR2', 'US_STANDARD'];
-
-
 
   const languageOptions = [
     { value: 'en', label: '🇺🇸 English' },
@@ -6733,15 +6913,13 @@ const QuoteForm: React.FC = () => {
     { value: 'ar', label: '🇸🇦 العربية' },
     { value: 'pt', label: '🇵🇹 Português' },
     { value: 'tr', label: '🇹🇷 Türkçe' },
-    { value: 'ru', label: '🇷🇺 Русский' }
+    { value: 'ru', label: '🇷🇺 Русский' },
   ];
-
-
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        countryListRef.current && 
+        countryListRef.current &&
         !countryListRef.current.contains(event.target as Node) &&
         searchInputRef.current &&
         !searchInputRef.current.contains(event.target as Node)
@@ -6749,44 +6927,37 @@ const QuoteForm: React.FC = () => {
         setIsCountryListVisible(false);
       }
 
-      if (
-        portListRef.current && 
-        !portListRef.current.contains(event.target as Node) &&
-        portSearchInputRef.current &&
-        !portSearchInputRef.current.contains(event.target as Node)
-      ) {
-        setIsPortListVisible(false);
-      }
+      // Origin port list removed; origin selection handled within StepOrigin
 
-      if (
-        destPortListRef.current && 
-        !destPortListRef.current.contains(event.target as Node)
-      ) {
+      if (destPortListRef.current && !destPortListRef.current.contains(event.target as Node)) {
         setIsDestPortListVisible(false);
       }
 
       // Phone prefix dropdown now handled inside StepContact
 
       // Step 5 custom dropdowns moved inside StepGoodsDetails
-      
+
       // Step 6 custom dropdowns
       // Experience dropdown handled in StepContact
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [setIsDestPortListVisible]);
 
   // Auto-positioning logic for dropdowns to prevent overflow
   useEffect(() => {
-    const adjustDropdownPosition = (dropdown: HTMLElement | null, inputElement: HTMLElement | null) => {
+    const adjustDropdownPosition = (
+      dropdown: HTMLElement | null,
+      inputElement: HTMLElement | null
+    ) => {
       if (!dropdown || !inputElement) return;
 
       const inputRect = inputElement.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const viewportWidth = window.innerWidth;
       const dropdownHeight = 300; // Maximum height from CSS
-      
+
       // Calculate available space
       const spaceBelow = viewportHeight - inputRect.bottom - 20; // 20px padding
       const spaceAbove = inputRect.top - 20; // 20px padding
@@ -6795,14 +6966,15 @@ const QuoteForm: React.FC = () => {
 
       // Reset classes
       dropdown.classList.remove('show-above', 'adjust-right', 'adjust-left');
-      
+
       // Vertical positioning - show above if not enough space below
       if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
         dropdown.classList.add('show-above');
       }
 
       // Horizontal positioning - adjust if dropdown would overflow
-      if (spaceRight < 300) { // Minimum dropdown width
+      if (spaceRight < 300) {
+        // Minimum dropdown width
         dropdown.classList.add('adjust-right');
       } else if (spaceLeft < 300) {
         dropdown.classList.add('adjust-left');
@@ -6816,11 +6988,9 @@ const QuoteForm: React.FC = () => {
     if (isCountryListVisible && countryListRef.current && searchInputRef.current) {
       adjustDropdownPosition(countryListRef.current, searchInputRef.current);
     }
-    
-    if (isPortListVisible && portListRef.current && portSearchInputRef.current) {
-      adjustDropdownPosition(portListRef.current, portSearchInputRef.current);
-    }
-    
+
+    // Origin port list removed; no positioning needed
+
     // Phone prefix dropdown handled inside StepContact
 
     // Step 5 dropdown positioning handled within StepGoodsDetails
@@ -6832,9 +7002,7 @@ const QuoteForm: React.FC = () => {
       if (isCountryListVisible && countryListRef.current && searchInputRef.current) {
         adjustDropdownPosition(countryListRef.current, searchInputRef.current);
       }
-      if (isPortListVisible && portListRef.current && portSearchInputRef.current) {
-        adjustDropdownPosition(portListRef.current, portSearchInputRef.current);
-      }
+      // Origin port list removed; no positioning needed
       // Phone prefix dropdown handled inside StepContact
       // Step 5 dropdown positioning handled within StepGoodsDetails
       // Experience dropdown handled in StepContact
@@ -6842,70 +7010,76 @@ const QuoteForm: React.FC = () => {
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('scroll', handleResize);
-    
+
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleResize);
     };
-  }, [isCountryListVisible, isPortListVisible]);
+  }, [isCountryListVisible]);
 
   const isLoadDataValid = (load: LoadDetails, loadIndex: number): boolean => {
     const loadNumber = loadIndex + 1;
-    
+
     // First check if shipping type is selected
     if (!load.shippingType) {
-      showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationShippingType}`);
+      showToast(`Shipment ${loadNumber}: ${getText('validationShippingType', userLang)}`);
       return false;
     }
-    
+
     // If user selected "unsure", no validation needed - they'll get assistance
     if (load.shippingType === 'unsure') {
       return true;
     }
-    
+
     if (load.shippingType === 'loose') {
       if (load.calculationType === 'unit') {
         if (!load.packageType) {
-          showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationPackageType}`);
+          showToast(`Shipment ${loadNumber}: ${getText('validationPackageType', userLang)}`);
           return false;
         }
         if (load.packageType === 'pallets') {
           if (load.palletType === 'non_specified') {
             if (!load.dimensions.length || !load.dimensions.width || !load.dimensions.height) {
-              showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationDimensionsNonSpecified}`);
+              showToast(
+                `Shipment ${loadNumber}: ${getText('validationDimensionsNonSpecified', userLang)}`
+              );
               return false;
             }
           } else if (standardPalletTypes.includes(load.palletType)) {
             if (!load.dimensions.height) {
-              showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationPalletHeight}`);
+              showToast(`Shipment ${loadNumber}: ${getText('validationPalletHeight', userLang)}`);
               return false;
             }
           }
         } else if (load.packageType === 'boxes') {
           if (!load.dimensions.length || !load.dimensions.width || !load.dimensions.height) {
-            showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationBoxDimensions}`);
+            showToast(`Shipment ${loadNumber}: ${getText('validationBoxDimensions', userLang)}`);
             return false;
           }
         }
         if (!load.weightPerUnit) {
-          showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationWeightPerUnit}`);
+          showToast(`Shipment ${loadNumber}: ${getText('validationWeightPerUnit', userLang)}`);
           return false;
         }
         if (!load.numberOfUnits || load.numberOfUnits < 1) {
           showToast(`Shipment ${loadNumber}: Please specify the number of units (minimum 1)`);
           return false;
         }
-      } else { // calculationType === 'total'
+      } else {
+        // calculationType === 'total'
         // New rule: at least one of totalVolume or totalWeight must be provided
         if (!load.totalVolume && !load.totalWeight) {
-          const msg = (I18N_TEXT as any)[userLang]?.validationAtLeastOneOfVolumeOrWeight || 'Please provide total volume or total weight';
+          const msg =
+            getText('validationAtLeastOneOfVolumeOrWeight', userLang) ||
+            'Please provide total volume or total weight';
           showToast(`Shipment ${loadNumber}: ${msg}`);
           return false;
         }
       }
-    } else { // shippingType === 'container'
+    } else {
+      // shippingType === 'container'
       if (!load.containerType) {
-        showToast(`Shipment ${loadNumber}: ${I18N_TEXT[userLang].validationContainerType}`);
+        showToast(`Shipment ${loadNumber}: ${getText('validationContainerType', userLang)}`);
         return false;
       }
     }
@@ -6955,39 +7129,20 @@ const QuoteForm: React.FC = () => {
     };
 
     // Update the array with current individual states
-    setFormData(prevFormData => {
+    setFormData((prevFormData) => {
       if (activeLoadIndex < 0 || activeLoadIndex >= prevFormData.loads.length) {
         return prevFormData;
       }
-      
-      const updatedLoads = prevFormData.loads.map((load, idx) => 
+
+      const updatedLoads = prevFormData.loads.map((load, idx) =>
         idx === activeLoadIndex ? currentLoadFromStates : load
       );
-      
+
       return { ...prevFormData, loads: updatedLoads };
     });
 
     return currentLoadFromStates;
   };
-
-  /* const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    // Sanitize zip code fields to allow only digits
-    let sanitizedValue = value;
-    if (name === 'zipCode' || name === 'destZipCode') {
-      sanitizedValue = value.replace(/\D/g, ''); // Remove any non-digit characters
-    }
-    // Sanitize city fields to allow international characters, letters, spaces, hyphens and apostrophes
-    if (name === 'city' || name === 'destCity') {
-      // Allow Unicode letters, numbers, spaces, hyphens, apostrophes, and common punctuation
-      sanitizedValue = value.replace(/[^\p{L}\p{N}\s'.,()-]/gu, '');
-    }
-    setFormData({
-      ...formData,
-      [name]: sanitizedValue
-    });
-    validateField(name, sanitizedValue);
-  }; */
 
   const validateField = (name: string, value: string): boolean => {
     let isValid = true;
@@ -7044,7 +7199,7 @@ const QuoteForm: React.FC = () => {
       default:
         return true; // Assume valid or handled elsewhere
     }
-    setFieldValid(prev => ({ ...prev, [name]: isValid }));
+    setFieldValid((prev) => ({ ...prev, [name]: isValid }));
     return isValid;
   };
 
@@ -7052,96 +7207,108 @@ const QuoteForm: React.FC = () => {
     switch (step) {
       case 1:
         if (!formData.country) {
-          showToast(I18N_TEXT[userLang].validationDestinationCountry);
-          setFieldValid(prev => ({ ...prev, country: false }));
+          showToast(getText('validationDestinationCountry', userLang));
+          setFieldValid((prev) => ({ ...prev, country: false }));
           return false;
         }
         if (!formData.destLocationType) {
-          showToast(I18N_TEXT[userLang].validationDestinationLocationType);
-          setFieldValid(prev => ({ ...prev, destLocationType: false }));
+          showToast(getText('validationDestinationLocationType', userLang));
+          setFieldValid((prev) => ({ ...prev, destLocationType: false }));
           return false;
         }
         if (formData.destLocationType) {
           if (formData.destLocationType === 'port') {
             // For port destinations, validate that a destination port is selected
             if (!formData.destPort) {
-              showToast(I18N_TEXT[userLang].validationDestinationPort || 'Please select a destination port');
-              setFieldValid(prev => ({ ...prev, destPort: false }));
+              showToast(
+                getText('validationDestinationPort', userLang) || 'Please select a destination port'
+              );
+              setFieldValid((prev) => ({ ...prev, destPort: false }));
               return false;
             }
           } else {
             // For non-port destinations, validate city and zip code
             if (!formData.destCity || !validateField('destCity', formData.destCity)) {
-            showToast(I18N_TEXT[userLang].validationDestinationCity);
-            setFieldValid(prev => ({ ...prev, destCity: false }));
-            return false;
-          }
+              showToast(getText('validationDestinationCity', userLang));
+              setFieldValid((prev) => ({ ...prev, destCity: false }));
+              return false;
+            }
             if (!formData.destZipCode || !validateField('destZipCode', formData.destZipCode)) {
-            showToast(I18N_TEXT[userLang].validationDestinationZip);
-            setFieldValid(prev => ({ ...prev, destZipCode: false }));
-            return false;
+              showToast(getText('validationDestinationZip', userLang));
+              setFieldValid((prev) => ({ ...prev, destZipCode: false }));
+              return false;
             }
           }
         }
-        setFieldValid(prev => ({ 
-          ...prev, 
-          country: true, 
-          destLocationType: true, 
-          destCity: (formData.destLocationType && formData.destLocationType !== 'port') ? !!formData.destCity : null, 
-          destZipCode: (formData.destLocationType && formData.destLocationType !== 'port') ? !!formData.destZipCode : null,
-          destPort: formData.destLocationType === 'port' ? !!formData.destPort : null
+        setFieldValid((prev) => ({
+          ...prev,
+          country: true,
+          destLocationType: true,
+          destCity:
+            formData.destLocationType && formData.destLocationType !== 'port'
+              ? !!formData.destCity
+              : null,
+          destZipCode:
+            formData.destLocationType && formData.destLocationType !== 'port'
+              ? !!formData.destZipCode
+              : null,
+          destPort: formData.destLocationType === 'port' ? !!formData.destPort : null,
         }));
         break;
       case 2:
         if (!formData.mode) {
-          showToast(I18N_TEXT[userLang].validationShippingMode);
-          setFieldValid(prev => ({ ...prev, mode: false }));
+          showToast(getText('validationShippingMode', userLang));
+          setFieldValid((prev) => ({ ...prev, mode: false }));
           return false;
         }
-        setFieldValid(prev => ({ ...prev, mode: true }));
+        setFieldValid((prev) => ({ ...prev, mode: true }));
         break;
       case 3:
         // 1. Check if an origin location type is selected
         if (!formData.locationType) {
-          showToast(I18N_TEXT[userLang].validationPickupLocationType);
-          setFieldValid(prev => ({ ...prev, locationType: false }));
+          showToast(getText('validationPickupLocationType', userLang));
+          setFieldValid((prev) => ({ ...prev, locationType: false }));
           return false;
         }
 
         // 2. Validate based on the selected location type
         if (formData.locationType === 'port') {
           if (!formData.origin) {
-            showToast(I18N_TEXT[userLang].validationOriginPort);
-            setFieldValid(prev => ({ ...prev, origin: false }));
+            showToast(getText('validationOriginPort', userLang));
+            setFieldValid((prev) => ({ ...prev, origin: false }));
             return false;
           }
         } else if (['factory', 'business', 'residential'].includes(formData.locationType)) {
           if (!formData.city) {
-            showToast(I18N_TEXT[userLang].validationPickupCity);
-            setFieldValid(prev => ({ ...prev, city: false }));
+            showToast(getText('validationPickupCity', userLang));
+            setFieldValid((prev) => ({ ...prev, city: false }));
             return false;
           }
           if (!formData.zipCode) {
-            showToast(I18N_TEXT[userLang].validationPickupZip);
-            setFieldValid(prev => ({ ...prev, zipCode: false }));
+            showToast(getText('validationPickupZip', userLang));
+            setFieldValid((prev) => ({ ...prev, zipCode: false }));
             return false;
           }
         }
-        
+
         // If all checks for step 3 passed
-        setFieldValid(prev => ({
+        setFieldValid((prev) => ({
           ...prev,
           locationType: true,
           origin: formData.locationType === 'port' ? !!formData.origin : null, // Valid if port and origin selected, null otherwise
-          city: ['factory', 'business', 'residential'].includes(formData.locationType) ? !!formData.city : null,
-          zipCode: ['factory', 'business', 'residential'].includes(formData.locationType) ? !!formData.zipCode : null,
+          city: ['factory', 'business', 'residential'].includes(formData.locationType)
+            ? !!formData.city
+            : null,
+          zipCode: ['factory', 'business', 'residential'].includes(formData.locationType)
+            ? !!formData.zipCode
+            : null,
         }));
         break;
       case 4:
         // Validation for step 4 - Cargo Details
         // First, sync current active load to ensure latest data is in the array
         syncCurrentLoadToArray();
-        
+
         // Now validate all loads with up-to-date data
         for (let i = 0; i < formData.loads.length; i++) {
           if (!isLoadDataValid(formData.loads[i], i)) {
@@ -7153,56 +7320,56 @@ const QuoteForm: React.FC = () => {
       case 5: // New Step 5: Goods Details
         // Check if all sub-steps are completed
         if (!formData.goodsValue) {
-          showToast(I18N_TEXT[userLang].validationGoodsValue);
-          setFieldValid(prev => ({ ...prev, goodsValue: false }));
+          showToast(getText('validationGoodsValue', userLang));
+          setFieldValid((prev) => ({ ...prev, goodsValue: false }));
           return false;
         }
         if (!formData.areGoodsReady) {
-          showToast(I18N_TEXT[userLang].validationReadyDate);
+          showToast(getText('validationReadyDate', userLang));
           return false;
         }
         // Sub-step 3 is optional, so no validation needed
-        setFieldValid(prev => ({ ...prev, goodsValue: true }));
+        setFieldValid((prev) => ({ ...prev, goodsValue: true }));
         break;
       case 6: // Step 6: Contact
         if (!formData.customerType) {
-          showToast(I18N_TEXT[userLang].validationShipperType);
+          showToast(getText('validationShipperType', userLang));
           return false;
         }
         if (!formData.firstName) {
-          showToast(I18N_TEXT[userLang].validationFirstName);
-          setFieldValid(prev => ({ ...prev, firstName: false }));
+          showToast(getText('validationFirstName', userLang));
+          setFieldValid((prev) => ({ ...prev, firstName: false }));
           return false;
         }
         if (!formData.lastName) {
-          showToast(I18N_TEXT[userLang].validationLastName);
-          setFieldValid(prev => ({ ...prev, lastName: false }));
+          showToast(getText('validationLastName', userLang));
+          setFieldValid((prev) => ({ ...prev, lastName: false }));
           return false;
         }
         // Only require company name if customer type is 'company'
         if (formData.customerType === 'company' && !formData.companyName) {
-          showToast(I18N_TEXT[userLang].validationCompanyName);
-          setFieldValid(prev => ({ ...prev, companyName: false }));
+          showToast(getText('validationCompanyName', userLang));
+          setFieldValid((prev) => ({ ...prev, companyName: false }));
           return false;
         }
         if (!formData.shipperType) {
-          showToast(I18N_TEXT[userLang].validationShipperRole);
-          setFieldValid(prev => ({ ...prev, shipperType: false }));
+          showToast(getText('validationShipperRole', userLang));
+          setFieldValid((prev) => ({ ...prev, shipperType: false }));
           return false;
         }
         if (!formData.email || !validateField('email', formData.email)) {
-          showToast(I18N_TEXT[userLang].validationEmail);
-          setFieldValid(prev => ({ ...prev, email: false }));
+          showToast(getText('validationEmail', userLang));
+          setFieldValid((prev) => ({ ...prev, email: false }));
           return false;
         }
         // If all checks for step 6 passed
-        setFieldValid(prev => ({
+        setFieldValid((prev) => ({
           ...prev,
           firstName: true,
           lastName: true,
           companyName: formData.customerType === 'company' ? !!formData.companyName : true,
           shipperType: true,
-          email: true
+          email: true,
         }));
         break;
     }
@@ -7210,28 +7377,24 @@ const QuoteForm: React.FC = () => {
   };
 
   // Using nextStep and prevStep from context
-
-
-
-
   // Handle Enter key to proceed to next step
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Only proceed if Enter key is pressed
       if (event.key !== 'Enter') return;
-      
+
       // Don't trigger if user is in a textarea or if any dropdown is open
       const target = event.target as HTMLElement;
       const isInTextarea = target.tagName === 'TEXTAREA';
       const isInInput = target.tagName === 'INPUT';
-  const anyDropdownOpen = isCountryListVisible || isPortListVisible; // experience dropdown handled in StepContact
-      
+      const anyDropdownOpen = isCountryListVisible; // other dropdowns handled within their steps
+
       // Don't trigger if any dropdown is open or if user is typing in textarea
       if (anyDropdownOpen || isInTextarea) return;
-      
+
       // Don't trigger if we're on the final confirmation step
       if (currentStep === 7) return;
-      
+
       // For input fields, allow normal Enter behavior (form submission) but prevent our custom handler
       if (isInInput) {
         // If it's the last step with a submit button, let the form handle it
@@ -7239,7 +7402,7 @@ const QuoteForm: React.FC = () => {
         // Otherwise prevent default and trigger next step
         event.preventDefault();
       }
-      
+
       // Trigger next step or submit
       if (currentStep < 6) {
         nextStep();
@@ -7254,7 +7417,7 @@ const QuoteForm: React.FC = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, nextStep, isCountryListVisible, isPortListVisible]);
+  }, [currentStep, nextStep, isCountryListVisible]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -7262,10 +7425,10 @@ const QuoteForm: React.FC = () => {
     await Promise.resolve();
     if (validateStep(currentStep)) {
       const makeWebhookUrl = 'https://hook.eu1.make.com/8afhony6fmk7pgxavn969atkmq0xrm1s';
-      
+
       // Use proxy URLs in development, direct URLs in production
       const isDevelopment = import.meta.env.DEV;
-      const n8nTestWebhookUrl = isDevelopment 
+      const n8nTestWebhookUrl = isDevelopment
         ? '/api/n8n-test'
         : 'https://n8n.srv783609.hstgr.cloud/webhook-test/228cb671-34ad-4e2e-95ab-95d830d875df';
       const n8nProdWebhookUrl = isDevelopment
@@ -7276,17 +7439,17 @@ const QuoteForm: React.FC = () => {
       const activeLoadSubmitData = syncCurrentLoadToArray();
 
       // 2. Prepare the base formData for the payload
-      let payloadBase = { ...formData };
+      const payloadBase = { ...formData };
 
       // Convert country code to name for the main payload data
-      const countryObj = COUNTRIES.find(c => c.code === formData.country);
+      const countryObj = COUNTRIES.find((c) => c.code === formData.country);
       if (countryObj) {
         payloadBase.country = countryObj.name; // Country name for the payload field
       }
 
       // Convert origin port/airport code to name
       const allPortsAndAirports = [...SEA_PORTS, ...AIRPORTS, ...RAIL_TERMINALS];
-      const originObj = allPortsAndAirports.find(p => p.code === formData.origin);
+      const originObj = allPortsAndAirports.find((p) => p.code === formData.origin);
       if (originObj) {
         payloadBase.origin = originObj.name;
       }
@@ -7294,7 +7457,8 @@ const QuoteForm: React.FC = () => {
       // 3. Process the loads array to clean container data and use latest active load data
       const processedLoads = formData.loads.map((loadInState, idx) => {
         // Use the most up-to-date data for the active load, others from formData.loads
-        let currentLoadDetailsToProcess = idx === activeLoadIndex ? activeLoadSubmitData : { ...loadInState };
+        const currentLoadDetailsToProcess =
+          idx === activeLoadIndex ? activeLoadSubmitData : { ...loadInState };
 
         if (currentLoadDetailsToProcess.shippingType === 'container') {
           return {
@@ -7326,8 +7490,11 @@ const QuoteForm: React.FC = () => {
       // 'en-CA' locale for YYYY-MM-DD format
       const datePartHKT = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Hong_Kong' });
       // 'en-GB' locale for HH:MM:SS format (24-hour)
-      const timePartHKT = now.toLocaleTimeString('en-GB', { timeZone: 'Asia/Hong_Kong', hourCycle: 'h23' });
-      
+      const timePartHKT = now.toLocaleTimeString('en-GB', {
+        timeZone: 'Asia/Hong_Kong',
+        hourCycle: 'h23',
+      });
+
       const submissionTimestampHKT = `${datePartHKT}T${timePartHKT}+08:00`; // Hong Kong is UTC+8
 
       // Use formData.country (the code) for the ID, if available, otherwise an empty string or placeholder
@@ -7372,638 +7539,135 @@ const QuoteForm: React.FC = () => {
         });
 
         const makeResult = results[2];
-        if (makeResult.status === 'rejected' || (makeResult.status === 'fulfilled' && !makeResult.value.ok)) {
-            const errorReason = makeResult.status === 'rejected' 
-                ? makeResult.reason 
-                : await makeResult.value.text();
-            const errorStatus = makeResult.status === 'fulfilled' ? makeResult.value.status : 'N/A';
+        if (
+          makeResult.status === 'rejected' ||
+          (makeResult.status === 'fulfilled' && !makeResult.value.ok)
+        ) {
+          const errorReason =
+            makeResult.status === 'rejected' ? makeResult.reason : await makeResult.value.text();
+          const errorStatus = makeResult.status === 'fulfilled' ? makeResult.value.status : 'N/A';
 
-            console.error('Main webhook (make.com) failed:', errorStatus, errorReason);
-            showToast(`Error: Main quote submission failed. Status: ${errorStatus}.`);
-            return;
+          console.error('Main webhook (make.com) failed:', errorStatus, errorReason);
+          showToast(`Error: Main quote submission failed. Status: ${errorStatus}.`);
+          return;
         }
-        
+
         // Set submission data and go to confirmation page
         setSubmissionId(submissionId);
         setCurrentStep(7);
-        
+
         // Don't reset form data immediately - user might want to see the summary
         // We'll reset when they start a new request
-        
+
         // Form is kept intact for confirmation page display
         // User can start a new request from the confirmation page
-
       } catch (error) {
         console.error('An unexpected error occurred during submission:', error);
-        showToast(I18N_TEXT[userLang].errorSubmission);
+        showToast(getText('errorSubmission', userLang));
       }
     }
   };
-
-  /* const handleModeSelect = (mode: string) => {
-    setFormData({
-      ...formData,
-      mode
-    });
-    setFieldValid({
-      ...fieldValid,
-      mode: true
-    });
-  }; */
-
-  /* const handleCountrySelect = (countryCode: string) => {
-    const selectedCountryData = COUNTRIES.find(c => c.code === countryCode);
-
-    if (selectedCountryData) {
-      setFormData(prevFormData => ({
-        ...prevFormData,
-        country: selectedCountryData.code,
-        // Set phoneCountryCode based on selected destination country, if it exists
-        phoneCountryCode: selectedCountryData.phonePrefix || prevFormData.phoneCountryCode 
-      }));
-
-      setFieldValid(prevFieldValid => ({
-        ...prevFieldValid,
-        country: true // Mark country as valid
-      }));
-
-      // Update the countrySearch input display (for Step 1)
-      setCountrySearch(`${selectedCountryData.flag} ${getTranslatedCountryName(selectedCountryData.code, userLang)}`);
-
-      // Update the phonePrefixSearch state (for Step 6 input) to reflect the new prefix
-      if (selectedCountryData.phonePrefix) {
-        // We need the flag for the prefix display. The selectedCountryData itself has the flag.
-        setPhonePrefixSearch(`${selectedCountryData.flag} ${selectedCountryData.phonePrefix}`);
-      } else {
-        // If the selected destination country has no phonePrefix, 
-        // attempt to display the currently set phoneCountryCode (from formData) with its flag, or just the code.
-        const currentPhoneCountry = COUNTRIES.find(c => c.phonePrefix === formData.phoneCountryCode);
-        if (currentPhoneCountry) {
-          setPhonePrefixSearch(`${currentPhoneCountry.flag} ${formData.phoneCountryCode}`);
-        } else {
-          setPhonePrefixSearch(formData.phoneCountryCode); // Fallback to just the prefix string
-        }
-      }
-    } else {
-      // Fallback if countryCode didn't match any country (should ideally not happen with UI selection)
-      setFormData(prevFormData => ({
-        ...prevFormData,
-        country: countryCode // Still set the code, but other fields might be out of sync
-      }));
-      setFieldValid(prevFieldValid => ({
-        ...prevFieldValid,
-        country: true // Or false, depending on how strict validation should be here
-      }));
-      setCountrySearch(''); // Clear search if full country data not found
-      // Clear or reset phone prefix search if main country data is missing
-      const fallbackCountry = COUNTRIES.find(c => c.phonePrefix === formData.phoneCountryCode);
-      if (fallbackCountry) {
-        setPhonePrefixSearch(`${fallbackCountry.flag} ${formData.phoneCountryCode}`);
-      } else {
-        setPhonePrefixSearch(formData.phoneCountryCode);
-      }
-    }
-    setIsCountryListVisible(false); // Hide the country list dropdown
-
-    // If newly selected country does not support rail freight and Rail was selected, reset mode
-    if (!RAIL_FREIGHT_COUNTRIES.includes(countryCode) && formData.mode === 'Rail') {
-      setFormData(prev => ({ ...prev, mode: '' }));
-      setFieldValid(prev => ({ ...prev, mode: null }));
-    }
-
-    // --- Update usage count in localStorage ---
-    try {
-      const key = 'countryUsage';
-      const usageRaw = localStorage.getItem(key);
-      const usageObj: Record<string, number> = usageRaw ? JSON.parse(usageRaw) : {};
-      usageObj[countryCode] = (usageObj[countryCode] || 0) + 1;
-      localStorage.setItem(key, JSON.stringify(usageObj));
-    } catch (err) { }
-  }; */
-
-  /* const handlePhonePrefixSelect = (prefix: string) => {
-    const country = COUNTRIES.find(c => c.phonePrefix === prefix);
-    setFormData({
-      ...formData,
-      phoneCountryCode: prefix
-    });
-    // Optionally update validation state for phoneCountryCode if needed
-    // setFieldValid({ ...fieldValid, phoneCountryCode: true }); 
-    setPhonePrefixSearch(country ? `${country.flag} ${prefix}` : prefix);
-    // setIsPhonePrefixListVisible(false);
-  }; */
-  /* const handlePortSelect = (portCode: string) => {
-    if (portCode === 'DONT_KNOW') {
-      // Handle "I don't know" option
-      setFormData({
-        ...formData,
-        origin: portCode
-      });
-      setFieldValid({
-        ...fieldValid,
-        origin: true
-      });
-      setPortSearch(`❓ ${I18N_TEXT[userLang].dontKnowPort}`);
-      setIsPortListVisible(false);
-    } else {
-      // Handle regular port selection
-      const port = [...SEA_PORTS, ...AIRPORTS, ...RAIL_TERMINALS].find(p => p.code === portCode);
-      setFormData({
-        ...formData,
-        origin: portCode
-      });
-      setFieldValid({
-        ...fieldValid,
-        origin: true
-      });
-      setPortSearch(port ? `${port.flag} ${getTranslatedPortNameLocal(port, userLang)}` : '');
-      setIsPortListVisible(false);
-    }
-  }; */
-
-  /* const handleDestPortSelect = (portCode: string) => {
-    const countryPorts = DESTINATION_PORTS_BY_COUNTRY[formData.country] || [];
-    const port = countryPorts.find(p => p.code === portCode);
-    setFormData({
-      ...formData,
-      destPort: portCode
-    });
-    setFieldValid({
-      ...fieldValid,
-      destPort: true
-    });
-          setDestPortSearchCtx(port ? `${port.flag} ${getTranslatedPortNameLocal(port, userLang)}` : '');
-    setIsDestPortListVisible(false);
-  }; */
-
-  // Step 5 dropdown options are defined within StepGoodsDetails
-
-  // Use the globally defined EXPERIENCE_OPTIONS with full translations
-
-  // Step 5 handlers and helpers moved into StepGoodsDetails
-
-  /* const handleExperienceSelect = (experienceCode: string) => {
-    const experience = EXPERIENCE_OPTIONS.find(e => e.code === experienceCode);
-    setFormData({
-      ...formData,
-      shipperType: experienceCode
-    });
-    
-    // Get the proper translated text and clean emojis
-    let translatedName = '';
-    switch(experienceCode) {
-      case 'first-time':
-        translatedName = (I18N_TEXT[userLang] as any).firstTimeShipper || 'First-time shipper';
-        break;
-      case 'up-to-10x':
-        translatedName = (I18N_TEXT[userLang] as any).upTo10Times || 'Shipped up to 10 times';
-        break;
-      case 'more-than-10x':
-        translatedName = (I18N_TEXT[userLang] as any).moreThan10Times || 'Shipped more than 10 times';
-        break;
-      case 'regular':
-        translatedName = (I18N_TEXT[userLang] as any).regularShipper || 'Regular shipper (monthly)';
-        break;
-    }
-    
-    setExperienceSearch(experience ? `${experience.icon}  ${translatedName}` : experienceCode);
-  // setIsExperienceListVisible(false);
-    setFieldValid(prev => ({ ...prev, shipperType: true }));
-  }; */
-
-  // Helper to clear the currently selected destination country (UX improvement)
-  /* const clearCountrySelection = () => {
-    // Reset the destination country related fields
-    setFormData(prev => ({
-      ...prev,
-      country: '',
-      destLocationType: '', // Reset destination location type
-      destCity: '', // Reset destination city
-      destZipCode: '', // Reset destination zip code
-      destPort: '' // Reset destination port
-    }));
-    setCountrySearch('');
-    setDestPortSearchCtx(''); // Reset destination port search
-  }; */
-
-  // Helper to clear the currently selected port (UX improvement)
-  /* const clearPortSelection = () => {
-    // Reset the origin port related fields
-    setFormData(prev => ({
-      ...prev,
-      origin: '',
-    }));
-    setPortSearch('');
-    setFieldValid(prev => ({ ...prev, origin: null }));
-  }; */
-
-  /* const handleLocationTypeSelect = (type: string) => {
-    setFormData({
-      ...formData,
-      locationType: type,
-      origin: '' // Reset origin when changing location type
-    });
-    setFieldValid(prev => ({ ...prev, locationType: true }));
-  }; */
-
-  /* const handleDestLocationTypeSelect = (type: string) => {
-    setFormData({
-      ...formData,
-      destLocationType: type,
-      destCity: '', // Reset city when changing location type
-      destZipCode: '', // Reset zip code when changing location type
-      destPort: '' // Reset port when changing location type
-    });
-    setFieldValid(prev => ({ 
-      ...prev, 
-      destLocationType: true,
-      destCity: null, // Reset validation state
-      destZipCode: null, // Reset validation state
-      destPort: null // Reset validation state
-    }));
-  }; */
-
-  // handleAddLoad removed (unused)
-
-
-
-
-
-  // Fonction de duplication d'un load
-
-
-
-
-
-
-
-
-  // Function for destination location types (Step 1) - includes all types with special handling for ports
-  /* const getDestinationLocationTypes = () => {
-    return LOCATION_TYPES.map(type => ({ ...type })); // Use all types including ports
-  }; */
-
-  // Function for pickup location types (Step 3) - uses dynamic icons based on selected shipping mode
-  /* const getPickupLocationTypes = () => {
-    const baseTypes = LOCATION_TYPES.map(type => ({ ...type })); // Deep copy for modification
-    const portIndex = baseTypes.findIndex(t => t.id === 'port');
-
-    if (portIndex !== -1) {
-      if (formData.mode === 'Sea') {
-        baseTypes[portIndex].name = 'Port';
-        baseTypes[portIndex].icon = Ship; // Ensure Ship icon for Sea mode
-      } else if (formData.mode === 'Air' || formData.mode === 'Express') {
-        baseTypes[portIndex].name = 'Airport';
-        baseTypes[portIndex].icon = Plane; // Ensure Plane icon for Air/Express modes
-      } else if (formData.mode === 'Rail') {
-        baseTypes[portIndex].name = 'Rail Terminal';
-        baseTypes[portIndex].icon = TrainFront;
-      }
-      // If formData.mode is empty or another value,
-      // it will use the name 'Port/Airport' and icon from the updated LOCATION_TYPES (Ship icon).
-    }
-    return baseTypes;
-  }; */
-
-
-
-  // Helper: remove flag emojis (regional indicator symbols) and trim
-  const sanitizeSearch = (input: string) => input
-    .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '') // remove flag emojis
-    .trim()
-    .toLowerCase();
-
-  const sanitizedCountrySearch = sanitizeSearch(debouncedCountrySearch);
-
-  // Get priority countries for current language
-  const priorityCountryCodes = PRIORITY_COUNTRIES_BY_LANG[userLang] || [];
-
-  const filteredCountries = (() => {
-    // First filter all countries based on search
-    const searchFiltered = COUNTRIES.filter(country => {
-      if (!sanitizedCountrySearch) return true; // if empty search, show all
-      const translatedName = getTranslatedCountryName(country.code, userLang);
-      return (
-        translatedName.toLowerCase().includes(sanitizedCountrySearch) ||
-        country.name.toLowerCase().includes(sanitizedCountrySearch) ||
-        country.code.toLowerCase().includes(sanitizedCountrySearch)
-      );
-    });
-
-    // If there's a search term, just return the filtered results sorted alphabetically
-    if (sanitizedCountrySearch) {
-      return searchFiltered.sort((a, b) => {
-        const aName = getTranslatedCountryName(a.code, userLang);
-        const bName = getTranslatedCountryName(b.code, userLang);
-        return aName.localeCompare(bName);
-      });
-    }
-
-    // If no search term, prioritize countries by language
-    const priorityCountries = searchFiltered.filter(country => 
-      priorityCountryCodes.includes(country.code)
-    ).sort((a, b) => {
-      const aName = getTranslatedCountryName(a.code, userLang);
-      const bName = getTranslatedCountryName(b.code, userLang);
-      return aName.localeCompare(bName);
-    });
-
-    const otherCountries = searchFiltered.filter(country => 
-      !priorityCountryCodes.includes(country.code)
-    ).sort((a, b) => {
-      const aName = getTranslatedCountryName(a.code, userLang);
-      const bName = getTranslatedCountryName(b.code, userLang);
-      return aName.localeCompare(bName);
-    });
-
-    // Return priority countries first, then others
-    return [...priorityCountries, ...otherCountries];
-  })();
-
-  /* const getFilteredPorts = () => {
-    let ports;
-    if (formData.mode === 'Sea') {
-      ports = SEA_PORTS;
-    } else if (formData.mode === 'Rail') {
-      ports = RAIL_TERMINALS;
-    } else { // Air / Express default
-      ports = AIRPORTS;
-    }
-    
-    // Filter ports based on search
-    const filteredPorts = ports.filter(port => {
-      const translatedName = getTranslatedPortNameLocal(port, userLang);
-      const translatedRegion = getTranslatedRegionName(port.region, userLang);
-      return translatedName.toLowerCase().includes(portSearch.toLowerCase()) ||
-             port.name.toLowerCase().includes(portSearch.toLowerCase()) ||
-             port.code.toLowerCase().includes(portSearch.toLowerCase()) ||
-             translatedRegion.toLowerCase().includes(portSearch.toLowerCase()) ||
-             port.region.toLowerCase().includes(portSearch.toLowerCase());
-    });
-    
-    // Add "I don't know" option at the top if search is empty or matches the text
-    const dontKnowText = I18N_TEXT[userLang].dontKnowPort;
-    const dontKnowOption = {
-      code: 'DONT_KNOW',
-      name: dontKnowText,
-      region: I18N_TEXT[userLang].dontKnowPortDescription,
-      type: 'unknown',
-      volume: '',
-      flag: '❓'
-    };
-    
-    if (!portSearch || dontKnowText.toLowerCase().includes(portSearch.toLowerCase())) {
-      return [dontKnowOption, ...filteredPorts];
-    }
-    
-    return filteredPorts;
-  }; */
-
-  /* const getFilteredDestinationPorts = () => {
-    // Get ports for the selected country
-    const countryPorts = DESTINATION_PORTS_BY_COUNTRY[formData.country] || [];
-    
-    // Filter based on shipping mode if selected
-    let modePorts = countryPorts;
-    if (formData.mode === 'Sea') {
-      modePorts = countryPorts.filter(port => port.type === 'sea');
-    } else if (formData.mode === 'Air' || formData.mode === 'Express') {
-      modePorts = countryPorts.filter(port => port.type === 'air');
-    } else if (formData.mode === 'Rail') {
-      modePorts = countryPorts.filter(port => port.type === 'rail');
-    }
-    
-    // Filter based on search text
-    return modePorts.filter(port => {
-      const translatedName = getTranslatedPortNameLocal(port, userLang);
-      return translatedName.toLowerCase().includes(destPortSearch.toLowerCase()) ||
-             port.code.toLowerCase().includes(destPortSearch.toLowerCase());
-    });
-  }; */
-
-
-  const handleTestSubmit = () => {
-    if (TEST_LEADS.length === 0) {
-      showToast(I18N_TEXT[userLang].noTestLeads);
-      return;
-    }
-
-    const randomIndex = Math.floor(Math.random() * TEST_LEADS.length);
-    const nextLead = TEST_LEADS[randomIndex];
-
-    // Injection des données dans le formulaire
-    setFormData(nextLead as any); // typage souple le temps de tous les ajustements
-    setActiveLoadIndex(0);
-    setCurrentStep(6);
-
-    // Mise à jour des états d'affichage (country, port, etc.)
-    const selectedCountry = COUNTRIES.find((c) => c.code === nextLead.country);
-    if (selectedCountry) {
-      setCountrySearch(`${selectedCountry.flag} ${getTranslatedCountryName(selectedCountry.code, userLang)}`);
-      setPhonePrefixSearch(`${selectedCountry.flag} ${selectedCountry.phonePrefix}`);
-    } else {
-      setCountrySearch('');
-      setPhonePrefixSearch('');
-    }
-
-    const originPort = [...SEA_PORTS, ...AIRPORTS, ...RAIL_TERMINALS].find((p) => p.code === nextLead.origin);
-    if (originPort) {
-      setPortSearch(`${originPort.flag} ${getTranslatedPortNameLocal(originPort, userLang)}`);
-    } else if (nextLead.origin === 'DONT_KNOW') {
-      setPortSearch(`❓ ${I18N_TEXT[userLang].dontKnowPort}`);
-    } else {
-      setPortSearch('');
-    }
-
-    // Handle destination port search if applicable
-    if (nextLead.destPort && nextLead.destLocationType === 'port') {
-      const countryPorts = DESTINATION_PORTS_BY_COUNTRY[nextLead.country] || [];
-      const destPort = countryPorts.find(p => p.code === nextLead.destPort);
-      if (destPort) {
-        setDestPortSearchCtx(`${destPort.flag} ${getTranslatedPortNameLocal(destPort, userLang)}`);
-      } else {
-        setDestPortSearchCtx('');
-      }
-    } else {
-      setDestPortSearchCtx('');
-    }
-
-    // No local selectedLocationType state; UI derives from formData
-  };
-
-  // Accessibility: highlighted index for keyboard navigation in country list
-  const [highlightedCountryIndex, setHighlightedCountryIndex] = useState<number>(-1);
-  // Reset highlighted index whenever we open/close list or search term changes
-  useEffect(() => {
-    if (!isCountryListVisible) {
-      setHighlightedCountryIndex(-1);
-    } else {
-      setHighlightedCountryIndex(prev => {
-        const withinBounds = prev >= 0 && prev < filteredCountries.length;
-        return withinBounds ? prev : 0;
-      });
-    }
-  }, [isCountryListVisible, sanitizedCountrySearch, filteredCountries.length]);
-
-  // Step 5 dropdown display initialization handled within StepGoodsDetails
-
-  // Keyboard navigation for country search
-  const handleCountrySearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isCountryListVisible && ['ArrowDown', 'ArrowUp'].includes(e.key)) {
-      setIsCountryListVisible(true);
-      return;
-    }
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlightedCountryIndex(prev => {
-        const next = prev + 1;
-        return next >= filteredCountries.length ? 0 : next;
-      });
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlightedCountryIndex(prev => {
-        const next = prev - 1;
-        return next < 0 ? filteredCountries.length - 1 : next;
-      });
-    } else if (e.key === 'Enter') {
-      if (highlightedCountryIndex >= 0 && highlightedCountryIndex < filteredCountries.length) {
-        e.preventDefault();
-        const selected = filteredCountries[highlightedCountryIndex];
-        if (selected) handleCountrySelect(selected.code);
-      }
-    } else if (e.key === 'Escape') {
-      setIsCountryListVisible(false);
-    }
-  };
-
-  // Debounce the country search input (200 ms)
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedCountrySearch(countrySearch);
-    }, 200);
-
-    return () => clearTimeout(handler);
-  }, [countrySearch]);
-
-  // scroll highlighted option into view
-  useEffect(() => {
-    if (!isCountryListVisible) return;
-    if (highlightedCountryIndex < 0 || highlightedCountryIndex >= filteredCountries.length) return;
-    const optionElem = document.getElementById(`country-option-${filteredCountries[highlightedCountryIndex].code}`);
-    if (optionElem && optionElem.scrollIntoView) {
-      optionElem.scrollIntoView({ block: 'nearest' });
-    }
-  }, [highlightedCountryIndex, isCountryListVisible, filteredCountries]);
-
-
-
-
 
   return (
     <div className="quote-form-container hover-lift">
       <div className="form-header">
         <h1 className="form-title bg-clip-text text-transparent bg-gradient-to-r from-[#001C38] to-[#D6DF20] animate-fade-in">
-          {currentStep === 7 ? getText('confirmationMainTitle', userLang) : I18N_TEXT[userLang].mainTitle}
+          {currentStep === 7
+            ? getText('confirmationMainTitle', userLang)
+            : getText('mainTitle', userLang)}
         </h1>
         <p className="form-subtitle text-[#001C38]/70 animate-slide-in">
-          {currentStep === 7 ? getText('confirmationSubtitle', userLang) : I18N_TEXT[userLang].mainSubtitle}
+          {currentStep === 7
+            ? getText('confirmationSubtitle', userLang)
+            : getText('mainSubtitle', userLang)}
         </p>
-        
+
         {/* Sélecteur de langue avec CustomDropdown */}
-          <div className="language-selector-header">
-            <CustomDropdown
-              value={userLang}
-              onChange={(value) => setUserLang(value as any)}
-              options={languageOptions}
-              placeholder="Select language"
-            />
-          </div>
-      </div>
-      
-      {/* Test Button */}
-      <div className="test-button-container">
-        <button
-          type="button"
-          onClick={handleTestSubmit}
-          className="btn btn-ghost btn-sm glassmorphism test-btn"
-        >
-          🚀 Test Submit
-        </button>
+        <div className="language-selector-header">
+          <CustomDropdown
+            value={userLang}
+            onChange={(value) => setUserLang(value as typeof userLang)}
+            options={languageOptions}
+            placeholder="Select language"
+          />
+        </div>
       </div>
 
       {/* Hide Timeline on confirmation page */}
       {currentStep !== 7 && (
-        <Timeline 
-          currentStep={currentStep} 
-          totalSteps={6} 
+        <Timeline
+          currentStep={currentStep}
+          totalSteps={6}
           translations={{
-            timelineDestination: I18N_TEXT[userLang].timelineDestination,
-            timelineMode: I18N_TEXT[userLang].timelineMode,
-            timelineOrigin: I18N_TEXT[userLang].timelineOrigin,
-            timelineCargo: I18N_TEXT[userLang].timelineCargo,
-            timelineGoodsDetails: I18N_TEXT[userLang].timelineGoodsDetails,
-            timelineContact: I18N_TEXT[userLang].timelineContact,
-            stepCounter: I18N_TEXT[userLang].stepCounter,
+            timelineDestination: getText('timelineDestination', userLang),
+            timelineMode: getText('timelineMode', userLang),
+            timelineOrigin: getText('timelineOrigin', userLang),
+            timelineCargo: getText('timelineCargo', userLang),
+            timelineGoodsDetails: getText('timelineGoodsDetails', userLang),
+            timelineContact: getText('timelineContact', userLang),
+            stepCounter: getText('stepCounter', userLang),
           }}
         />
       )}
-      
-      <form onSubmit={handleSubmit} className="quote-form">
-  <StepDestination />
-  <StepMode />
-  <StepOrigin />
-  <StepFreight />
-  <StepGoodsDetails />
-  <StepContact />
 
-  {currentStep !== 7 && (
-  <div className="form-navigation">
-    {currentStep > 1 && (
-      <button 
-        type="button" 
-        onClick={prevStep} 
-        className="btn btn-secondary glassmorphism"
-        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
-      >
-        <ChevronLeft size={16} />
-        {I18N_TEXT[userLang].previous}
-      </button>
-    )}
-    {currentStep < 6 ? (
-      <button 
-        type="button" 
-        onClick={nextStep} 
-        className="btn btn-primary glassmorphism"
-        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
-      >
-        {I18N_TEXT[userLang].next}
-        <ChevronRight size={16} />
-      </button>
-    ) : (
-      <button 
-        type="submit" 
-        className="btn btn-success glassmorphism"
-        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
-      >
-        {getText('getMyQuote', userLang)}
-        <ChevronRight size={16} />
-      </button>
-    )}
-  </div>
-  )}
-</form>
-        
-        {/* Step 7: Confirmation Page */}
-        <StepConfirmation submissionId={submissionId} setSubmissionId={setSubmissionId} showToast={showToast} />
-        
-        <div className="trust-badge glassmorphism">
-          <span>💡 {I18N_TEXT[userLang].trustBadge}</span>
-        </div>
-        
-        <Toast message={toastMessage} isVisible={!!toastMessage} />
+      <form onSubmit={handleSubmit} className="quote-form">
+        <StepDestination />
+        <StepMode />
+        <StepOrigin />
+        <StepFreight />
+        <StepGoodsDetails />
+        <StepContact />
+        {currentStep !== 7 && (
+          <div className="form-navigation">
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={prevStep}
+                className="btn btn-secondary glassmorphism"
+                style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+              >
+                <ChevronLeft size={16} />
+                {getText('previous', userLang)}
+              </button>
+            )}
+            {currentStep < 6 ? (
+              <button
+                type="button"
+                onClick={nextStep}
+                className="btn btn-primary glassmorphism"
+                style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+              >
+                {getText('next', userLang)}
+                <ChevronRight size={16} />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="btn btn-success glassmorphism"
+                style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
+              >
+                {getText('getMyQuote', userLang)}
+                <ChevronRight size={16} />
+              </button>
+            )}
+          </div>
+        )}
+      </form>
+
+      {/* Step 7: Confirmation Page */}
+      <StepConfirmation
+        submissionId={submissionId}
+        setSubmissionId={setSubmissionId}
+        showToast={showToast}
+      />
+
+      <div className="trust-badge glassmorphism">
+        <span>💡 {getText('trustBadge', userLang)}</span>
       </div>
-    );
-  };
-  
-  export default QuoteForm;
+
+      <Toast message={toastMessage} isVisible={!!toastMessage} />
+    </div>
+  );
+};
+
+export default QuoteForm;
