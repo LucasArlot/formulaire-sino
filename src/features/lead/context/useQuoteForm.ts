@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { QuoteFormContext } from '@/features/lead/context/QuoteFormContext';
+import { QuoteFormContext } from '@/features/lead/QuoteFormContext';
 import type { QuoteFormContextValue } from '@/features/lead/context/QuoteFormTypes';
 
 export function useQuoteForm(): QuoteFormContextValue {
