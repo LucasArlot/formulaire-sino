@@ -1,6 +1,6 @@
 import React from 'react';
 import { QuoteForm } from '@/features/lead';
-import { QuoteFormProvider } from '@/features/lead/context/QuoteFormContext';
+import { QuoteFormProvider } from '@/features/lead/QuoteFormContext';
 import '@/styles/main.css';
 
 function App() {
