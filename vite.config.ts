@@ -4,7 +4,7 @@ import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/formulaire-sino/',
+  base: '/sino-form/',
   plugins: [react()],
   build: {
     rollupOptions: {

@@ -1,4 +1,4 @@
-import React from 'react';
+// React import not needed in TSX with modern tooling
 import { QuoteForm } from '@/features/lead';
 import { QuoteFormProvider } from '@/features/lead/QuoteFormContext';
 import '@/styles/main.css';

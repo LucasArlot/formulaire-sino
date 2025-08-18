@@ -1,5 +1,6 @@
 import type { FormData, FieldValid } from '@/features/lead/context/types';
 import type { I18N_TEXT as I18N_TYPE } from '@/features/lead/context/i18n';
+import type { ComponentType } from 'react';
 
 export interface QuoteFormContextValue {
   currentStep: number;
@@ -60,7 +61,11 @@ export interface QuoteFormContextValue {
   handleCurrencySelect: (currencyCode: string) => void;
 
   // Filtering
-  getDestinationLocationTypes: () => Array<{ id: string; name: string; icon: any }>;
+  getDestinationLocationTypes: () => Array<{
+    id: string;
+    name: string;
+    icon: ComponentType<{ size?: number | string; className?: string }>;
+  }>;
   getFilteredDestinationPorts: () => Array<{ code: string; name: string; flag: string; type?: string; volume?: string }>;
   getFilteredOriginPorts: () => Array<{ code: string; name: string; flag: string; type?: string; volume?: string }>;
   filteredCountries: Array<{ code: string; name: string; flag: string }>;
@@ -85,6 +90,6 @@ export interface QuoteFormContextValue {
   clearCountrySelection: () => void;
   handleDestLocationTypeSelect: (typeId: string) => void;
   handleDestPortSelect: (portCode: string) => void;
-  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }
 

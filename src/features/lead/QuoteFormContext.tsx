@@ -11781,7 +11781,7 @@ export const QuoteFormProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
 
   const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
       setFormData((prev) => ({ ...prev, [name]: value }));
       setFieldValid((prev) => ({ ...prev, [name]: value.trim() ? true : null }));
