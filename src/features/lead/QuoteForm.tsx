@@ -3,7 +3,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Timeline from './Timeline';
 import Toast from '@/shared/components/Toast';
 import CustomDropdown from '@/shared/components/CustomDropdown';
-import { useQuoteForm, initialLoadDetails } from '@/features/lead/QuoteFormContext';
+import { useQuoteForm } from '@/features/lead/context/useQuoteForm';
+import { initialLoadDetails } from '@/features/lead/context/types';
 import { useToast } from '@/hooks';
 import StepDestination from './steps/StepDestination';
 import StepMode from './steps/StepMode';
@@ -1859,8 +1860,7 @@ const getText = (key: string, lang: keyof typeof I18N_TEXT): string => {
       remarksPlaceholder: 'Any special instructions, requirements, or questions...',
       remarksHelp: 'Help us serve you better with any additional context',
       readyToSubmit: 'Ready to get your quote!',
-      submitDescription: 'Click "Get My Quote" below to submit your request. We\'ll respond within 24 hours.',
-      getMyQuote: 'Get My Quote',
+      submitDescription: 'Click the submit button below to send your request. We\'ll respond within 24 hours.',
       securityBadge: 'Secure & GDPR compliant',
       // Customer type selection
       customerTypeQuestion: 'Are you shipping as an individual or for a company?',
@@ -1869,10 +1869,7 @@ const getText = (key: string, lang: keyof typeof I18N_TEXT): string => {
       individualDescription: 'Personal shipment or private customer',
       companyCustomer: 'Company',
       companyDescription: 'Business shipment or commercial entity',
-      // Confirmation page
-      confirmationMainTitle: 'Request Confirmation',
-      confirmationTitle: 'Quote Request Confirmed',
-      confirmationSubtitle: 'Your request has been successfully submitted',
+      // Confirmation page (moved to centralized i18n)
       referenceNumber: 'Reference Number',
       yourRequest: 'Your Request Summary',
       shipmentDetails: 'Shipment Details',
@@ -6546,7 +6543,7 @@ const getText = (key: string, lang: keyof typeof I18N_TEXT): string => {
     remarksHelp: getText('remarksHelp', userLang),
     readyToSubmit: getText('readyToSubmit', userLang),
     submitDescription: getText('submitDescription', userLang),
-    getMyQuote: getText('getMyQuote', userLang),
+    getMyQuote: getText('submitCta', userLang),
     securityBadge: getText('securityBadge', userLang),
     // Customer type selection
     customerTypeQuestion: getText('customerTypeQuestion', userLang),
@@ -7484,6 +7481,35 @@ const QuoteForm: React.FC = () => {
         return currentLoadDetailsToProcess;
       });
 
+      // Determine preferred language based on lead country (ES for Spanish-speaking countries, else EN)
+      const spanishSpeakingCountryCodes = new Set([
+        'ES', // Spain
+        'MX', // Mexico
+        'AR', // Argentina
+        'CO', // Colombia
+        'CL', // Chile
+        'PE', // Peru
+        'VE', // Venezuela
+        'EC', // Ecuador
+        'BO', // Bolivia
+        'PY', // Paraguay
+        'UY', // Uruguay
+        'GT', // Guatemala
+        'CU', // Cuba
+        'DO', // Dominican Republic
+        'HN', // Honduras
+        'SV', // El Salvador
+        'NI', // Nicaragua
+        'CR', // Costa Rica
+        'PA', // Panama
+        'GQ', // Equatorial Guinea
+      ]);
+      const preferredLanguage = spanishSpeakingCountryCodes.has(
+        (formData.country || '').toUpperCase()
+      )
+        ? 'ES'
+        : 'EN';
+
       // 4. Add submission metadata and finalize payload
       const now = new Date();
       // Get date and time parts for Hong Kong timezone
@@ -7504,6 +7530,7 @@ const QuoteForm: React.FC = () => {
       const finalPayload = {
         submissionId: submissionId,
         timestamp: submissionTimestampHKT, // Utiliser le timestamp HKT
+        preferredLanguage,
         ...payloadBase, // Spread the rest of the form data (country here will be the name)
         loads: processedLoads, // Add the processed loads
       };
@@ -7646,7 +7673,7 @@ const QuoteForm: React.FC = () => {
                 className="btn btn-success glassmorphism"
                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
               >
-                {getText('getMyQuote', userLang)}
+                {getText('submitCta', userLang)}
                 <ChevronRight size={16} />
               </button>
             )}
